@@ -4,11 +4,12 @@ import { createUser } from "./db"
 
 export const signUpWithEmail = async (email: string, password: string, name: string) => {
   try {
-    if (!auth) {
+    const authInstance = auth()
+    if (!authInstance) {
       throw new Error("Firebase Auth is not initialized")
     }
 
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+    const userCredential = await createUserWithEmailAndPassword(authInstance, email, password)
     const user = userCredential.user
 
     // Create user document in Firestore
@@ -31,11 +32,12 @@ export const signUpWithEmail = async (email: string, password: string, name: str
 
 export const signInWithEmail = async (email: string, password: string) => {
   try {
-    if (!auth) {
+    const authInstance = auth()
+    if (!authInstance) {
       throw new Error("Firebase Auth is not initialized")
     }
 
-    const userCredential = await signInWithEmailAndPassword(auth, email, password)
+    const userCredential = await signInWithEmailAndPassword(authInstance, email, password)
     const user = userCredential.user
 
     return {
@@ -50,11 +52,12 @@ export const signInWithEmail = async (email: string, password: string) => {
 
 export const logOut = async () => {
   try {
-    if (!auth) {
+    const authInstance = auth()
+    if (!authInstance) {
       throw new Error("Firebase Auth is not initialized")
     }
 
-    await signOut(auth)
+    await signOut(authInstance)
   } catch (error) {
     console.error("Error signing out:", error)
     throw error
@@ -63,20 +66,25 @@ export const logOut = async () => {
 
 export const getCurrentUser = (): Promise<User | null> => {
   return new Promise((resolve, reject) => {
-    if (!auth) {
-      reject(new Error("Firebase Auth is not initialized"))
-      return
-    }
+    try {
+      const authInstance = auth()
+      if (!authInstance) {
+        reject(new Error("Firebase Auth is not initialized"))
+        return
+      }
 
-    const unsubscribe = auth.onAuthStateChanged(
-      (user) => {
-        unsubscribe()
-        resolve(user)
-      },
-      (error) => {
-        unsubscribe()
-        reject(error)
-      },
-    )
+      const unsubscribe = authInstance.onAuthStateChanged(
+        (user) => {
+          unsubscribe()
+          resolve(user)
+        },
+        (error) => {
+          unsubscribe()
+          reject(error)
+        },
+      )
+    } catch (error) {
+      reject(error)
+    }
   })
 }

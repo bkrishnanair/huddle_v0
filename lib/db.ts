@@ -15,9 +15,11 @@ import { db } from "./firebase"
 
 // Helper function to check if Firestore is available
 const checkFirestore = () => {
-  if (!db) {
+  const dbInstance = db()
+  if (!dbInstance) {
     throw new Error("Firestore is not initialized")
   }
+  return dbInstance
 }
 
 // User operations
@@ -27,8 +29,8 @@ export const createUser = async (userData: {
   uid: string
 }) => {
   try {
-    checkFirestore()
-    const userRef = doc(db, "users", userData.uid)
+    const dbInstance = checkFirestore()
+    const userRef = doc(dbInstance, "users", userData.uid)
     await setDoc(userRef, {
       ...userData,
       createdAt: serverTimestamp(),
@@ -42,8 +44,8 @@ export const createUser = async (userData: {
 
 export const getUser = async (uid: string) => {
   try {
-    checkFirestore()
-    const userRef = doc(db, "users", uid)
+    const dbInstance = checkFirestore()
+    const userRef = doc(dbInstance, "users", uid)
     const userSnap = await getDoc(userRef)
 
     if (userSnap.exists()) {
@@ -69,8 +71,8 @@ export const createEvent = async (eventData: {
   createdBy: string
 }) => {
   try {
-    checkFirestore()
-    const eventRef = await addDoc(collection(db, "events"), {
+    const dbInstance = checkFirestore()
+    const eventRef = await addDoc(collection(dbInstance, "events"), {
       ...eventData,
       currentPlayers: 1,
       players: [eventData.createdBy],
@@ -87,8 +89,8 @@ export const createEvent = async (eventData: {
 
 export const getAllEvents = async () => {
   try {
-    checkFirestore()
-    const eventsRef = collection(db, "events")
+    const dbInstance = checkFirestore()
+    const eventsRef = collection(dbInstance, "events")
     const querySnapshot = await getDocs(eventsRef)
 
     const events = querySnapshot.docs.map((doc) => ({
@@ -105,8 +107,8 @@ export const getAllEvents = async () => {
 
 export const getEvent = async (eventId: string) => {
   try {
-    checkFirestore()
-    const eventRef = doc(db, "events", eventId)
+    const dbInstance = checkFirestore()
+    const eventRef = doc(dbInstance, "events", eventId)
     const eventSnap = await getDoc(eventRef)
 
     if (eventSnap.exists()) {
@@ -121,8 +123,8 @@ export const getEvent = async (eventId: string) => {
 
 export const joinEvent = async (eventId: string, userId: string) => {
   try {
-    checkFirestore()
-    const eventRef = doc(db, "events", eventId)
+    const dbInstance = checkFirestore()
+    const eventRef = doc(dbInstance, "events", eventId)
 
     await updateDoc(eventRef, {
       players: arrayUnion(userId),
@@ -139,8 +141,8 @@ export const joinEvent = async (eventId: string, userId: string) => {
 
 export const leaveEvent = async (eventId: string, userId: string) => {
   try {
-    checkFirestore()
-    const eventRef = doc(db, "events", eventId)
+    const dbInstance = checkFirestore()
+    const eventRef = doc(dbInstance, "events", eventId)
 
     await updateDoc(eventRef, {
       players: arrayRemove(userId),
