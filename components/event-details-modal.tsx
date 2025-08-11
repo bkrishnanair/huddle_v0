@@ -4,7 +4,9 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { X, MapPin, Users, Calendar } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { X, MapPin, Users, Calendar, MessageCircle, Info } from "lucide-react"
+import EventChat from "./event-chat"
 
 interface EventDetailsModalProps {
   event: any
@@ -63,8 +65,8 @@ export default function EventDetailsModal({ event, user, onClose, onEventUpdated
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50 p-4">
-      <Card className="w-full max-w-md bg-white rounded-t-2xl max-h-[80vh] overflow-y-auto">
-        <CardHeader className="pb-4">
+      <Card className="w-full max-w-md bg-white rounded-t-2xl max-h-[85vh] overflow-hidden flex flex-col">
+        <CardHeader className="pb-4 flex-shrink-0">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <CardTitle className="text-xl mb-2">{event.title}</CardTitle>
@@ -78,75 +80,96 @@ export default function EventDetailsModal({ event, user, onClose, onEventUpdated
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-4">
-          {/* Date & Time */}
-          <div className="flex items-center space-x-3 text-gray-600">
-            <Calendar className="w-5 h-5" />
-            <div>
-              <p className="font-medium text-gray-900">{formatDate(event.date)}</p>
-              <p className="text-sm">{formatTime(event.time)}</p>
-            </div>
-          </div>
+        <div className="flex-1 overflow-hidden">
+          <Tabs defaultValue="details" className="h-full flex flex-col">
+            <TabsList className="grid w-full grid-cols-2 mx-4">
+              <TabsTrigger value="details" className="flex items-center space-x-2">
+                <Info className="w-4 h-4" />
+                <span>Details</span>
+              </TabsTrigger>
+              <TabsTrigger value="chat" className="flex items-center space-x-2">
+                <MessageCircle className="w-4 h-4" />
+                <span>Chat</span>
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Location */}
-          <div className="flex items-center space-x-3 text-gray-600">
-            <MapPin className="w-5 h-5" />
-            <div>
-              <p className="font-medium text-gray-900">Location</p>
-              <p className="text-sm">{event.location}</p>
-            </div>
-          </div>
+            <TabsContent value="details" className="flex-1 overflow-y-auto mt-0">
+              <CardContent className="space-y-4 pt-4">
+                {/* Date & Time */}
+                <div className="flex items-center space-x-3 text-gray-600">
+                  <Calendar className="w-5 h-5" />
+                  <div>
+                    <p className="font-medium text-gray-900">{formatDate(event.date)}</p>
+                    <p className="text-sm">{formatTime(event.time)}</p>
+                  </div>
+                </div>
 
-          {/* Players */}
-          <div className="flex items-center space-x-3 text-gray-600">
-            <Users className="w-5 h-5" />
-            <div>
-              <p className="font-medium text-gray-900">
-                Players: {event.currentPlayers} / {event.maxPlayers}
-              </p>
-              <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${(event.currentPlayers / event.maxPlayers) * 100}%` }}
-                />
-              </div>
-            </div>
-          </div>
+                {/* Location */}
+                <div className="flex items-center space-x-3 text-gray-600">
+                  <MapPin className="w-5 h-5" />
+                  <div>
+                    <p className="font-medium text-gray-900">Location</p>
+                    <p className="text-sm">{event.location}</p>
+                  </div>
+                </div>
 
-          {/* Status */}
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm text-gray-600">Your status:</span>
-            <Badge variant={isUserJoined ? "default" : "outline"}>{isUserJoined ? "Joined" : "Not joined"}</Badge>
-          </div>
+                {/* Players */}
+                <div className="flex items-center space-x-3 text-gray-600">
+                  <Users className="w-5 h-5" />
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      Players: {event.currentPlayers} / {event.maxPlayers}
+                    </p>
+                    <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${(event.currentPlayers / event.maxPlayers) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
 
-          {/* RSVP Button */}
-          <div className="pt-4">
-            {isUserJoined ? (
-              <Button
-                onClick={handleRSVP}
-                disabled={isLoading}
-                variant="outline"
-                className="w-full border-red-200 text-red-600 hover:bg-red-50 bg-transparent"
-              >
-                {isLoading ? "Leaving..." : "Leave Game"}
-              </Button>
-            ) : (
-              <Button
-                onClick={handleRSVP}
-                disabled={isLoading || isFull}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
-                {isLoading ? "Joining..." : isFull ? "Game Full" : "Join Game"}
-              </Button>
-            )}
-          </div>
+                {/* Status */}
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <span className="text-sm text-gray-600">Your status:</span>
+                  <Badge variant={isUserJoined ? "default" : "outline"}>{isUserJoined ? "Joined" : "Not joined"}</Badge>
+                </div>
 
-          {isFull && !isUserJoined && (
-            <p className="text-sm text-amber-600 text-center bg-amber-50 p-2 rounded">
-              This game is currently full. Check back later for openings!
-            </p>
-          )}
-        </CardContent>
+                {/* RSVP Button */}
+                <div className="pt-4">
+                  {isUserJoined ? (
+                    <Button
+                      onClick={handleRSVP}
+                      disabled={isLoading}
+                      variant="outline"
+                      className="w-full border-red-200 text-red-600 hover:bg-red-50 bg-transparent"
+                    >
+                      {isLoading ? "Leaving..." : "Leave Game"}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleRSVP}
+                      disabled={isLoading || isFull}
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                    >
+                      {isLoading ? "Joining..." : isFull ? "Game Full" : "Join Game"}
+                    </Button>
+                  )}
+                </div>
+
+                {isFull && !isUserJoined && (
+                  <p className="text-sm text-amber-600 text-center bg-amber-50 p-2 rounded">
+                    This game is currently full. Check back later for openings!
+                  </p>
+                )}
+              </CardContent>
+            </TabsContent>
+
+            <TabsContent value="chat" className="flex-1 overflow-hidden mt-0">
+              <EventChat eventId={event.id} user={user} />
+            </TabsContent>
+          </Tabs>
+        </div>
       </Card>
     </div>
   )

@@ -156,3 +156,85 @@ export const leaveEvent = async (eventId: string, userId: string) => {
     throw error
   }
 }
+
+export const getUserJoinedEvents = async (userId: string) => {
+  try {
+    const dbInstance = checkFirestore()
+    const eventsRef = collection(dbInstance, "events")
+    const querySnapshot = await getDocs(eventsRef)
+
+    const joinedEvents = querySnapshot.docs
+      .map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+      .filter((event: any) => event.players?.includes(userId) && event.createdBy !== userId)
+
+    return joinedEvents
+  } catch (error) {
+    console.error("Error getting user joined events:", error)
+    throw error
+  }
+}
+
+export const getUserOrganizedEvents = async (userId: string) => {
+  try {
+    const dbInstance = checkFirestore()
+    const eventsRef = collection(dbInstance, "events")
+    const querySnapshot = await getDocs(eventsRef)
+
+    const organizedEvents = querySnapshot.docs
+      .map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+      .filter((event: any) => event.createdBy === userId)
+
+    return organizedEvents
+  } catch (error) {
+    console.error("Error getting user organized events:", error)
+    throw error
+  }
+}
+
+// Added real-time chat functionality for events
+export const sendMessage = async (eventId: string, userId: string, userName: string, message: string) => {
+  try {
+    const dbInstance = checkFirestore()
+    const chatRef = collection(dbInstance, "events", eventId, "chat")
+
+    await addDoc(chatRef, {
+      userId,
+      userName,
+      message,
+      timestamp: serverTimestamp(),
+    })
+
+    return true
+  } catch (error) {
+    console.error("Error sending message:", error)
+    throw error
+  }
+}
+
+export const getChatMessages = async (eventId: string) => {
+  try {
+    const dbInstance = checkFirestore()
+    const chatRef = collection(dbInstance, "events", eventId, "chat")
+    const querySnapshot = await getDocs(chatRef)
+
+    const messages = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }))
+
+    // Sort by timestamp
+    return messages.sort((a: any, b: any) => {
+      if (!a.timestamp || !b.timestamp) return 0
+      return a.timestamp.seconds - b.timestamp.seconds
+    })
+  } catch (error) {
+    console.error("Error getting chat messages:", error)
+    throw error
+  }
+}

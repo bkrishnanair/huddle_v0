@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Plus, User, LogOut, MapPin } from "lucide-react"
+import { Plus, MapPin } from "lucide-react"
 import EventDetailsModal from "./event-details-modal"
 import CreateEventModal from "./create-event-modal"
+import SharedHeader from "./shared-header"
 import { APIProvider, Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps"
 
 interface MapViewProps {
@@ -148,22 +149,7 @@ export default function MapView({ user, onLogout }: MapViewProps) {
 
   return (
     <div className="h-screen flex flex-col bg-gray-100">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <MapPin className="w-6 h-6 text-blue-600" />
-          <h1 className="text-xl font-bold text-gray-900">Huddle</h1>
-        </div>
-        <div className="flex items-center space-x-2">
-          <div className="flex items-center space-x-2 text-sm text-gray-600">
-            <User className="w-4 h-4" />
-            <span>{user.name}</span>
-          </div>
-          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-gray-600 hover:text-gray-900">
-            <LogOut className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
+      <SharedHeader user={user} onLogout={onLogout} />
 
       {/* Map Container */}
       <div className="flex-1 relative">
@@ -187,7 +173,7 @@ export default function MapView({ user, onLogout }: MapViewProps) {
             {userLocation && (
               <AdvancedMarker position={userLocation}>
                 <Pin background="#2563eb" borderColor="#1e40af" glyphColor="#ffffff">
-                  <User className="w-4 h-4" />
+                  <MapPin className="w-4 h-4" />
                 </Pin>
               </AdvancedMarker>
             )}
