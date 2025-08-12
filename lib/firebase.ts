@@ -4,6 +4,7 @@ import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app"
 import { getAuth, type Auth } from "firebase/auth"
 import { getFirestore, type Firestore } from "firebase/firestore"
 
+// Reverted back to Next.js environment variables from Vite
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -13,56 +14,75 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 }
 
-const validateConfig = () => {
-  const requiredKeys = ["apiKey", "authDomain", "projectId", "storageBucket", "messagingSenderId", "appId"]
-  const missingKeys = requiredKeys.filter((key) => !firebaseConfig[key as keyof typeof firebaseConfig])
-
-  if (missingKeys.length > 0) {
-    throw new Error(`Missing Firebase configuration: ${missingKeys.join(", ")}`)
-  }
-}
-
 let app: FirebaseApp | null = null
 let auth: Auth | null = null
 let db: Firestore | null = null
 
+const validateConfig = () => {
+  if (typeof window === "undefined") {
+    return false
+  }
+
+  const requiredKeys = ["apiKey", "authDomain", "projectId", "storageBucket", "messagingSenderId", "appId"]
+  const missingKeys = requiredKeys.filter((key) => {
+    const value = firebaseConfig[key as keyof typeof firebaseConfig]
+    return !value || value === "undefined" || value.startsWith("your-")
+  })
+
+  if (missingKeys.length > 0) {
+    console.error(`Missing or invalid Firebase configuration: ${missingKeys.join(", ")}`)
+    console.error("Please check your .env.local file and ensure all Firebase environment variables are set correctly")
+    return false
+  }
+  return true
+}
+
 const initializeFirebase = () => {
   if (typeof window === "undefined") {
-    // Don't initialize on server side
     return null
   }
 
-  try {
-    validateConfig()
+  if (app) {
+    return app
+  }
 
-    // Initialize app if not already done
-    if (!app) {
-      app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp()
+  try {
+    if (!validateConfig()) {
+      throw new Error("Invalid Firebase configuration")
     }
 
+    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp()
     return app
   } catch (error) {
     console.error("Error initializing Firebase app:", error)
-    throw error
+    return null
   }
 }
 
-const getAuthInstance = (): Auth => {
+const getAuthInstance = (): Auth | null => {
+  if (typeof window === "undefined") {
+    return null
+  }
+
   if (!auth) {
     const firebaseApp = initializeFirebase()
     if (!firebaseApp) {
-      throw new Error("Firebase app not initialized - running on server side")
+      return null
     }
     auth = getAuth(firebaseApp)
   }
   return auth
 }
 
-const getDbInstance = (): Firestore => {
+const getDbInstance = (): Firestore | null => {
+  if (typeof window === "undefined") {
+    return null
+  }
+
   if (!db) {
     const firebaseApp = initializeFirebase()
     if (!firebaseApp) {
-      throw new Error("Firebase app not initialized - running on server side")
+      return null
     }
     db = getFirestore(firebaseApp)
   }

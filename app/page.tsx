@@ -14,25 +14,31 @@ export default function Home() {
   useEffect(() => {
     const loadUserProfile = async () => {
       if (firebaseUser) {
+        const optimisticUser = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          name: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "User",
+        }
+        setUser(optimisticUser)
+        setLoading(false)
+
         try {
           const userProfile = await getUser(firebaseUser.uid)
-          setUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            name: userProfile?.name || "User",
-          })
+          if (userProfile?.name && userProfile.name !== optimisticUser.name) {
+            setUser({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              name: userProfile.name,
+            })
+          }
         } catch (error) {
           console.error("Error fetching user profile:", error)
-          setUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            name: "User",
-          })
+          // Keep the optimistic user data if API call fails
         }
       } else {
         setUser(null)
+        setLoading(false)
       }
-      setLoading(false)
     }
 
     if (!authLoading) {

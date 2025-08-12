@@ -47,6 +47,17 @@ export default function MapView({ user, onLogout }: MapViewProps) {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 37.7749, lng: -122.4194 })
+  const [mapsError, setMapsError] = useState<string | null>(null)
+
+  const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+
+  useEffect(() => {
+    if (!mapsApiKey || mapsApiKey === "undefined" || mapsApiKey.startsWith("your-")) {
+      setMapsError(
+        "Google Maps API key is not configured. Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your .env.local file.",
+      )
+    }
+  }, [mapsApiKey])
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -61,21 +72,18 @@ export default function MapView({ user, onLogout }: MapViewProps) {
         },
         (error) => {
           console.error("Error getting location:", error)
-          // Default to San Francisco if location access denied
           const defaultLocation = { lat: 37.7749, lng: -122.4194 }
           setUserLocation(defaultLocation)
           setMapCenter(defaultLocation)
         },
       )
     } else {
-      // Default location
       const defaultLocation = { lat: 37.7749, lng: -122.4194 }
       setUserLocation(defaultLocation)
       setMapCenter(defaultLocation)
     }
   }, [])
 
-  // Load events
   useEffect(() => {
     const loadEvents = async () => {
       try {
@@ -111,22 +119,21 @@ export default function MapView({ user, onLogout }: MapViewProps) {
     setSelectedEvent(updatedEvent)
   }
 
-  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-
-  if (!googleMapsApiKey) {
+  if (mapsError || !mapsApiKey) {
     return (
-      <div className="min-h-screen bg-red-50 flex items-center justify-center p-4">
+      <div className="min-h-screen liquid-gradient flex items-center justify-center p-4">
         <div className="text-center max-w-md">
-          <MapPin className="w-12 h-12 text-red-600 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-red-800 mb-4">Google Maps API Key Required</h1>
-          <p className="text-red-600 mb-6">
-            To use the map functionality, you need to add your Google Maps API key to your environment variables.
-          </p>
-          <div className="bg-red-100 border border-red-300 rounded-lg p-4 text-left">
-            <h3 className="font-semibold text-red-800 mb-2">Setup Instructions:</h3>
-            <ol className="text-sm text-red-700 space-y-1 list-decimal list-inside">
+          <div className="glass-card rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <MapPin className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-4 drop-shadow-lg">Google Maps Configuration Error</h1>
+          <p className="text-white/80 mb-6 drop-shadow">{mapsError || "Google Maps API key not found"}</p>
+          <div className="glass-card border-white/30 rounded-lg p-4 text-left">
+            <h3 className="font-semibold text-white mb-2">Setup Instructions:</h3>
+            <ol className="text-sm text-white/80 space-y-1 list-decimal list-inside">
               <li>Get a Google Maps API key from Google Cloud Console</li>
-              <li>Enable Maps JavaScript API and Places API</li>
+              <li>Enable Maps JavaScript API in your Google Cloud project</li>
+              <li>Enable billing for your Google Cloud project</li>
               <li>Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your .env.local file</li>
               <li>Restart your development server</li>
             </ol>
@@ -138,26 +145,27 @@ export default function MapView({ user, onLogout }: MapViewProps) {
 
   if (!userLocation) {
     return (
-      <div className="min-h-screen bg-blue-50 flex items-center justify-center">
+      <div className="min-h-screen liquid-gradient flex items-center justify-center">
         <div className="text-center">
-          <MapPin className="w-12 h-12 text-blue-600 mx-auto mb-4 animate-pulse" />
-          <p className="text-gray-600">Getting your location...</p>
+          <div className="glass-card rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 floating">
+            <MapPin className="w-8 h-8 text-white" />
+          </div>
+          <p className="text-white/80 drop-shadow">Getting your location...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-100">
+    <div className="h-screen flex flex-col liquid-gradient">
       <SharedHeader user={user} onLogout={onLogout} />
 
       {/* Map Container */}
       <div className="flex-1 relative">
-        <APIProvider apiKey={googleMapsApiKey}>
+        <APIProvider apiKey={mapsApiKey}>
           <Map
             defaultCenter={mapCenter}
             defaultZoom={14}
-            mapId="huddle-map"
             className="w-full h-full"
             options={{
               disableDefaultUI: false,
@@ -194,13 +202,13 @@ export default function MapView({ user, onLogout }: MapViewProps) {
         </APIProvider>
 
         {/* Map Legend */}
-        <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-3 text-sm">
+        <div className="absolute top-4 left-4 glass-card rounded-lg p-3 text-sm text-white">
           <div className="flex items-center space-x-2 mb-2">
-            <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+            <div className="w-3 h-3 bg-blue-400 rounded-full glow"></div>
             <span>Your location</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+            <div className="w-3 h-3 bg-orange-400 rounded-full glow"></div>
             <span>Games nearby</span>
           </div>
         </div>
@@ -208,14 +216,14 @@ export default function MapView({ user, onLogout }: MapViewProps) {
         {/* Create Event Button */}
         <Button
           onClick={() => setShowCreateModal(true)}
-          className="absolute bottom-6 right-6 bg-blue-600 hover:bg-blue-700 rounded-full w-14 h-14 shadow-lg"
+          className="absolute bottom-6 right-6 glass-card hover:glow rounded-full w-14 h-14 shadow-2xl floating text-white border-white/30 transition-all duration-300 hover:scale-110"
           size="lg"
         >
           <Plus className="w-6 h-6" />
         </Button>
 
         {/* Events Counter */}
-        <div className="absolute bottom-6 left-6 bg-white rounded-lg shadow-lg px-3 py-2 text-sm font-medium">
+        <div className="absolute bottom-6 left-6 glass-card rounded-lg px-3 py-2 text-sm font-medium text-white">
           {events.length} games nearby
         </div>
       </div>

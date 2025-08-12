@@ -41,6 +41,12 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     try {
       const authInstance = auth()
 
+      if (!authInstance) {
+        console.warn("Firebase Auth not available, using fallback")
+        setLoading(false)
+        return
+      }
+
       unsubscribe = onAuthStateChanged(
         authInstance,
         (user) => {

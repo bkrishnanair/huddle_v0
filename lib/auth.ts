@@ -1,6 +1,24 @@
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, type User } from "firebase/auth"
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut,
+  type User,
+} from "firebase/auth"
 import { auth } from "./firebase"
-import { createUser } from "./db"
+import { createUser, getUser } from "./db"
+
+const googleProvider = new GoogleAuthProvider()
+
+export const getAuth = async (): Promise<User | null> => {
+  try {
+    return await getCurrentUser()
+  } catch (error) {
+    console.error("Error getting auth:", error)
+    return null
+  }
+}
 
 export const signUpWithEmail = async (email: string, password: string, name: string) => {
   try {
@@ -50,6 +68,39 @@ export const signInWithEmail = async (email: string, password: string) => {
   }
 }
 
+export const signInWithGoogle = async () => {
+  try {
+    const authInstance = auth()
+    if (!authInstance) {
+      throw new Error("Firebase Auth is not initialized")
+    }
+
+    const result = await signInWithPopup(authInstance, googleProvider)
+    const user = result.user
+
+    // Check if user already exists in Firestore
+    const existingUser = await getUser(user.uid)
+
+    // If user doesn't exist, create a new user document
+    if (!existingUser) {
+      await createUser({
+        uid: user.uid,
+        email: user.email!,
+        name: user.displayName || user.email!.split("@")[0],
+      })
+    }
+
+    return {
+      uid: user.uid,
+      email: user.email!,
+      name: user.displayName || existingUser?.name || user.email!.split("@")[0],
+    }
+  } catch (error: any) {
+    console.error("Error signing in with Google:", error)
+    throw new Error(error.message)
+  }
+}
+
 export const logOut = async () => {
   try {
     const authInstance = auth()
@@ -69,22 +120,32 @@ export const getCurrentUser = (): Promise<User | null> => {
     try {
       const authInstance = auth()
       if (!authInstance) {
-        reject(new Error("Firebase Auth is not initialized"))
+        resolve(null)
         return
       }
 
+      // Set a timeout to prevent hanging
+      const timeout = setTimeout(() => {
+        unsubscribe()
+        resolve(null)
+      }, 5000)
+
       const unsubscribe = authInstance.onAuthStateChanged(
         (user) => {
+          clearTimeout(timeout)
           unsubscribe()
           resolve(user)
         },
         (error) => {
+          clearTimeout(timeout)
           unsubscribe()
-          reject(error)
+          console.error("Auth state error:", error)
+          resolve(null)
         },
       )
     } catch (error) {
-      reject(error)
+      console.error("getCurrentUser error:", error)
+      resolve(null)
     }
   })
 }
