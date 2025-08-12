@@ -16,14 +16,14 @@ service cloud.firestore {
       allow create: if request.auth != null 
         && request.auth.uid == request.resource.data.createdBy;
       
-      // Only the event creator can update/delete events
-      allow update, delete: if request.auth != null 
-        && request.auth.uid == resource.data.createdBy;
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.createdBy ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['players', 'currentPlayers'])
+      );
       
-      // Special rule for RSVP updates - allow users to join/leave events
-      allow update: if request.auth != null
-        && request.auth.uid != resource.data.createdBy
-        && onlyUpdatingPlayersList();
+      // Only the event creator can delete events
+      allow delete: if request.auth != null 
+        && request.auth.uid == resource.data.createdBy;
       
       // Chat subcollection for each event
       match /chat/{messageId} {
@@ -31,21 +31,13 @@ service cloud.firestore {
         allow read: if request.auth != null 
           && isEventParticipant(eventId);
         
-        // Only event participants can send messages
         allow create: if request.auth != null
           && isEventParticipant(eventId)
-          && request.auth.uid == request.resource.data.userId;
+          && request.auth.uid == request.resource.data.senderId;
         
-        // Users can only delete their own messages
         allow delete: if request.auth != null 
-          && request.auth.uid == resource.data.userId;
+          && request.auth.uid == resource.data.senderId;
       }
-    }
-    
-    // Helper function to check if only players list is being updated (for RSVP)
-    function onlyUpdatingPlayersList() {
-      let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
-      return affectedKeys.hasOnly(['players', 'currentPlayers']);
     }
     
     function isEventParticipant(eventId) {

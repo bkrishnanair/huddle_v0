@@ -1,10 +1,12 @@
 "use server"
 
 export async function getGoogleMapsConfig() {
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
   if (!apiKey) {
-    throw new Error("Google Maps API key not configured. Please add GOOGLE_MAPS_API_KEY to your environment variables.")
+    throw new Error(
+      "Google Maps API key not configured. Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your environment variables.",
+    )
   }
 
   if (apiKey.length < 10) {

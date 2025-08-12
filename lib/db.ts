@@ -13,13 +13,12 @@ import {
 } from "firebase/firestore"
 import { db } from "./firebase"
 
-// Helper function to check if Firestore is available
+// Helper function to check if Firestore is not initialized
 const checkFirestore = () => {
-  const dbInstance = db()
-  if (!dbInstance) {
+  if (!db) {
     throw new Error("Firestore is not initialized")
   }
-  return dbInstance
+  return db
 }
 
 // User operations
@@ -196,6 +195,8 @@ export const getUserOrganizedEvents = async (userId: string) => {
     throw error
   }
 }
+
+export const getEvents = getAllEvents
 
 // Added real-time chat functionality for events
 export const sendMessage = async (eventId: string, userId: string, userName: string, message: string) => {

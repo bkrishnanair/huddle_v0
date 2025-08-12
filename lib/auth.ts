@@ -22,12 +22,11 @@ export const getAuth = async (): Promise<User | null> => {
 
 export const signUpWithEmail = async (email: string, password: string, name: string) => {
   try {
-    const authInstance = auth()
-    if (!authInstance) {
+    if (!auth) {
       throw new Error("Firebase Auth is not initialized")
     }
 
-    const userCredential = await createUserWithEmailAndPassword(authInstance, email, password)
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password)
     const user = userCredential.user
 
     // Create user document in Firestore
@@ -50,12 +49,11 @@ export const signUpWithEmail = async (email: string, password: string, name: str
 
 export const signInWithEmail = async (email: string, password: string) => {
   try {
-    const authInstance = auth()
-    if (!authInstance) {
+    if (!auth) {
       throw new Error("Firebase Auth is not initialized")
     }
 
-    const userCredential = await signInWithEmailAndPassword(authInstance, email, password)
+    const userCredential = await signInWithEmailAndPassword(auth, email, password)
     const user = userCredential.user
 
     return {
@@ -70,12 +68,11 @@ export const signInWithEmail = async (email: string, password: string) => {
 
 export const signInWithGoogle = async () => {
   try {
-    const authInstance = auth()
-    if (!authInstance) {
+    if (!auth) {
       throw new Error("Firebase Auth is not initialized")
     }
 
-    const result = await signInWithPopup(authInstance, googleProvider)
+    const result = await signInWithPopup(auth, googleProvider)
     const user = result.user
 
     // Check if user already exists in Firestore
@@ -103,12 +100,11 @@ export const signInWithGoogle = async () => {
 
 export const logOut = async () => {
   try {
-    const authInstance = auth()
-    if (!authInstance) {
+    if (!auth) {
       throw new Error("Firebase Auth is not initialized")
     }
 
-    await signOut(authInstance)
+    await signOut(auth)
   } catch (error) {
     console.error("Error signing out:", error)
     throw error
@@ -118,8 +114,7 @@ export const logOut = async () => {
 export const getCurrentUser = (): Promise<User | null> => {
   return new Promise((resolve, reject) => {
     try {
-      const authInstance = auth()
-      if (!authInstance) {
+      if (!auth) {
         resolve(null)
         return
       }
@@ -130,7 +125,7 @@ export const getCurrentUser = (): Promise<User | null> => {
         resolve(null)
       }, 5000)
 
-      const unsubscribe = authInstance.onAuthStateChanged(
+      const unsubscribe = auth.onAuthStateChanged(
         (user) => {
           clearTimeout(timeout)
           unsubscribe()

@@ -32,10 +32,9 @@ export default function EventChat({ eventId, user }: EventChatProps) {
 
   // Real-time listener for chat messages
   useEffect(() => {
-    const dbInstance = db()
-    if (!dbInstance) return
+    if (!db) return
 
-    const chatRef = collection(dbInstance, "events", eventId, "chat")
+    const chatRef = collection(db, "events", eventId, "chat")
     const q = query(chatRef, orderBy("timestamp", "asc"))
 
     const unsubscribe = onSnapshot(q, (snapshot) => {

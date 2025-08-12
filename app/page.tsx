@@ -5,11 +5,17 @@ import { useFirebase } from "@/lib/firebase-context"
 import { getUser } from "@/lib/db"
 import AuthScreen from "@/components/auth-screen"
 import MapView from "@/components/map-view"
+import EventsPage from "@/components/events-page"
+import ChatPage from "@/components/chat-page"
+import BottomNavigation from "@/components/bottom-navigation"
+import { useRouter } from "next/navigation"
 
 export default function Home() {
   const { user: firebaseUser, loading: authLoading, error: authError } = useFirebase()
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState("map")
+  const router = useRouter()
 
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -45,6 +51,14 @@ export default function Home() {
       loadUserProfile()
     }
   }, [firebaseUser, authLoading])
+
+  const handleTabChange = (tab: string) => {
+    if (tab === "profile") {
+      router.push("/profile")
+    } else {
+      setActiveTab(tab)
+    }
+  }
 
   if (authError) {
     return (
@@ -82,5 +96,23 @@ export default function Home() {
     return <AuthScreen onLogin={setUser} />
   }
 
-  return <MapView user={user} onLogout={() => setUser(null)} />
+  const renderActiveTab = () => {
+    switch (activeTab) {
+      case "map":
+        return <MapView user={user} onLogout={() => setUser(null)} />
+      case "events":
+        return <EventsPage user={user} />
+      case "chat":
+        return <ChatPage user={user} />
+      default:
+        return <MapView user={user} onLogout={() => setUser(null)} />
+    }
+  }
+
+  return (
+    <div className="relative">
+      {renderActiveTab()}
+      <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
+    </div>
+  )
 }
