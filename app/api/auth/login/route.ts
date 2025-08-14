@@ -1,49 +1,50 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { signInWithEmail } from "@/lib/auth"
+import { getFirebaseAdminAuth } from "@/lib/firebase-admin"
 import { getUser } from "@/lib/db"
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    const { idToken } = await request.json()
 
-    if (!email || !password) {
-      return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
+    if (!idToken) {
+      return NextResponse.json({ error: "ID token is required" }, { status: 400 })
     }
 
     // Check if Firebase is configured
     if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
-      // Use fallback in-memory storage
-      const { fallbackSignIn } = await import("@/lib/fallback-db")
-      const user = await fallbackSignIn(email, password)
-      return NextResponse.json({ user: { uid: user.uid, email: user.email, name: user.name } })
+      return NextResponse.json({ error: "Firebase is not configured" }, { status: 500 })
     }
 
-    // Use Firebase
-    const authUser = await signInWithEmail(email, password)
-    const userProfile = await getUser(authUser.uid)
+    // Verify token with Firebase Admin SDK
+    const adminAuth = getFirebaseAdminAuth()
+    if (!adminAuth) {
+      throw new Error("Firebase Admin Auth is not initialized")
+    }
+
+    const decodedToken = await adminAuth.verifyIdToken(idToken)
+    console.log("🔥 Server-side token verification successful")
+
+    // Get user profile from database
+    const userProfile = await getUser(decodedToken.uid)
 
     const user = {
-      uid: authUser.uid,
-      email: authUser.email,
-      name: userProfile?.name || "User",
+      uid: decodedToken.uid,
+      email: decodedToken.email,
+      name: userProfile?.name || decodedToken.name || "User",
     }
 
     return NextResponse.json({ user })
   } catch (error: any) {
     console.error("Login error:", error)
 
-    if (
-      error.message.includes("user-not-found") ||
-      error.message.includes("wrong-password") ||
-      error.message.includes("Invalid credentials")
-    ) {
-      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
+    if (error.code === "auth/id-token-expired") {
+      return NextResponse.json({ error: "Session expired. Please sign in again." }, { status: 401 })
     }
 
-    if (error.message.includes("too-many-requests")) {
-      return NextResponse.json({ error: "Too many failed attempts. Please try again later." }, { status: 429 })
+    if (error.code === "auth/id-token-revoked") {
+      return NextResponse.json({ error: "Session revoked. Please sign in again." }, { status: 401 })
     }
 
-    return NextResponse.json({ error: "Login failed. Please try again." }, { status: 500 })
+    return NextResponse.json({ error: "Authentication failed. Please try again." }, { status: 500 })
   }
 }

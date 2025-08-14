@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MapPin, Users } from "lucide-react"
 import { signInWithGoogle } from "@/lib/auth"
+import { createUser } from "@/lib/db"
 
 interface AuthScreenProps {
   onLogin: (user: any) => void
@@ -30,24 +31,51 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
     const name = formData.get("name") as string
 
     try {
-      const endpoint = isLogin ? "/api/auth/login" : "/api/auth/signup"
-      const body = isLogin ? { email, password } : { email, password, name }
+      const { signInWithEmailAndPassword, createUserWithEmailAndPassword } = await import("firebase/auth")
+      const { getFirebaseAuth } = await import("@/lib/firebase")
 
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        onLogin(data.user)
-      } else {
-        setError(data.error || "Authentication failed")
+      const auth = getFirebaseAuth()
+      if (!auth) {
+        throw new Error("Firebase Auth is not initialized")
       }
-    } catch (error) {
-      setError("Network error. Please try again.")
+
+      let userCredential
+      if (isLogin) {
+        userCredential = await signInWithEmailAndPassword(auth, email, password)
+      } else {
+        userCredential = await createUserWithEmailAndPassword(auth, email, password)
+        // Create user profile in database for new signups
+        await createUser(userCredential.user.uid, {
+          email: userCredential.user.email!,
+          name: name,
+        })
+      }
+
+      const user = {
+        uid: userCredential.user.uid,
+        email: userCredential.user.email,
+        name: name || userCredential.user.displayName || "User",
+      }
+
+      onLogin(user)
+    } catch (error: any) {
+      console.error("Auth error:", error)
+
+      if (
+        error.code === "auth/user-not-found" ||
+        error.code === "auth/wrong-password" ||
+        error.code === "auth/invalid-credential"
+      ) {
+        setError("Invalid email or password")
+      } else if (error.code === "auth/email-already-in-use") {
+        setError("Email is already registered")
+      } else if (error.code === "auth/weak-password") {
+        setError("Password should be at least 6 characters")
+      } else if (error.code === "auth/too-many-requests") {
+        setError("Too many failed attempts. Please try again later.")
+      } else {
+        setError("Authentication failed. Please try again.")
+      }
     } finally {
       setIsLoading(false)
     }
