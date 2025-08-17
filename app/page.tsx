@@ -53,11 +53,17 @@ export default function Home() {
   }, [firebaseUser, authLoading])
 
   const handleTabChange = (tab: string) => {
+    console.log("[v0] Tab change requested:", tab)
     if (tab === "profile") {
-      router.push("/profile")
+      // Keep profile within the tab system instead of redirecting
+      setActiveTab("profile")
     } else {
       setActiveTab(tab)
     }
+  }
+
+  const handleSwitchToMap = () => {
+    setActiveTab("map")
   }
 
   if (authError) {
@@ -97,13 +103,33 @@ export default function Home() {
   }
 
   const renderActiveTab = () => {
+    console.log("[v0] Rendering active tab:", activeTab)
     switch (activeTab) {
       case "map":
         return <MapView user={user} onLogout={() => setUser(null)} />
       case "events":
-        return <EventsPage user={user} />
+        return <EventsPage user={user} onSwitchToMap={handleSwitchToMap} />
       case "chat":
         return <ChatPage user={user} />
+      case "profile":
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 pb-20">
+            <div className="glass-card mx-4 mt-4 p-4 rounded-2xl text-center">
+              <h1 className="text-2xl font-bold text-gray-900 mb-4">Profile</h1>
+              <div className="w-20 h-20 bg-blue-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+                <span className="text-2xl font-bold text-blue-600">{user.name?.charAt(0).toUpperCase() || "U"}</span>
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900">{user.name}</h2>
+              <p className="text-gray-600 mb-6">{user.email}</p>
+              <button
+                onClick={() => setUser(null)}
+                className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        )
       default:
         return <MapView user={user} onLogout={() => setUser(null)} />
     }

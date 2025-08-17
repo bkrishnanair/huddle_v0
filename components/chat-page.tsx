@@ -25,20 +25,28 @@ export default function ChatPage({ user }: ChatPageProps) {
 
   useEffect(() => {
     const loadUserEvents = async () => {
+      console.log("[v0] ChatPage: Starting to load user events for user:", user.uid)
       try {
+        console.log("[v0] ChatPage: Calling getEvents()...")
         const allEvents = await getEvents()
+        console.log("[v0] ChatPage: getEvents() returned:", allEvents)
         // Filter events where user is a participant
         const userEvents = allEvents.filter((event) => event.players.includes(user.uid) || event.createdBy === user.uid)
+        console.log("[v0] ChatPage: Filtered user events:", userEvents)
         setEvents(userEvents)
+        console.log("[v0] ChatPage: Events state updated successfully")
       } catch (error) {
-        console.error("Error loading user events:", error)
+        console.error("[v0] ChatPage: Error loading user events:", error)
       } finally {
+        console.log("[v0] ChatPage: Setting loading to false")
         setLoading(false)
       }
     }
 
     loadUserEvents()
   }, [user.uid])
+
+  console.log("[v0] ChatPage: Rendering with loading =", loading, "events count =", events.length)
 
   if (loading) {
     return (

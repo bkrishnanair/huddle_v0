@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { getEvents } from "@/lib/db"
-import { Calendar, MapPin, Users, Clock } from "lucide-react"
+import { Calendar, MapPin, Users, Clock, Search, Map } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import CreateEventModal from "@/components/create-event-modal"
 import EventDetailsModal from "@/components/event-details-modal"
 
@@ -22,28 +23,49 @@ interface Event {
 
 interface EventsPageProps {
   user: any
+  onSwitchToMap?: () => void
 }
 
-export default function EventsPage({ user }: EventsPageProps) {
+export default function EventsPage({ user, onSwitchToMap }: EventsPageProps) {
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedSport, setSelectedSport] = useState("All Sports")
+  const [viewMode, setViewMode] = useState<"nearby" | "my">("nearby")
 
   useEffect(() => {
     const loadEvents = async () => {
+      console.log("[v0] EventsPage: Starting to load events...")
       try {
+        console.log("[v0] EventsPage: Calling getEvents()...")
         const eventsData = await getEvents()
+        console.log("[v0] EventsPage: getEvents() returned:", eventsData)
         setEvents(eventsData)
+        console.log("[v0] EventsPage: Events state updated successfully")
       } catch (error) {
-        console.error("Error loading events:", error)
+        console.error("[v0] EventsPage: Error loading events:", error)
       } finally {
+        console.log("[v0] EventsPage: Setting loading to false")
         setLoading(false)
       }
     }
 
     loadEvents()
   }, [])
+
+  const filteredEvents = events.filter((event) => {
+    const matchesSearch =
+      event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      event.sport.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesSport = selectedSport === "All Sports" || event.sport === selectedSport
+    const matchesView =
+      viewMode === "nearby" ||
+      (viewMode === "my" && (event.createdBy === user?.uid || event.players.includes(user?.uid)))
+
+    return matchesSearch && matchesSport && matchesView
+  })
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -53,6 +75,8 @@ export default function EventsPage({ user }: EventsPageProps) {
       day: "numeric",
     })
   }
+
+  console.log("[v0] EventsPage: Rendering with loading =", loading, "events count =", events.length)
 
   if (loading) {
     return (
@@ -64,38 +88,66 @@ export default function EventsPage({ user }: EventsPageProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 pb-20">
-      {/* Header */}
       <div className="glass-card mx-4 mt-4 p-4 rounded-2xl">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Events</h1>
-            <p className="text-gray-600">Find and join games near you</p>
-          </div>
-          <Button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6"
-          >
-            Create Event
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold text-gray-900">Events</h1>
+          <Button variant="ghost" onClick={onSwitchToMap} className="text-gray-600 hover:text-gray-900 font-medium">
+            <Map className="w-4 h-4 mr-2" />
+            Map
           </Button>
+        </div>
+
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            placeholder="Search events..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 bg-white/50 border-white/20 rounded-xl"
+          />
+        </div>
+
+        <div className="mb-4">
+          <Button variant="default" className="bg-blue-500 hover:bg-blue-600 text-white rounded-full px-6">
+            {selectedSport}
+          </Button>
+        </div>
+
+        <div className="flex bg-gray-100 rounded-full p-1">
+          <button
+            onClick={() => setViewMode("nearby")}
+            className={`flex-1 py-2 px-4 rounded-full text-sm font-medium transition-all ${
+              viewMode === "nearby" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Nearby
+          </button>
+          <button
+            onClick={() => setViewMode("my")}
+            className={`flex-1 py-2 px-4 rounded-full text-sm font-medium transition-all ${
+              viewMode === "my" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            My Events
+          </button>
         </div>
       </div>
 
-      {/* Events List */}
       <div className="px-4 mt-6 space-y-4">
-        {events.length === 0 ? (
+        {filteredEvents.length === 0 ? (
           <div className="glass-card p-8 rounded-2xl text-center">
             <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No events yet</h3>
-            <p className="text-gray-600 mb-4">Be the first to create an event in your area!</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No events nearby</h3>
+            <p className="text-gray-600 mb-4">Try adjusting your filters or create a new event</p>
             <Button
               onClick={() => setShowCreateModal(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
             >
-              Create First Event
+              Create Event
             </Button>
           </div>
         ) : (
-          events.map((event) => (
+          filteredEvents.map((event) => (
             <div
               key={event.id}
               onClick={() => setSelectedEvent(event)}
@@ -141,7 +193,15 @@ export default function EventsPage({ user }: EventsPageProps) {
         )}
       </div>
 
-      {/* Modals */}
+      <div className="fixed bottom-24 right-6">
+        <Button
+          onClick={() => setShowCreateModal(true)}
+          className="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+        >
+          <span className="text-2xl">+</span>
+        </Button>
+      </div>
+
       {showCreateModal && (
         <CreateEventModal
           isOpen={showCreateModal}

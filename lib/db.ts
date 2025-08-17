@@ -88,17 +88,26 @@ export const createEvent = async (eventData: {
 
 export const getAllEvents = async () => {
   try {
+    console.log("[v0] getAllEvents: Starting function...")
     const dbInstance = checkFirestore()
+    console.log("[v0] getAllEvents: Firestore check passed, db instance:", !!dbInstance)
+
     const eventsRef = collection(dbInstance, "events")
+    console.log("[v0] getAllEvents: Created events collection reference")
+
+    console.log("[v0] getAllEvents: Calling getDocs...")
     const querySnapshot = await getDocs(eventsRef)
+    console.log("[v0] getAllEvents: getDocs completed, docs count:", querySnapshot.docs.length)
 
     const events = querySnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     }))
 
+    console.log("[v0] getAllEvents: Mapped events, returning:", events.length, "events")
     return events
   } catch (error) {
+    console.error("[v0] getAllEvents: Error occurred:", error)
     console.error("Error getting events:", error)
     throw error
   }
