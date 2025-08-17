@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
-// FIX: Switched to the correct server-side authentication function
-import { getServerCurrentUser } from "@/lib/auth";
+// FIX: Switched to importing from the new, dedicated server-side auth file.
+import { getServerCurrentUser } from "@/lib/auth-server";
 import { getEvents, createEvent } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
@@ -15,11 +15,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // This now correctly and securely identifies the user on the server.
+    // This function now comes from a server-only file, resolving the build error.
     const user = await getServerCurrentUser();
 
     if (!user) {
-      // If the cookie is invalid or missing, the user is unauthorized.
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
@@ -29,7 +28,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 });
     }
 
-    // We now have the user's ID (uid) from the verified session.
     const event = await createEvent({
       title,
       sport,
@@ -37,7 +35,7 @@ export async function POST(request: NextRequest) {
       date,
       time,
       maxPlayers: Number(maxPlayers),
-      createdBy: user.uid, // Use the verified user ID
+      createdBy: user.uid,
     });
 
     return NextResponse.json({ event });
