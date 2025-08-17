@@ -32,7 +32,7 @@ function Calendar({
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
         table: "w-full border-collapse space-y-1",
-        head_row: "flex",
+        head_row: "flex justify-between",
         head_cell:
           "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
         row: "flex w-full mt-2",
@@ -53,9 +53,15 @@ function Calendar({
         day_hidden: "invisible",
         ...classNames,
       }}
+      // FIX: Updated to use the modern 'Chevron' component API for react-day-picker v8+
+      // The 'IconLeft' and 'IconRight' props are deprecated.
       components={{
-        IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
-        IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
+        Chevron: ({ orientation }) =>
+          orientation === "left" ? (
+            <ChevronLeft className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          ),
       }}
       {...props}
     />
@@ -64,4 +70,3 @@ function Calendar({
 Calendar.displayName = "Calendar"
 
 export { Calendar }
-
