@@ -25,6 +25,9 @@ export const useFirebase = () => {
   return context
 }
 
+// Alias for useAuth (backward compatibility)
+export const useAuth = useFirebase
+
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)

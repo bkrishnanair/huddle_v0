@@ -23,7 +23,7 @@ interface EventChatProps {
   eventId: string
 }
 
-export function EventChat({ eventId }: EventChatProps) {
+export default function EventChat({ eventId }: EventChatProps) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [newMessage, setNewMessage] = useState("")

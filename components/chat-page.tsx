@@ -4,10 +4,10 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/firebase-context";
 import { getUserEvents } from "@/lib/db";
 import { ChatList } from "./chat-list";
-import { EventChat } from "./event-chat";
+import EventChat from "./event-chat";
 import { Card } from "./ui/card";
 
-export function ChatPage() {
+export default function ChatPage() {
   const { user } = useAuth();
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
