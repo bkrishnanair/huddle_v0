@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { getEvents } from "@/lib/db";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,11 +12,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import CreateEventModal from "@/components/create-event-modal";
 import EventDetailsModal from "@/components/event-details-modal";
 import { EventCard } from "@/components/events/event-card";
 import { SummaryHeader } from "@/components/events/summary-header";
 import { useAuth } from "@/lib/firebase-context";
+import { format } from "date-fns";
 
 interface GameEvent {
   id: string;
@@ -39,6 +46,7 @@ export default function EventsPage() {
   const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSport, setSelectedSport] = useState("All");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     const loadEvents = async () => {
@@ -65,9 +73,11 @@ export default function EventsPage() {
         event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         event.sport.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesSport = selectedSport === "All" || event.sport === selectedSport;
-      return matchesSearch && matchesSport;
+      const matchesDate =
+        !selectedDate || event.date === format(selectedDate, "yyyy-MM-dd");
+      return matchesSearch && matchesSport && matchesDate;
     });
-  }, [events, searchQuery, selectedSport]);
+  }, [events, searchQuery, selectedSport, selectedDate]);
 
   const summaryStats = useMemo(() => {
     const now = new Date();
@@ -128,6 +138,25 @@ export default function EventsPage() {
               ))}
             </SelectContent>
           </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className="glass border-white/20 text-white"
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 glass-card">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 

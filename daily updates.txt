@@ -13,4 +13,17 @@ lib/db.ts` for fetching user events and sending/getting chat messages.
   - Designed and implemented a `components/events/summary-header.tsx` to provide quick statistics (Total, Today, Your Upcoming).
   - Refactored the main events page to use the `SummaryHeader`, a responsive grid of `EventCard
 
+
+- Implemented push notification feature:
+  - Added frontend logic to request notification permission and get FCM token.
+  - Created a new file (`lib/notifications.ts`) for FCM logic.
+  - Modified `lib/db.ts` to save FCM tokens to user documents.
+  - Integrated notification permission request into `app/layout.tsx` using a new component (`components/notification-permission-handler.tsx`).
+  - Set up backend Cloud Functions directory and basic files manually (`functions/package.json`, `functions/index.js`) for scheduled notification logic (requires manual Firebase login and deployment).
+- Enhanced events page (`components/events-page.tsx`):
+  - Added client-side filtering and search.
+  - Implemented a text input search bar, sport type filter, and date picker (using shadcn/ui components).
+  - Updated filtering logic to filter events based on title, sport type, and selected date.
+
+
 You are an assistant specialized in summarizing daily development activities. I will provide you with a text file containing my chat log with an AI code agent for today's work. Your task is to review this chat and create a clear, concise, and simple journal entry for today's development. Focus on what was implemented, built, or significant decisions made regarding the app's features or architecture. The entry should be easy to understand and serve as a quick reference for my progress.
