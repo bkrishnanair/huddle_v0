@@ -37,7 +37,6 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated }: Cr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.sport) {
-      // It's good practice to validate required fields
       alert("Please select a sport.");
       return;
     }
@@ -55,7 +54,6 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated }: Cr
         onEventCreated(data.event);
         onClose(); // Close modal on success
       } else {
-        // Handle server-side errors
         const errorData = await response.json();
         console.error("Failed to create event:", errorData.error);
         alert(`Error: ${errorData.error}`);
@@ -73,13 +71,11 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated }: Cr
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Return null if the modal is not supposed to be open
   if (!isOpen) return null;
 
   const today = new Date().toISOString().split("T")[0];
 
   return (
-    // FIX: Main container now uses flexbox to perfectly center the modal
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-md glass-card border-none rounded-2xl shadow-2xl max-h-[90vh] flex flex-col">
         <CardHeader className="pb-4 border-b border-white/20">
@@ -91,7 +87,6 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated }: Cr
           </div>
         </CardHeader>
 
-        {/* FIX: Form content is wrapped in a ScrollArea to enable scrolling on smaller screens */}
         <ScrollArea className="flex-grow">
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -109,9 +104,18 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated }: Cr
 
               <div>
                 <Label htmlFor="sport" className="text-white/90">Sport</Label>
+                {/* 
+                  FIX: Removed the invalid <SelectItem value=""> and am now relying
+                  on the <SelectValue placeholder="..."> prop, which is the correct
+                  way to handle placeholders in radix-ui/react-select.
+                */}
                 <Select required value={formData.sport} onValueChange={(value) => handleInputChange("sport", value)}>
-                  <SelectTrigger className="glass border-white/30 text-white"><SelectValue placeholder="Select a sport" /></SelectTrigger>
-                  <SelectContent className="glass-card"><SelectItem value="" disabled>Select a sport</SelectItem>{SPORTS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                  <SelectTrigger className="glass border-white/30 text-white">
+                    <SelectValue placeholder="Select a sport" />
+                  </SelectTrigger>
+                  <SelectContent className="glass-card">
+                    {SPORTS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
                 </Select>
               </div>
 
@@ -133,7 +137,6 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated }: Cr
                   <Label htmlFor="date" className="text-white/90">Date</Label>
                   <Input id="date" type="date" min={today} value={formData.date} onChange={(e) => handleInputChange("date", e.target.value)} required className="glass border-white/30 text-white" />
                 </div>
-                {/* FIX: Added a dedicated time input field */}
                 <div>
                   <Label htmlFor="time" className="text-white/90">Time</Label>
                   <Input id="time" type="time" value={formData.time} onChange={(e) => handleInputChange("time", e.target.value)} required className="glass border-white/30 text-white" />
