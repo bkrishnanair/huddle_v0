@@ -1,0 +1,8 @@
+```
+git add .
+git commit -m ""
+git push origin main
+```
+git pull origin main
+git checkout -b new-feature
+git merge new-feature
