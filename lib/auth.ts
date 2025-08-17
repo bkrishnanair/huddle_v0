@@ -1,4 +1,5 @@
 // lib/auth.ts
+// This file contains authentication logic that is safe to run on the CLIENT-SIDE.
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -9,12 +10,9 @@ import {
 } from "firebase/auth";
 import { auth } from "./firebase";
 import { createUser, getUser } from "./db";
-import { cookies } from "next/headers";
-import { admin } from "./firebase-admin";
 
 const googleProvider = new GoogleAuthProvider();
 
-// --- CLIENT-SIDE AUTH FUNCTIONS ---
 // These functions are designed to be called only in the browser.
 
 export const signUpWithEmail = async (email: string, password: string, name: string) => {
@@ -54,31 +52,8 @@ export const logOut = async () => {
 /**
  * getCurrentUser (Client-Side)
  * Provides a synchronous, immediate check for the current user state in the browser.
- * Best for UI checks and client-side logic.
  */
 export const getCurrentUser = (): User | null => {
   if (!auth) return null;
   return auth.currentUser;
-};
-
-// --- SERVER-SIDE AUTH FUNCTIONS ---
-// These functions are for use in Next.js API Routes and Server Components.
-
-/**
- * getServerCurrentUser (Server-Side)
- * Verifies the session cookie from the incoming request to securely identify the user.
- * This is the correct way to handle authentication on the server.
- */
-export const getServerCurrentUser = async () => {
-  const sessionCookie = cookies().get("session")?.value;
-  if (!sessionCookie) return null;
-
-  try {
-    // Use the Firebase Admin SDK to verify the cookie and get user details.
-    const decodedIdToken = await admin.auth().verifySessionCookie(sessionCookie, true);
-    return decodedIdToken;
-  } catch (error) {
-    console.error("Error verifying session cookie:", error);
-    return null;
-  }
 };
