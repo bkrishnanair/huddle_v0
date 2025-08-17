@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Send, MessageCircle } from "lucide-react"
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
+import { useAuth } from "@/lib/firebase-context"
 
 interface ChatMessage {
   id: string
@@ -20,10 +21,10 @@ interface ChatMessage {
 
 interface EventChatProps {
   eventId: string
-  user: any
 }
 
-export default function EventChat({ eventId, user }: EventChatProps) {
+export function EventChat({ eventId }: EventChatProps) {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [newMessage, setNewMessage] = useState("")
   const [sending, setSending] = useState(false)
@@ -57,14 +58,14 @@ export default function EventChat({ eventId, user }: EventChatProps) {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!newMessage.trim() || sending) return
+    if (!newMessage.trim() || sending || !user) return
 
     setSending(true)
     try {
       const response = await fetch(`/api/events/${eventId}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: newMessage }),
+        body: JSON.stringify({ message: newMessage, userId: user.uid, userName: user.displayName }),
       })
 
       if (response.ok) {
@@ -91,7 +92,7 @@ export default function EventChat({ eventId, user }: EventChatProps) {
   }
 
   return (
-    <div className="flex flex-col h-80">
+    <div className="flex flex-col h-full">
       {/* Chat Header */}
       <div className="flex items-center space-x-2 p-3 border-b bg-gray-50">
         <MessageCircle className="w-5 h-5 text-blue-600" />
@@ -109,17 +110,17 @@ export default function EventChat({ eventId, user }: EventChatProps) {
         ) : (
           <div className="space-y-3">
             {messages.map((message) => (
-              <div key={message.id} className={`flex ${message.userId === user.uid ? "justify-end" : "justify-start"}`}>
+              <div key={message.id} className={`flex ${message.userId === user?.uid ? "justify-end" : "justify-start"}`}>
                 <div
                   className={`max-w-xs lg:max-w-md px-3 py-2 rounded-lg ${
-                    message.userId === user.uid ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-900"
+                    message.userId === user?.uid ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-900"
                   }`}
                 >
-                  {message.userId !== user.uid && (
+                  {message.userId !== user?.uid && (
                     <p className="text-xs font-semibold mb-1 opacity-75">{message.userName}</p>
                   )}
                   <p className="text-sm">{message.message}</p>
-                  <p className={`text-xs mt-1 ${message.userId === user.uid ? "text-blue-100" : "text-gray-500"}`}>
+                  <p className={`text-xs mt-1 ${message.userId === user?.uid ? "text-blue-100" : "text-gray-500"}`}>
                     {formatTime(message.timestamp)}
                   </p>
                 </div>

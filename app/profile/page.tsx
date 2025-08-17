@@ -4,7 +4,10 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, LogOut, Trophy, Calendar, Users, MapPin } from "lucide-react"
+import { ArrowLeft, LogOut, Trophy, MapPin, Calendar, Users } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { EventList } from "@/components/profile/event-list"
+import { useAuth } from "@/lib/firebase-context"
 
 interface GameEvent {
   id: string
@@ -15,8 +18,6 @@ interface GameEvent {
   time: string
   maxPlayers: number
   currentPlayers: number
-  createdBy: string
-  players: string[]
 }
 
 interface UserStats {
@@ -26,65 +27,52 @@ interface UserStats {
 }
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<any>(null)
+  const { user, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<UserStats>({ joined: 0, organized: 0, upcoming: 0 })
-  const [recentEvents, setRecentEvents] = useState<GameEvent[]>([])
+  const [organizedEvents, setOrganizedEvents] = useState<GameEvent[]>([])
+  const [joinedEvents, setJoinedEvents] = useState<GameEvent[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
-    const initializeProfile = async () => {
-      try {
-        // Check auth first
-        const authResponse = await fetch("/api/auth/me")
-        if (!authResponse.ok) {
-          router.push("/")
-          return
-        }
-
-        const userData = await authResponse.json()
-        setUser(userData.user)
-        setLoading(false)
-
-        fetchUserEvents(userData.user.uid)
-      } catch (error) {
-        console.error("Profile initialization failed:", error)
-        router.push("/")
-      }
+    if (!authLoading && !user) {
+      router.push("/")
+      return
     }
 
-    const fetchUserEvents = async (userId: string) => {
-      try {
-        const eventsResponse = await fetch(`/api/users/${userId}/events`)
-        if (eventsResponse.ok) {
-          const eventsData = await eventsResponse.json()
-          const joinedEvents = eventsData.joinedEvents || []
-          const organizedEvents = eventsData.organizedEvents || []
+    if (user) {
+      const fetchUserEvents = async (userId: string) => {
+        try {
+          const eventsResponse = await fetch(`/api/users/${userId}/events`)
+          if (eventsResponse.ok) {
+            const eventsData = await eventsResponse.json()
+            const organized = eventsData.organizedEvents || []
+            const joined = eventsData.joinedEvents || []
 
-          const now = new Date()
-          const upcoming = [...joinedEvents, ...organizedEvents].filter((event) => {
-            const eventDate = new Date(event.date)
-            return eventDate > now
-          }).length
+            const now = new Date()
+            const upcoming = [...joined, ...organized].filter((event) => {
+              const eventDate = new Date(event.date)
+              return eventDate > now
+            }).length
 
-          setStats({
-            joined: joinedEvents.length,
-            organized: organizedEvents.length,
-            upcoming,
-          })
-
-          const allEvents = [...joinedEvents, ...organizedEvents]
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-            .slice(0, 3)
-          setRecentEvents(allEvents)
+            setStats({
+              joined: joined.length,
+              organized: organized.length,
+              upcoming,
+            })
+            setOrganizedEvents(organized)
+            setJoinedEvents(joined)
+          }
+        } catch (error) {
+          console.error("Failed to fetch user events:", error)
+        } finally {
+          setLoading(false)
         }
-      } catch (error) {
-        console.error("Failed to fetch user events:", error)
       }
-    }
 
-    initializeProfile()
-  }, [router])
+      fetchUserEvents(user.uid)
+    }
+  }, [user, authLoading, router])
 
   const handleBack = () => {
     router.push("/")
@@ -100,15 +88,7 @@ export default function ProfilePage() {
     }
   }
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    })
-  }
-
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen glass-bg flex items-center justify-center">
         <div className="glass-card p-8 text-center">
@@ -139,9 +119,9 @@ export default function ProfilePage() {
 
         <div className="text-center pb-8 px-4">
           <div className="w-20 h-20 bg-white/20 rounded-full mx-auto mb-4 flex items-center justify-center">
-            <span className="text-2xl font-bold">{user.name?.charAt(0) || user.email?.charAt(0) || "U"}</span>
+            <span className="text-2xl font-bold">{user.displayName?.charAt(0) || user.email?.charAt(0) || "U"}</span>
           </div>
-          <h1 className="text-2xl font-bold mb-1">{user.name || "User"}</h1>
+          <h1 className="text-2xl font-bold mb-1">{user.displayName || "User"}</h1>
           <p className="text-white/80 text-sm">{user.email}</p>
         </div>
       </div>
@@ -166,6 +146,19 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
+        <Tabs defaultValue="organized">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="organized">Organized</TabsTrigger>
+            <TabsTrigger value="joined">Joined</TabsTrigger>
+          </TabsList>
+          <TabsContent value="organized">
+            <EventList events={organizedEvents} emptyStateMessage="You have not organized any events." />
+          </TabsContent>
+          <TabsContent value="joined">
+            <EventList events={joinedEvents} emptyStateMessage="You have not joined any events." />
+          </TabsContent>
+        </Tabs>
+
         <Card className="glass-card mb-6">
           <CardContent className="p-6">
             <h2 className="text-lg font-semibold text-white mb-4">Achievements</h2>
@@ -178,48 +171,6 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        <Card className="glass-card mb-6">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">Recent Events</h2>
-            </div>
-
-            {recentEvents.length === 0 ? (
-              <div className="text-center py-8">
-                <Calendar className="w-12 h-12 text-white/30 mx-auto mb-4" />
-                <p className="text-white/70 mb-2">No events yet</p>
-                <p className="text-white/50 text-sm mb-4">Start by joining or creating an event</p>
-                <Button onClick={handleBack} className="bg-blue-500 hover:bg-blue-600 text-white">
-                  Explore Events
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {recentEvents.map((event) => (
-                  <div key={event.id} className="bg-white/10 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-medium text-white">{event.title}</h3>
-                      <span className="text-xs bg-blue-500/30 text-blue-200 px-2 py-1 rounded">{event.sport}</span>
-                    </div>
-                    <div className="flex items-center space-x-4 text-sm text-white/70">
-                      <div className="flex items-center space-x-1">
-                        <Calendar className="w-3 h-3" />
-                        <span>{formatDate(event.date)}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Users className="w-3 h-3" />
-                        <span>
-                          {event.currentPlayers}/{event.maxPlayers}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
         <Card className="glass-card">
           <CardContent className="p-6">
             <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
@@ -229,7 +180,7 @@ export default function ProfilePage() {
                 className="w-full justify-start text-white hover:bg-white/10"
                 onClick={handleBack}
               >
-                <Calendar className="w-4 h-4 mr-3" />
+                <Users className="w-4 h-4 mr-3" />
                 View My Events
               </Button>
               <Button

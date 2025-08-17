@@ -1,216 +1,161 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { getEvents } from "@/lib/db"
-import { Calendar, MapPin, Users, Clock, Search, Map } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import CreateEventModal from "@/components/create-event-modal"
-import EventDetailsModal from "@/components/event-details-modal"
+import { useState, useEffect, useMemo } from "react";
+import { getEvents } from "@/lib/db";
+import { Search, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import CreateEventModal from "@/components/create-event-modal";
+import EventDetailsModal from "@/components/event-details-modal";
+import { EventCard } from "@/components/events/event-card";
+import { SummaryHeader } from "@/components/events/summary-header";
+import { useAuth } from "@/lib/firebase-context";
 
-interface Event {
-  id: string
-  title: string
-  sport: string
-  location: { lat: number; lng: number; address: string }
-  date: string
-  time: string
-  maxPlayers: number
-  currentPlayers: number
-  createdBy: string
-  players: string[]
+interface GameEvent {
+  id: string;
+  title: string;
+  sport: string;
+  location: any;
+  date: string;
+  time: string;
+  maxPlayers: number;
+  currentPlayers: number;
+  createdBy: string;
+  players: string[];
 }
 
-interface EventsPageProps {
-  user: any
-  onSwitchToMap?: () => void
-}
-
-export default function EventsPage({ user, onSwitchToMap }: EventsPageProps) {
-  const [events, setEvents] = useState<Event[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedSport, setSelectedSport] = useState("All Sports")
-  const [viewMode, setViewMode] = useState<"nearby" | "my">("nearby")
+export default function EventsPage() {
+  const { user } = useAuth();
+  const [events, setEvents] = useState<GameEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedSport, setSelectedSport] = useState("All");
 
   useEffect(() => {
     const loadEvents = async () => {
-      console.log("[v0] EventsPage: Starting to load events...")
       try {
-        console.log("[v0] EventsPage: Calling getEvents()...")
-        const eventsData = await getEvents()
-        console.log("[v0] EventsPage: getEvents() returned:", eventsData)
-        setEvents(eventsData)
-        console.log("[v0] EventsPage: Events state updated successfully")
+        const eventsData = await getEvents();
+        setEvents(Array.isArray(eventsData) ? eventsData : []);
       } catch (error) {
-        console.error("[v0] EventsPage: Error loading events:", error)
+        console.error("Error loading events:", error);
       } finally {
-        console.log("[v0] EventsPage: Setting loading to false")
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
+    loadEvents();
+  }, []);
 
-    loadEvents()
-  }, [])
+  const sports = useMemo(() => {
+    const allSports = events.map((e) => e.sport);
+    return ["All", ...Array.from(new Set(allSports))];
+  }, [events]);
 
-  const filteredEvents = events.filter((event) => {
-    const matchesSearch =
-      event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      event.sport.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesSport = selectedSport === "All Sports" || event.sport === selectedSport
-    const matchesView =
-      viewMode === "nearby" ||
-      (viewMode === "my" && (event.createdBy === user?.uid || event.players.includes(user?.uid)))
+  const filteredEvents = useMemo(() => {
+    return events.filter((event) => {
+      const matchesSearch =
+        event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        event.sport.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSport = selectedSport === "All" || event.sport === selectedSport;
+      return matchesSearch && matchesSport;
+    });
+  }, [events, searchQuery, selectedSport]);
 
-    return matchesSearch && matchesSport && matchesView
-  })
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    })
-  }
-
-  console.log("[v0] EventsPage: Rendering with loading =", loading, "events count =", events.length)
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    )
-  }
+  const summaryStats = useMemo(() => {
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+    const eventsToday = events.filter((e) => e.date === today).length;
+    const yourUpcoming = user
+      ? events.filter(
+          (e) =>
+            new Date(e.date) >= now &&
+            (e.createdBy === user.uid || e.players.includes(user.uid))
+        ).length
+      : 0;
+    return { totalEvents: events.length, eventsToday, yourUpcoming };
+  }, [events, user]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 pb-20">
-      <div className="glass-card mx-4 mt-4 p-4 rounded-2xl">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-gray-900">Events</h1>
-          <Button variant="ghost" onClick={onSwitchToMap} className="text-gray-600 hover:text-gray-900 font-medium">
-            <Map className="w-4 h-4 mr-2" />
-            Map
-          </Button>
+    <div className="min-h-screen liquid-gradient p-4 md:p-8">
+      <header className="flex flex-col md:flex-row justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-white">Discover Events</h1>
+          <p className="text-white/80">Find and join games happening around you.</p>
         </div>
-
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="Search events..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-white/50 border-white/20 rounded-xl"
-          />
-        </div>
-
-        <div className="mb-4">
-          <Button variant="default" className="bg-blue-500 hover:bg-blue-600 text-white rounded-full px-6">
-            {selectedSport}
-          </Button>
-        </div>
-
-        <div className="flex bg-gray-100 rounded-full p-1">
-          <button
-            onClick={() => setViewMode("nearby")}
-            className={`flex-1 py-2 px-4 rounded-full text-sm font-medium transition-all ${
-              viewMode === "nearby" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            Nearby
-          </button>
-          <button
-            onClick={() => setViewMode("my")}
-            className={`flex-1 py-2 px-4 rounded-full text-sm font-medium transition-all ${
-              viewMode === "my" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            My Events
-          </button>
-        </div>
-      </div>
-
-      <div className="px-4 mt-6 space-y-4">
-        {filteredEvents.length === 0 ? (
-          <div className="glass-card p-8 rounded-2xl text-center">
-            <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No events nearby</h3>
-            <p className="text-gray-600 mb-4">Try adjusting your filters or create a new event</p>
-            <Button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
-            >
-              Create Event
-            </Button>
-          </div>
-        ) : (
-          filteredEvents.map((event) => (
-            <div
-              key={event.id}
-              onClick={() => setSelectedEvent(event)}
-              className="glass-card p-4 rounded-2xl cursor-pointer hover:scale-[1.02] transition-all duration-200"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
-                      {event.sport}
-                    </span>
-                    <span className="text-sm text-gray-500">{formatDate(event.date)}</span>
-                  </div>
-
-                  <h3 className="font-semibold text-gray-900 mb-2">{event.title}</h3>
-
-                  <div className="space-y-1 text-sm text-gray-600">
-                    <div className="flex items-center space-x-2">
-                      <Clock className="w-4 h-4" />
-                      <span>{event.time}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="w-4 h-4" />
-                      <span className="truncate">{event.location.address}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Users className="w-4 h-4" />
-                      <span>
-                        {event.currentPlayers}/{event.maxPlayers} players
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="ml-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-blue-600" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      <div className="fixed bottom-24 right-6">
         <Button
           onClick={() => setShowCreateModal(true)}
-          className="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+          className="glass-card mt-4 md:mt-0"
         >
-          <span className="text-2xl">+</span>
+          <Plus className="w-4 h-4 mr-2" />
+          Create Event
         </Button>
+      </header>
+
+      <SummaryHeader
+        totalEvents={summaryStats.totalEvents}
+        eventsToday={summaryStats.eventsToday}
+        yourUpcomingEvents={summaryStats.yourUpcoming}
+      />
+
+      <div className="glass-card p-4 rounded-2xl mb-8">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="relative flex-grow">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70" />
+            <Input
+              placeholder="Search by name or sport..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 glass border-white/20 text-white placeholder:text-white/60"
+            />
+          </div>
+          <Select value={selectedSport} onValueChange={setSelectedSport}>
+            <SelectTrigger className="glass border-white/20 text-white">
+              <SelectValue placeholder="Filter by sport" />
+            </SelectTrigger>
+            <SelectContent className="glass-card">
+              {sports.map((sport) => (
+                <SelectItem key={sport} value={sport}>
+                  {sport}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+
+      {loading ? (
+        <div className="text-center text-white/80">Loading events...</div>
+      ) : filteredEvents.length === 0 ? (
+        <div className="text-center glass-card p-8 rounded-2xl">
+          <h3 className="text-xl font-semibold text-white mb-2">No Events Found</h3>
+          <p className="text-white/70 mb-4">
+            Try adjusting your filters or be the first to create an event!
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredEvents.map((event) => (
+            <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} />
+          ))}
+        </div>
+      )}
 
       {showCreateModal && (
         <CreateEventModal
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
           onEventCreated={(newEvent) => {
-            setEvents([newEvent, ...events])
-            setShowCreateModal(false)
+            setEvents((prev) => [newEvent, ...prev]);
+            setShowCreateModal(false);
           }}
-          user={user}
         />
       )}
 
@@ -219,12 +164,13 @@ export default function EventsPage({ user, onSwitchToMap }: EventsPageProps) {
           event={selectedEvent}
           isOpen={!!selectedEvent}
           onClose={() => setSelectedEvent(null)}
-          user={user}
           onEventUpdated={(updatedEvent) => {
-            setEvents(events.map((e) => (e.id === updatedEvent.id ? updatedEvent : e)))
+            setEvents((prev) =>
+              prev.map((e) => (e.id === updatedEvent.id ? updatedEvent : e))
+            );
           }}
         />
       )}
     </div>
-  )
+  );
 }
