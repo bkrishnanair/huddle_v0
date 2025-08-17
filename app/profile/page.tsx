@@ -9,6 +9,7 @@ import { ArrowLeft, LogOut, Trophy, MapPin, Calendar, Users, Loader2 } from "luc
 import { useAuth } from "@/lib/firebase-context";
 import Link from "next/link";
 
+// Interface for a single event object
 interface GameEvent {
   id: string;
   title: string;
@@ -20,6 +21,7 @@ interface GameEvent {
   currentPlayers: number;
 }
 
+// Interface for the user's statistics
 interface UserStats {
   joined: number;
   organized: number;
@@ -27,39 +29,45 @@ interface UserStats {
 }
 
 export default function ProfilePage() {
+  // Authentication and navigation hooks
   const { user, loading: authLoading, logout } = useAuth();
+  const router = useRouter();
+
+  // State for user stats and events
   const [stats, setStats] = useState<UserStats>({ joined: 0, organized: 0, upcoming: 0 });
   const [recentEvents, setRecentEvents] = useState<GameEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
+  // Effect to fetch user data and associated events
   useEffect(() => {
+    // If auth is done and there's no user, redirect to home
     if (!authLoading && !user) {
       router.push("/");
       return;
     }
 
+    // If a user is logged in, fetch their events
     if (user) {
       const fetchUserEvents = async (userId: string) => {
         try {
-          const eventsResponse = await fetch(`/api/users/${userId}/events`);
-          if (eventsResponse.ok) {
-            const eventsData = await eventsResponse.json();
-            const organized = eventsData.organizedEvents || [];
-            const joined = eventsData.joinedEvents || [];
-
+          const response = await fetch(`/api/users/${userId}/events`);
+          if (response.ok) {
+            const data = await response.json();
+            const organized = data.organizedEvents || [];
+            const joined = data.joinedEvents || [];
             const now = new Date();
-            const upcoming = [...joined, ...organized].filter(
+
+            // Calculate stats for the top card
+            const upcomingCount = [...joined, ...organized].filter(
               (event) => new Date(event.date) > now
             ).length;
-
             setStats({
               joined: joined.length,
               organized: organized.length,
-              upcoming,
+              upcoming: upcomingCount,
             });
 
-            // Set the 3 most recent events overall for the "Recent Events" card
+            // Get the 3 most recent events for the "Recent Events" card
             const allEvents = [...joined, ...organized]
               .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
               .slice(0, 3);
@@ -71,25 +79,26 @@ export default function ProfilePage() {
           setLoading(false);
         }
       };
-
       fetchUserEvents(user.uid);
     }
   }, [user, authLoading, router]);
 
+  // Handler for the logout action
   const handleLogout = async () => {
     await logout();
     router.push("/");
   };
-  
+
+  // Helper to format dates consistently
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
+  // Loading state while fetching user and event data
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen liquid-gradient flex items-center justify-center">
-        <div className="text-center text-white">
+      <div className="min-h-screen liquid-gradient flex items-center justify-center text-white">
+        <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" />
           <p>Loading Profile...</p>
         </div>
@@ -101,8 +110,8 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen liquid-gradient pb-24">
-      {/* Header Section */}
-      <div className="relative bg-gradient-to-b from-blue-500/30 to-transparent p-4 text-white">
+      {/* Header Section with gradient and user info */}
+      <header className="relative bg-gradient-to-b from-blue-500/30 to-transparent p-4 text-white">
         <div className="flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={() => router.back()} className="hover:bg-white/10">
             <ArrowLeft className="w-4 h-4 mr-2" /> Back
@@ -118,10 +127,10 @@ export default function ProfilePage() {
           <h1 className="text-2xl font-bold">{user.displayName || "User"}</h1>
           <p className="text-white/80">{user.email}</p>
         </div>
-      </div>
+      </header>
 
-      {/* Main Content Area */}
-      <div className="px-4 -mt-10">
+      {/* Main content area with floating cards */}
+      <main className="px-4 -mt-10">
         {/* Stats Card */}
         <Card className="glass-card mb-6 shadow-lg">
           <CardContent className="p-4">
@@ -197,7 +206,7 @@ export default function ProfilePage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </main>
     </div>
   );
 }
