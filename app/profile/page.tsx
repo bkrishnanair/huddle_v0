@@ -1,218 +1,190 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft, LogOut, Trophy, Calendar, Users, MapPin } from "lucide-react"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, LogOut, Trophy, MapPin, Calendar, Users, Loader2 } from "lucide-react";
+import { useAuth } from "@/lib/firebase-context";
+import Link from "next/link";
 
+// Interface for a single event object
 interface GameEvent {
-  id: string
-  title: string
-  sport: string
-  location: string
-  date: string
-  time: string
-  maxPlayers: number
-  currentPlayers: number
-  createdBy: string
-  players: string[]
+  id: string;
+  title: string;
+  sport: string;
+  location: string;
+  date: string;
+  time: string;
+  maxPlayers: number;
+  currentPlayers: number;
 }
 
+// Interface for the user's statistics
 interface UserStats {
-  joined: number
-  organized: number
-  upcoming: number
+  joined: number;
+  organized: number;
+  upcoming: number;
 }
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<any>(null)
-  const [stats, setStats] = useState<UserStats>({ joined: 0, organized: 0, upcoming: 0 })
-  const [recentEvents, setRecentEvents] = useState<GameEvent[]>([])
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
+  // Authentication and navigation hooks
+  const { user, loading: authLoading, logout } = useAuth();
+  const router = useRouter();
 
+  // State for user stats and events
+  const [stats, setStats] = useState<UserStats>({ joined: 0, organized: 0, upcoming: 0 });
+  const [recentEvents, setRecentEvents] = useState<GameEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Effect to fetch user data and associated events
   useEffect(() => {
-    const initializeProfile = async () => {
-      try {
-        // Check auth first
-        const authResponse = await fetch("/api/auth/me")
-        if (!authResponse.ok) {
-          router.push("/")
-          return
-        }
-
-        const userData = await authResponse.json()
-        setUser(userData.user)
-        setLoading(false)
-
-        fetchUserEvents(userData.user.uid)
-      } catch (error) {
-        console.error("Profile initialization failed:", error)
-        router.push("/")
-      }
+    // If auth is done and there's no user, redirect to home
+    if (!authLoading && !user) {
+      router.push("/");
+      return;
     }
 
-    const fetchUserEvents = async (userId: string) => {
-      try {
-        const eventsResponse = await fetch(`/api/users/${userId}/events`)
-        if (eventsResponse.ok) {
-          const eventsData = await eventsResponse.json()
-          const joinedEvents = eventsData.joinedEvents || []
-          const organizedEvents = eventsData.organizedEvents || []
+    // If a user is logged in, fetch their events
+    if (user) {
+      const fetchUserEvents = async (userId: string) => {
+        try {
+          const response = await fetch(`/api/users/${userId}/events`);
+          if (response.ok) {
+            const data = await response.json();
+            const organized = data.organizedEvents || [];
+            const joined = data.joinedEvents || [];
+            const now = new Date();
 
-          const now = new Date()
-          const upcoming = [...joinedEvents, ...organizedEvents].filter((event) => {
-            const eventDate = new Date(event.date)
-            return eventDate > now
-          }).length
+            // Calculate stats for the top card
+            const upcomingCount = [...joined, ...organized].filter(
+              (event) => new Date(event.date) > now
+            ).length;
+            setStats({
+              joined: joined.length,
+              organized: organized.length,
+              upcoming: upcomingCount,
+            });
 
-          setStats({
-            joined: joinedEvents.length,
-            organized: organizedEvents.length,
-            upcoming,
-          })
-
-          const allEvents = [...joinedEvents, ...organizedEvents]
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-            .slice(0, 3)
-          setRecentEvents(allEvents)
+            // Get the 3 most recent events for the "Recent Events" card
+            const allEvents = [...joined, ...organized]
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              .slice(0, 3);
+            setRecentEvents(allEvents);
+          }
+        } catch (error) {
+          console.error("Failed to fetch user events:", error);
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        console.error("Failed to fetch user events:", error)
-      }
+      };
+      fetchUserEvents(user.uid);
     }
+  }, [user, authLoading, router]);
 
-    initializeProfile()
-  }, [router])
-
-  const handleBack = () => {
-    router.push("/")
-  }
-
+  // Handler for the logout action
   const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" })
-      router.push("/")
-    } catch (error) {
-      console.error("Logout failed:", error)
-      router.push("/")
-    }
-  }
+    await logout();
+    router.push("/");
+  };
 
+  // Helper to format dates consistently
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    })
-  }
+    return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
 
-  if (loading) {
+  // Loading state while fetching user and event data
+  if (loading || authLoading) {
     return (
-      <div className="min-h-screen glass-bg flex items-center justify-center">
-        <div className="glass-card p-8 text-center">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-white/80">Loading profile...</p>
+      <div className="min-h-screen liquid-gradient flex items-center justify-center text-white">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" />
+          <p>Loading Profile...</p>
         </div>
       </div>
-    )
+    );
   }
 
-  if (!user) {
-    return null
-  }
+  if (!user) return null;
 
   return (
-    <div className="min-h-screen glass-bg">
-      <div className="relative bg-gradient-to-br from-blue-500 via-blue-600 to-slate-800 text-white">
-        <div className="flex items-center justify-between p-4">
-          <Button variant="ghost" size="sm" onClick={handleBack} className="text-white hover:bg-white/20">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+    <div className="min-h-screen liquid-gradient pb-24">
+      {/* Header Section with gradient and user info */}
+      <header className="relative bg-gradient-to-b from-blue-500/30 to-transparent p-4 text-white">
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" size="sm" onClick={() => router.back()} className="hover:bg-white/10">
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back
           </Button>
-          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-white hover:bg-white/20">
-            Logout
-            <LogOut className="w-4 h-4 ml-2" />
+          <Button variant="ghost" size="sm" onClick={handleLogout} className="hover:bg-white/10">
+            Logout <LogOut className="w-4 h-4 ml-2" />
           </Button>
         </div>
-
-        <div className="text-center pb-8 px-4">
-          <div className="w-20 h-20 bg-white/20 rounded-full mx-auto mb-4 flex items-center justify-center">
-            <span className="text-2xl font-bold">{user.name?.charAt(0) || user.email?.charAt(0) || "U"}</span>
+        <div className="text-center py-6">
+          <div className="w-24 h-24 bg-white/20 rounded-full mx-auto mb-4 flex items-center justify-center">
+            <span className="text-4xl font-bold">{user.displayName?.charAt(0) || "U"}</span>
           </div>
-          <h1 className="text-2xl font-bold mb-1">{user.name || "User"}</h1>
-          <p className="text-white/80 text-sm">{user.email}</p>
+          <h1 className="text-2xl font-bold">{user.displayName || "User"}</h1>
+          <p className="text-white/80">{user.email}</p>
         </div>
-      </div>
+      </header>
 
-      <div className="px-4 -mt-6 pb-20">
-        <Card className="glass-card mb-6">
-          <CardContent className="p-6">
-            <div className="grid grid-cols-3 gap-4 text-center">
+      {/* Main content area with floating cards */}
+      <main className="px-4 -mt-10">
+        {/* Stats Card */}
+        <Card className="glass-card mb-6 shadow-lg">
+          <CardContent className="p-4">
+            <div className="grid grid-cols-3 gap-4 text-center text-white">
               <div>
-                <div className="text-2xl font-bold text-blue-400 mb-1">{stats.joined}</div>
-                <div className="text-sm text-white/70">Events Joined</div>
+                <p className="text-2xl font-bold">{stats.joined}</p>
+                <p className="text-sm text-white/70">Events Joined</p>
               </div>
               <div>
-                <div className="text-2xl font-bold text-green-400 mb-1">{stats.organized}</div>
-                <div className="text-sm text-white/70">Organized</div>
+                <p className="text-2xl font-bold">{stats.organized}</p>
+                <p className="text-sm text-white/70">Organized</p>
               </div>
               <div>
-                <div className="text-2xl font-bold text-purple-400 mb-1">{stats.upcoming}</div>
-                <div className="text-sm text-white/70">Upcoming</div>
+                <p className="text-2xl font-bold">{stats.upcoming}</p>
+                <p className="text-sm text-white/70">Upcoming</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* Achievements Card */}
         <Card className="glass-card mb-6">
           <CardContent className="p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Achievements</h2>
-            <div className="flex items-center space-x-3 text-white/70">
+            <h2 className="text-lg font-semibold text-white mb-3">Achievements</h2>
+            <div className="flex items-center space-x-3 text-white/80">
               <Trophy className="w-5 h-5 text-yellow-400" />
-              <span className="text-sm">
-                {stats.joined > 0 ? "Event Participant!" : "Join your first event to earn badges!"}
-              </span>
+              <span>Join your first event to earn badges!</span>
             </div>
           </CardContent>
         </Card>
 
+        {/* Recent Events Card */}
         <Card className="glass-card mb-6">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">Recent Events</h2>
-            </div>
-
+            <h2 className="text-lg font-semibold text-white mb-4">Recent Events</h2>
             {recentEvents.length === 0 ? (
-              <div className="text-center py-8">
-                <Calendar className="w-12 h-12 text-white/30 mx-auto mb-4" />
-                <p className="text-white/70 mb-2">No events yet</p>
-                <p className="text-white/50 text-sm mb-4">Start by joining or creating an event</p>
-                <Button onClick={handleBack} className="bg-blue-500 hover:bg-blue-600 text-white">
-                  Explore Events
-                </Button>
+              <div className="text-center py-4">
+                <p className="text-white/70 mb-4">Start by joining or creating an event.</p>
+                <Link href="/" passHref>
+                  <Button className="bg-blue-500 hover:bg-blue-600 text-white">Explore Events</Button>
+                </Link>
               </div>
             ) : (
               <div className="space-y-3">
                 {recentEvents.map((event) => (
-                  <div key={event.id} className="bg-white/10 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
+                  <div key={event.id} className="bg-white/10 p-3 rounded-lg flex justify-between items-center">
+                    <div>
                       <h3 className="font-medium text-white">{event.title}</h3>
-                      <span className="text-xs bg-blue-500/30 text-blue-200 px-2 py-1 rounded">{event.sport}</span>
-                    </div>
-                    <div className="flex items-center space-x-4 text-sm text-white/70">
-                      <div className="flex items-center space-x-1">
-                        <Calendar className="w-3 h-3" />
-                        <span>{formatDate(event.date)}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Users className="w-3 h-3" />
-                        <span>
-                          {event.currentPlayers}/{event.maxPlayers}
-                        </span>
+                      <div className="flex items-center space-x-4 text-sm text-white/70 mt-1">
+                        <div className="flex items-center"><Calendar className="w-3 h-3 mr-1" /><span>{formatDate(event.date)}</span></div>
+                        <div className="flex items-center"><Users className="w-3 h-3 mr-1" /><span>{event.currentPlayers}/{event.maxPlayers}</span></div>
                       </div>
                     </div>
+                    <Badge variant="secondary" className="bg-white/20 text-white border-none">{event.sport}</Badge>
                   </div>
                 ))}
               </div>
@@ -220,30 +192,21 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
+        {/* Quick Actions Card */}
         <Card className="glass-card">
           <CardContent className="p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
-            <div className="space-y-3">
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-white hover:bg-white/10"
-                onClick={handleBack}
-              >
-                <Calendar className="w-4 h-4 mr-3" />
-                View My Events
+            <h2 className="text-lg font-semibold text-white mb-3">Quick Actions</h2>
+            <div className="space-y-2">
+              <Button asChild variant="ghost" className="w-full justify-start text-white/90 hover:bg-white/10 hover:text-white">
+                <Link href="/events"><Users className="w-4 h-4 mr-3" /> View My Events</Link>
               </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-white hover:bg-white/10"
-                onClick={handleBack}
-              >
-                <MapPin className="w-4 h-4 mr-3" />
-                Find Nearby Events
+              <Button asChild variant="ghost" className="w-full justify-start text-white/90 hover:bg-white/10 hover:text-white">
+                <Link href="/"><MapPin className="w-4 h-4 mr-3" /> Find Nearby Events</Link>
               </Button>
             </div>
           </CardContent>
         </Card>
-      </div>
+      </main>
     </div>
-  )
+  );
 }

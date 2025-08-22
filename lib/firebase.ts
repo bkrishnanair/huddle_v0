@@ -61,8 +61,10 @@ const initializeFirebase = () => {
       return { app: null, auth: null, db: null }
     }
 
-    // Validate configuration first
-    validateFirebaseConfig()
+    // Validate configuration first (skip in development if needed)
+    if (process.env.NODE_ENV === 'production') {
+      validateFirebaseConfig()
+    }
 
     // Debug configuration status
     debugFirebaseConfig()
