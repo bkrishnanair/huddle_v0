@@ -29,9 +29,15 @@ export const createUser = async (userId: string, data: any) => {
 
 // Event Management
 export const getEvents = async () => {
-  const eventsCol = collection(db, "events");
-  const eventSnapshot = await getDocs(eventsCol);
-  return eventSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  try {
+    const eventsCol = collection(db, "events");
+    const eventSnapshot = await getDocs(eventsCol);
+    return eventSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error("Error fetching events from Firestore:", error);
+    // Re-throw the error to be caught by the API route
+    throw new Error("Failed to retrieve events from the database.");
+  }
 };
 
 export const getUserEvents = async (userId: string) => {

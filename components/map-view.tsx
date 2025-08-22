@@ -261,7 +261,7 @@ export default function MapView({ user, onLogout }: MapViewProps) {
             }}
           >
             <Map
-              mapId={MAP_ID}
+              mapId={mapId}
               defaultCenter={mapCenter}
               defaultZoom={14}
               className="w-full h-full"

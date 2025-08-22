@@ -9,8 +9,8 @@ service cloud.firestore {
     
     // Events collection
     match /events/{eventId} {
-      // Anyone authenticated can read events (to see them on the map)
-      allow read: if request.auth != null;
+      // Allow public read access for viewing events on the map
+      allow read: if true;
       
       // Only authenticated users can create events
       allow create: if request.auth != null 
