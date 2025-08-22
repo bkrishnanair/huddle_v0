@@ -13,6 +13,7 @@ import { APIProvider, Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps
 import MapsApiValidator from "./maps-api-validator"
 import { mapsValidator } from "@/lib/maps-debug"
 
+// ... (interfaces and helper functions remain the same) ...
 interface MapViewProps {
   user: any
   onLogout: () => void
@@ -46,7 +47,6 @@ const getSportColor = (sport: string): string => {
   return colors[sport] || colors.default
 }
 
-const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || "huddle-main-map"
 
 export default function MapView({ user, onLogout }: MapViewProps) {
   const [events, setEvents] = useState<GameEvent[]>([])
@@ -71,54 +71,82 @@ export default function MapView({ user, onLogout }: MapViewProps) {
       return
     }
 
-    // Log comprehensive status
     mapsValidator.logMapsApiStatus(mapsApiKey, mapId)
-
-    // Clear any previous errors
     setMapsError(null)
   }, [mapsApiKey, mapId])
 
+  // FIX: Rewrote the geolocation logic for clarity and robust error handling.
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const location = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          }
-          setUserLocation(location)
-          setMapCenter(location)
-        },
-        (error) => {
-          console.error("Error getting location:", error)
-          const defaultLocation = { lat: 37.7749, lng: -122.4194 }
-          setUserLocation(defaultLocation)
-          setMapCenter(defaultLocation)
-        },
-      )
+    // A fallback default location in case everything else fails.
+    const defaultLocation = { lat: 37.7749, lng: -122.4194 };
+
+    const handleSuccess = (position: GeolocationPosition) => {
+      const location = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      };
+      setUserLocation(location);
+      setMapCenter(location);
+      console.log("Geolocation successful:", location);
+    };
+
+    const handleError = (error: GeolocationPositionError) => {
+      let errorMessage = "An unknown error occurred.";
+      switch (error.code) {
+        case error.PERMISSION_DENIED:
+          errorMessage = "Location permission denied. Please enable it in your browser settings.";
+          break;
+        case error.POSITION_UNAVAILABLE:
+          errorMessage = "Location information is unavailable.";
+          break;
+        case error.TIMEOUT:
+          errorMessage = "The request to get user location timed out.";
+          break;
+      }
+      console.error("Error getting location:", errorMessage, error);
+      // Set a user-friendly error message to be displayed in the UI if needed
+      // setMapsError(`Could not get location: ${errorMessage}`);
+      
+      // Fallback to a default location so the map can still render.
+      setUserLocation(defaultLocation);
+      setMapCenter(defaultLocation);
+    };
+
+    // Check if the Geolocation API is supported by the browser.
+    if (!navigator.geolocation) {
+      console.error("Geolocation is not supported by this browser.");
+      setUserLocation(defaultLocation);
+      setMapCenter(defaultLocation);
     } else {
-      const defaultLocation = { lat: 37.7749, lng: -122.4194 }
-      setUserLocation(defaultLocation)
-      setMapCenter(defaultLocation)
+      // Request the user's current position.
+      navigator.geolocation.getCurrentPosition(handleSuccess, handleError, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      });
     }
-  }, [])
+  }, []); // This effect runs only once when the component mounts.
 
   useEffect(() => {
     const loadEvents = async () => {
       try {
-        const response = await fetch("/api/events")
+        const response = await fetch("/api/events");
         if (response.ok) {
-          const data = await response.json()
-          setEvents(data.events)
+          const data = await response.json();
+          // Ensure that the response has an events array
+          setEvents(data.events || []); 
+        } else {
+           console.error("Failed to fetch events with status:", response.status);
         }
       } catch (error) {
-        console.error("Failed to load events:", error)
+        console.error("Failed to load events:", error);
       }
-    }
+    };
 
-    loadEvents()
-  }, [])
+    loadEvents();
+  }, []);
 
+  // ... (rest of the component remains the same) ...
   const handleLogout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" })
@@ -334,6 +362,7 @@ export default function MapView({ user, onLogout }: MapViewProps) {
         {/* Create Event Modal */}
         {showCreateModal && (
           <CreateEventModal
+            isOpen={showCreateModal}
             user={user}
             userLocation={userLocation}
             onClose={() => setShowCreateModal(false)}
