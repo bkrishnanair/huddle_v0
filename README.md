@@ -3,6 +3,9 @@
 
 Welcome to the Local Event Discovery Platform! This is a modern, full-stack web application designed to help users find, join, and discuss local events happening around them. It features an interactive map, real-time chat, and a clean, component-based architecture.
 
+![alt text](image-2.png)
+![alt text](image-1.png)
+![alt text](image-3.png)
 ![Project Screenshot](public/placeholder.jpg)
 
 ## ✨ Key Features

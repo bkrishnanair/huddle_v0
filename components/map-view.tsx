@@ -255,7 +255,7 @@ export default function MapView({ user, onLogout }: MapViewProps) {
               console.log("🗺️ Google Maps API loaded successfully")
               console.log("🔄 Cache-busting timestamp:", Date.now())
             }}
-            onError={(error) => {
+            onError={(error: any) => {
               console.error("🚨 APIProvider Error:", error)
               handleMapError(error)
             }}
@@ -265,8 +265,7 @@ export default function MapView({ user, onLogout }: MapViewProps) {
               defaultCenter={mapCenter}
               defaultZoom={14}
               className="w-full h-full"
-              onLoad={handleMapLoad}
-              onError={handleMapError}
+              onTilesLoaded={handleMapLoad}
               options={{
                 disableDefaultUI: false,
                 zoomControl: true,
