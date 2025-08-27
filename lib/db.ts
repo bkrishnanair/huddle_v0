@@ -12,10 +12,12 @@ import {
   orderBy,
   updateDoc,
   arrayUnion,
+  GeoPoint,
 } from "firebase/firestore";
 import { db } from "./firebase";
+import * as geofire from "geofire-common";
 
-// User Management
+// ... (User Management functions remain the same) ...
 export const getUser = async (userId: string) => {
   const userRef = doc(db, "users", userId);
   const userSnap = await getDoc(userRef);
@@ -27,6 +29,7 @@ export const createUser = async (userId: string, data: any) => {
   await setDoc(userRef, { ...data, createdAt: Timestamp.now() });
 };
 
+
 // Event Management
 export const getEvents = async () => {
   try {
@@ -35,12 +38,67 @@ export const getEvents = async () => {
     return eventSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
     console.error("Error fetching events from Firestore:", error);
-    // Re-throw the error to be caught by the API route
     throw new Error("Failed to retrieve events from the database.");
   }
 };
 
+// GEO: New function to create an event with geospatial data.
+export const createEvent = async (eventData: any) => {
+  try {
+    const eventsCol = collection(db, "events");
+    const newEventRef = await addDoc(eventsCol, {
+      ...eventData,
+      createdAt: Timestamp.now(),
+    });
+    return { id: newEventRef.id, ...eventData };
+  } catch (error) {
+    console.error("Error creating event in Firestore:", error);
+    throw new Error("Failed to save event to the database.");
+  }
+};
+
+
+// GEO: New function to query events based on proximity.
+export const getNearbyEvents = async (center: [number, number], radiusInM: number) => {
+  try {
+    const bounds = geofire.geohashQueryBounds(center, radiusInM);
+    const promises = [];
+
+    for (const b of bounds) {
+      const q = query(
+        collection(db, "events"),
+        orderBy("geohash"),
+        where("geohash", ">=", b[0]),
+        where("geohash", "<=", b[1])
+      );
+      promises.push(getDocs(q));
+    }
+
+    const snapshots = await Promise.all(promises);
+    const matchingDocs = [];
+
+    for (const snap of snapshots) {
+      for (const doc of snap.docs) {
+        const lat = doc.get("geopoint").latitude;
+        const lng = doc.get("geopoint").longitude;
+
+        const distanceInKm = geofire.distanceBetween([lat, lng], center);
+        const distanceInM = distanceInKm * 1000;
+        if (distanceInM <= radiusInM) {
+          matchingDocs.push({ id: doc.id, ...doc.data() });
+        }
+      }
+    }
+    return matchingDocs;
+  } catch (error) {
+    console.error("Error fetching nearby events:", error);
+    throw new Error("Failed to query nearby events.");
+  }
+};
+
+
 export const getUserEvents = async (userId: string) => {
+  // ... (function remains the same) ...
   if (!userId) return [];
 
   const eventsRef = collection(db, "events");
@@ -70,20 +128,12 @@ export const getUserEvents = async (userId: string) => {
   return Array.from(eventsMap.values());
 };
 
-/**
- * Saves a new FCM token to a user's document in Firestore.
- * It adds the token to an array to prevent overwriting existing tokens.
- * @param {string} userId - The ID of the user.
- * @param {string} token - The FCM token to save.
- */
+// ... (Chat and FCM Token functions remain the same) ...
 export const saveFcmToken = async (userId: string, token: string) => {
   if (!userId || !token) return;
 
   try {
     const userRef = doc(db, "users", userId);
-    // Use arrayUnion to add the new token to the fcmTokens array
-    // This safely handles cases where the field doesn't exist yet
-    // and prevents duplicate tokens from being added.
     await updateDoc(userRef, {
       fcmTokens: arrayUnion(token),
     });
@@ -93,7 +143,6 @@ export const saveFcmToken = async (userId: string, token: string) => {
   }
 };
 
-// Chat Management
 export const sendMessage = async (
   eventId: string,
   userId: string,
