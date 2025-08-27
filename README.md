@@ -6,11 +6,11 @@ This V1 release is feature-complete and stable, showcasing a scalable backend ar
 
 | Login/Signup | Discover Events | Events Page |
 | :---: | :---: | :---: |
-| ![alt text](image-5.png) | ![alt text](image-4.png) | ![alt text](image-1.png) |
+| ![alt text](Pages/old/image-5.png) | ![alt text](Pages/old/image-4.png) | ![alt text](Pages/old/image-1.png) |
 
 | Events search | Create Event | Chat |
 | :---: | :---: | :---: |
-| ![alt text](image-6.png) | ![alt text](image-7.png) | ![alt text](image-3.png) |
+| ![alt text](Pages/old/image-6.png) | ![alt text](Pages/old/image-7.png) | ![alt text](Pages/old/image-3.png) |
 
 | Profile |
 | :---: |
@@ -101,9 +101,9 @@ The application should now be running on [http://localhost:3000](http://localhos
 
 This project has been architected with performance and scalability in mind. Here are some of the key technical decisions:
 
-*   **Scalability (Geospatial Queries)**: The project has moved from a naive "fetch all" approach to a highly scalable one. By calculating and storing a `geohash` for each event, the backend can now query for events within a specific geographic area without having to check every single document in the database. This is the correct, production-grade way to build a location-aware application.
+*   **Scalability (Geospatial Queries)**: The project has moved from a naive '''fetch all''' approach to a highly scalable one. By calculating and storing a `geohash` for each event, the backend can now query for events within a specific geographic area without having to check every single document in the database. This is the correct, production-grade way to build a location-aware application.
 
-*   **Performance (Data Denormalization)**: To speed up the UI, event documents are now created with `organizerName` and `organizerPhotoURL` saved directly on them. This is a classic denormalization strategy that avoids the need for the client to make a second database request for the organizer's profile for every event card it displays, significantly reducing latency and database reads.
+*   **Performance (Data Denormalization)**: To speed up the UI, event documents are now created with `organizerName` and `organizerPhotoURL` saved directly on them. This is a classic denormalization strategy that avoids the need for the client to make a second database request for the organizer'''s profile for every event card it displays, significantly reducing latency and database reads.
 
 *   **User Experience (Client-Side Filtering)**: The "Discover Events" page stores the fetched nearby events in a master state (`allNearbyEvents`). When a user interacts with filters, a derived state (`filteredEvents`) is instantly recalculated on the client, providing a fast and responsive UI without any additional network requests.
 
