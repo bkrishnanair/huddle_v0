@@ -1,135 +1,111 @@
-# Local Event Discovery Platform
-# Huddle
+# Huddle - V1 Stable
 
-Welcome to the Local Event Discovery Platform! This is a modern, full-stack web application designed to help users find, join, and discuss local events happening around them. It features an interactive map, real-time chat, and a clean, component-based architecture.
+Huddle is a modern, full-stack web application designed to help users discover, create, and join local pickup sports events. Centered around an interactive map, it provides a seamless experience for finding nearby games, creating events with precise locations, and engaging with other participants through real-time chat.
 
-![Project Screenshot](public/placeholder.jpg)
+This V1 release is feature-complete and stable, showcasing a scalable backend architecture and a polished, user-friendly "glassmorphism" UI.
 
-Login/Signup
-![alt text](image-5.png)
+| Login/Signup | Discover Events | Events Page |
+| :---: | :---: | :---: |
+| ![alt text](image-5.png) | ![alt text](image-4.png) | ![alt text](image-1.png) |
 
-main-map page (Discover Events Nearby)
-![alt text](image-4.png)
+| Events search | Create Event | Chat |
+| :---: | :---: | :---: |
+| ![alt text](image-6.png) | ![alt text](image-7.png) | ![alt text](image-3.png) |
 
-Events Page
-![alt text](image-1.png)
+| Profile |
+| :---: |
+| ![alt text](image.png) |
 
-Create Events
-![alt text](image-2.png)
+## Key Features
 
-Chat
-![alt text](image-3.png)
+*   **Interactive Geospatial Search**: Users can discover events in their vicinity, powered by efficient geospatial queries using geohashing.
+*   **Dynamic, Client-Side Filtering**: A fast and responsive UI allows users to instantly filter nearby events by sport, date, time, and availability without re-fetching data.
+*   **Advanced Event Creation**: A completely overhauled event creation modal featuring an interactive map, a draggable pin for precise location setting, and Google Places Autocomplete for address searching.
+*   **Real-Time Event Chat**: Each event includes a real-time chat for registered participants to coordinate and communicate.
+*   **Social Sign-In**: Streamlined user onboarding with support for both traditional email/password and one-click Google Sign-In.
+*   **User Profiles**: A dedicated profile page where users can view their organized and joined events.
+*   **Modern UI/UX**: A beautiful "glassmorphism" design system built with Tailwind CSS and Shadcn/ui, featuring professional skeleton loading states for a smooth user experience.
 
-Profile
-![alt text](image.png)
-## ✨ Key Features
+## Tech Stack
 
-*   **🗺️ Interactive Map View**: Discover events visually on a Google Map.
-*   **👤 User Authentication**: Secure sign-up and login functionality powered by Firebase Authentication.
-*   **🎉 Event Management**: Users can create new events, and RSVP to events organized by others.
-*   **💬 Real-Time Chat**: Every event has a dedicated real-time chat room for attendees to communicate.
-*   **✉️ Centralized Chat Page**: A dedicated page to view and manage conversations for all your joined and organized events.
-*   **👤 User Profile**: A clean profile page with a tabbed view to easily see events you've organized versus those you've joined.
-*   **📱 Responsive Design**: A modern, responsive UI built with Tailwind CSS and Shadcn/ui.
+| Category      | Technology                                                                                             |
+| :------------ | :----------------------------------------------------------------------------------------------------- |
+| **Framework** | [**Next.js**](https://nextjs.org/) (v15+ with App Router)                                                |
+| **Language**  | [**TypeScript**](https://www.typescriptlang.org/)                                                      |
+| **Backend**   | [**Firebase**](https://firebase.google.com/) (Serverless: Auth, Firestore)                             |
+| **Geospatial**| [**Google Maps Platform**](https://developers.google.com/maps) & [**`geofire-common`**](https://github.com/firebase/geofire-js) |
+| **Styling**   | [**Tailwind CSS**](https://tailwindcss.com/) & [**Shadcn/ui**](https://ui.shadcn.com/)                   |
+| **Deployment**| [**Vercel**](https://vercel.com/) (Frontend) & [**Firebase**](https://firebase.google.com/) (Backend)    |
+| **Package Manager**| [**PNPM**](https://pnpm.io/)                                                                           |
 
-## 🚀 Tech Stack
+---
 
-This project is built with a modern, type-safe, and scalable technology stack.
+## Getting Started
 
-*   **Framework**: [Next.js](https://nextjs.org/) (with App Router)
-*   **Language**: [TypeScript](https://www.typescriptlang.org/)
-*   **Backend & Database**: [Firebase](https://firebase.google.com/) (Firestore, Firebase Authentication)
-*   **UI Components**: [Shadcn/ui](https://ui.shadcn.com/), built on Radix UI
-*   **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-*   **Mapping**: [Google Maps Platform](https://developers.google.com/maps)
-*   **Package Manager**: [PNPM](https://pnpm.io/)
+Follow these instructions to get the project running on your local machine for development and testing purposes.
 
-## ⚙️ Getting Started
+### 1. Prerequisites
 
-Follow these instructions to get the project up and running on your local machine.
+Ensure you have the following installed:
+*   [Node.js](https://nodejs.org/) (v18 or later)
+*   [PNPM](https://pnpm.io/installation)
 
-### Prerequisites
-
-*   Node.js (v18 or later)
-*   PNPM installed (`npm install -g pnpm`)
-*   A Firebase project with Firestore and Authentication enabled.
-*   A Google Cloud Platform project with the Maps JavaScript API enabled.
-
-### 1. Clone the Repository
+### 2. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/your-repo-name.git
-cd your-repo-name
-```
-
-### 2. Install Dependencies
-
-```bash
-pnpm install
+git clone https://github.com/bkrishnanair/huddle_v0.git
+cd huddle_v0
 ```
 
 ### 3. Set Up Environment Variables
 
-You will need to create a `.env.local` file in the root of the project. This file will store your secret keys for Firebase and Google Maps.
+This project requires API keys from both Firebase and Google Cloud to function.
 
-Rename the `env.local.example` file (if present) to `.env.local`, or create it from scratch with the following content:
+1.  Create a `.env.local` file in the root of the project:
+    ```bash
+    touch .env.local
+    ```
+2.  Add the following environment variables to the file, replacing the placeholders with your actual project credentials:
+    ```env
+    # Firebase Configuration
+    NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
+    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain
+    NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_firebase_project_id
+    NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_firebase_storage_bucket
+    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_firebase_messaging_sender_id
+    NEXT_PUBLIC_FIREBASE_APP_ID=your_firebase_app_id
 
-```
-# Firebase Client SDK Configuration
-# These keys are safe to expose on the client side
-NEXT_PUBLIC_FIREBASE_API_KEY=
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
-NEXT_PUBLIC_FIREBASE_APP_ID=
+    # Google Maps Configuration
+    NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+    NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID=your_google_maps_map_id
+    ```
+    > **Note:** For the Google Maps API Key, ensure you have enabled the **Maps JavaScript API**, **Places API**, and **Geocoding API** in your Google Cloud Console.
 
-# Firebase Admin SDK Configuration (for server-side code)
-# Keep these secret! Do not expose them to the client.
-FIREBASE_PROJECT_ID=
-FIREBASE_CLIENT_EMAIL=
-FIREBASE_PRIVATE_KEY=
+### 4. Install Dependencies and Run
 
-# Google Maps API Key
-# This key is used for loading the map on the client side
-NEXT_PUBLIC_MAPS_API_KEY=
-```
-
-### 4. Run the Development Server
+This project uses `pnpm`. The repository includes an `.npmrc` file to automatically handle peer dependency issues during installation.
 
 ```bash
-pnpm dev
+# Install all project dependencies
+pnpm install
 
-or npm run dev
+# Run the development server
+pnpm run dev
 ```
 
-The application should now be running at [http://localhost:3000](http://localhost:3000).
-
-## 📂 Project Structure
-
-The project follows the standard Next.js App Router structure, with a clear separation of concerns.
-
-```
-/
-├── app/                      # Main application folder (pages and API routes)
-│   ├── api/                  # Backend API routes
-│   └── (main)/               # Route group for main app pages (profile, etc.)
-├── components/               # Reusable React components
-│   ├── ui/                   # UI components from Shadcn/ui
-│   └── (feature)/            # Components specific to features (events, chat, etc.)
-├── lib/                      # Core logic, Firebase SDK setup, and utility functions
-├── public/                   # Static assets (images, logos)
-├── firebase.json             # Firebase hosting and services configuration
-├── firestore.rules           # Security rules for the Firestore database
-└── package.json              # Project dependencies and scripts
-```
-
-## Recent Updates
-
-The project is under active development. Recent efforts (mid-August) have focused on:
-*   **Feature Expansion**: Rolled out a dedicated chat system and redesigned the events and profile pages.
-*   **Stabilization**: Resolved dependency conflicts related to React 19, fixed incorrect package versions, and corrected module import/export errors across the codebase to ensure a stable and reliable development experience.
+The application should now be running on [http://localhost:3000](http://localhost:3000).
 
 ---
-This README was generated with assistance from an AI code agent.
-```
+
+## Key Architectural Decisions
+
+This project has been architected with performance and scalability in mind. Here are some of the key technical decisions:
+
+*   **Scalability (Geospatial Queries)**: The project has moved from a naive "fetch all" approach to a highly scalable one. By calculating and storing a `geohash` for each event, the backend can now query for events within a specific geographic area without having to check every single document in the database. This is the correct, production-grade way to build a location-aware application.
+
+*   **Performance (Data Denormalization)**: To speed up the UI, event documents are now created with `organizerName` and `organizerPhotoURL` saved directly on them. This is a classic denormalization strategy that avoids the need for the client to make a second database request for the organizer's profile for every event card it displays, significantly reducing latency and database reads.
+
+*   **User Experience (Client-Side Filtering)**: The "Discover Events" page stores the fetched nearby events in a master state (`allNearbyEvents`). When a user interacts with filters, a derived state (`filteredEvents`) is instantly recalculated on the client, providing a fast and responsive UI without any additional network requests.
+
+---
+This README was last updated with assistance from an AI code agent.
