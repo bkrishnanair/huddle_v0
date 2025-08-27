@@ -5,6 +5,23 @@ Welcome to the Local Event Discovery Platform! This is a modern, full-stack web 
 
 ![Project Screenshot](public/placeholder.jpg)
 
+Login/Signup
+![alt text](image-5.png)
+
+main-map page (Discover Events Nearby)
+![alt text](image-4.png)
+
+Events Page
+![alt text](image-1.png)
+
+Create Events
+![alt text](image-2.png)
+
+Chat
+![alt text](image-3.png)
+
+Profile
+![alt text](image.png)
 ## ✨ Key Features
 
 *   **🗺️ Interactive Map View**: Discover events visually on a Google Map.

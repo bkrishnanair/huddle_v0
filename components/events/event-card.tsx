@@ -2,8 +2,9 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, MapPin, Users, Sun } from "lucide-react";
+import { Calendar, Clock, MapPin, Users } from "lucide-react";
 
+// ... (interfaces remain the same) ...
 interface GameEvent {
   id: string;
   title: string;
@@ -14,11 +15,11 @@ interface GameEvent {
   maxPlayers: number;
   currentPlayers: number;
 }
-
 interface EventCardProps {
   event: GameEvent;
   onSelectEvent: (event: GameEvent) => void;
 }
+
 
 export function EventCard({ event, onSelectEvent }: EventCardProps) {
   const formatDate = (dateStr: string) => {
@@ -75,3 +76,24 @@ export function EventCard({ event, onSelectEvent }: EventCardProps) {
   );
 }
 
+export function EventCardSkeleton() {
+  return (
+    <Card className="glass-card p-4 rounded-2xl animate-pulse">
+      <CardContent className="p-0">
+        <div className="flex justify-between items-start mb-3">
+          <div className="h-6 w-3/4 bg-white/20 rounded-md"></div>
+          <div className="h-6 w-1/4 bg-white/20 rounded-md"></div>
+        </div>
+        <div className="space-y-2">
+          <div className="h-4 w-5/6 bg-white/20 rounded-md"></div>
+          <div className="h-4 w-4/6 bg-white/20 rounded-md"></div>
+          <div className="h-4 w-3/6 bg-white/20 rounded-md"></div>
+        </div>
+        <div className="border-t border-white/20 my-3"></div>
+        <div className="flex justify-between items-center">
+          <div className="h-5 w-1/2 bg-white/20 rounded-md"></div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
