@@ -1,3 +1,4 @@
+
 August 16th 
 
 lib/db.ts` for fetching user events and sending/getting chat messages.
@@ -59,10 +60,42 @@ August 17th
   - Further refactored auth by creating a dedicated `lib/auth-server.ts` file for server-only logic, importing `cookies` and `firebase-admin`, and ensuring `lib/auth.ts` is purely client-side compatible, fixing the "next/headers" build error.
 
 
-You are an assistant specialized in summarizing daily development activities. I will provide you with a text file containing my chat log with an AI code agent for today's work. Your task is to review this chat and create a clear, concise, and simple journal entry for today's development. Focus on what was implemented, built, or significant decisions made regarding the app's features or architecture. The entry should be easy to understand and serve as a quick reference for my progress.
+August 26th :
 
 Implemented several map optimizations:
   - Used client-side caching for event lists displayed on the map.
   - Optimized map queries by fetching events only within the current viewport.
   - Memoized map marker components to prevent unnecessary re-renders.
   - Configured the map to use a vector map with Map ID styling for better visual clarity and performance.
+
+
+geofire-common` for geohash calculations.
+  - Modified POST /api/events to add geohash and GeoPoint during event creation.
+  - Created `createEvent` function in `lib/db.ts`.
+  - Created new GET /api/events/nearby endpoint for radius-based event fetching.
+  - Updated the Discover Events page to use /api/events/nearby for efficient, localized data fetching.
+  - Implemented client-side filtering (search, sport, date, time of day, availability) on the fetched nearby events for instant results.
+  - Established clear state management for `allNearbyEvents` and `filteredEvents` on the Discover page.
+- Optimized event display by denormalizing data:
+  - Modified the POST /api/events endpoint to embed `organizerName` and `organizerPhotoURL` into new event documents.
+  - Updated `EventCard` and `EventCardSkeleton` components to display organizer info directly from the event object.
+- Overhauled the Create Event modal location input:
+  - Replaced static input with an interactive map (defaults to user location).
+  - Added a draggable marker to pinpoint event location.
+  - Integrated Google Places Autocomplete API for location search above the map.
+  - Synced search selection to update form input, re-center map, and move marker.
+- Implemented location permission fallback:
+  - Created `ManualLocationSearch` component for denied permission states.
+  - Updated `EventsPage` to conditionally render `ManualLocationSearch` if `locationAccessDenied`.
+  - Added manual search functionality in fallback to geocode and fetch nearby events.
+- Implemented Google Sign-In:
+  - Added `signInWithGoogle` function to `lib/auth.ts` using `signInWithPopup`.
+  - Added Firestore user creation logic within `signInWithGoogle` for new users.
+  - Added "Continue with Google" button to `AuthScreen`.
+  - Removed redundant `/api/auth/google
+
+
+
+You are an assistant specialized in summarizing daily development activities. I will provide you with a text file containing my chat log with an AI code agent for today's work. Your task is to review this chat and create a clear, concise, and simple journal entry for today's development. Focus on what was implemented, built, or significant decisions made regarding the app's features or architecture. The entry should be easy to understand and serve as a quick reference for my progress.
+
+
