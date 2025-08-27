@@ -14,7 +14,7 @@ This V1 release is feature-complete and stable, showcasing a scalable backend ar
 
 | Profile |
 | :---: |
-| ![alt text](image.png) |
+| ![alt text](Pages/old/image.png) |
 
 ## Key Features
 
