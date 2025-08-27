@@ -8,14 +8,13 @@ import MapView from "@/components/map-view"
 import EventsPage from "@/components/events-page"
 import ChatPage from "@/components/chat-page"
 import BottomNavigation from "@/components/bottom-navigation"
-import { useRouter } from "next/navigation"
+import ProfilePage from "@/app/profile/page" // Import the redesigned profile page
 
 export default function Home() {
   const { user: firebaseUser, loading: authLoading, error: authError } = useFirebase()
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("map")
-  const router = useRouter()
 
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -24,22 +23,18 @@ export default function Home() {
           uid: firebaseUser.uid,
           email: firebaseUser.email,
           name: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "User",
+          photoURL: firebaseUser.photoURL,
         }
         setUser(optimisticUser)
         setLoading(false)
 
         try {
           const userProfile = await getUser(firebaseUser.uid)
-          if (userProfile?.name && userProfile.name !== optimisticUser.name) {
-            setUser({
-              uid: firebaseUser.uid,
-              email: firebaseUser.email,
-              name: userProfile.name,
-            })
+          if (userProfile) {
+            setUser({ ...optimisticUser, ...userProfile })
           }
         } catch (error) {
           console.error("Error fetching user profile:", error)
-          // Keep the optimistic user data if API call fails
         }
       } else {
         setUser(null)
@@ -53,13 +48,7 @@ export default function Home() {
   }, [firebaseUser, authLoading])
 
   const handleTabChange = (tab: string) => {
-    console.log("[v0] Tab change requested:", tab)
-    if (tab === "profile") {
-      // Keep profile within the tab system instead of redirecting
-      setActiveTab("profile")
-    } else {
-      setActiveTab(tab)
-    }
+    setActiveTab(tab)
   }
 
   const handleSwitchToMap = () => {
@@ -68,18 +57,16 @@ export default function Home() {
 
   if (authError) {
     return (
-      <div className="min-h-screen bg-red-50 flex items-center justify-center p-4">
-        <div className="text-center max-w-md">
-          <div className="text-red-600 text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold text-red-800 mb-4">Firebase Error</h1>
-          <p className="text-red-600 mb-6">{authError}</p>
-          <div className="bg-red-100 border border-red-300 rounded-lg p-4 text-left">
-            <h3 className="font-semibold text-red-800 mb-2">Troubleshooting:</h3>
-            <ul className="text-sm text-red-700 space-y-1">
-              <li>• Check that Authentication is enabled in Firebase Console</li>
-              <li>• Check that Firestore is enabled in Firebase Console</li>
-              <li>• Verify your Firebase project configuration</li>
-              <li>• Try refreshing the page</li>
+      <div className="min-h-screen liquid-gradient flex items-center justify-center p-4 text-white">
+        <div className="text-center max-w-md glass-card p-8 rounded-2xl">
+          <h1 className="text-2xl font-bold mb-4">Firebase Error</h1>
+          <p className="mb-6">{authError}</p>
+          <div className="bg-white/10 border border-white/20 rounded-lg p-4 text-left">
+            <h3 className="font-semibold mb-2">Troubleshooting:</h3>
+            <ul className="text-sm space-y-1">
+              <li>• Check your Firebase project configuration.</li>
+              <li>• Ensure Authentication and Firestore are enabled.</li>
+              <li>• Verify Firestore rules allow access.</li>
             </ul>
           </div>
         </div>
@@ -89,10 +76,10 @@ export default function Home() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-blue-50 flex items-center justify-center">
+      <div className="min-h-screen liquid-gradient flex items-center justify-center text-white">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Connecting to Firebase...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p>Connecting...</p>
         </div>
       </div>
     )
@@ -103,33 +90,16 @@ export default function Home() {
   }
 
   const renderActiveTab = () => {
-    console.log("[v0] Rendering active tab:", activeTab)
     switch (activeTab) {
       case "map":
         return <MapView user={user} onLogout={() => setUser(null)} />
       case "events":
         return <EventsPage user={user} onSwitchToMap={handleSwitchToMap} />
       case "chat":
-        return <ChatPage user={user} />
+        return <ChatPage />
       case "profile":
-        return (
-          <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 pb-20">
-            <div className="glass-card mx-4 mt-4 p-4 rounded-2xl text-center">
-              <h1 className="text-2xl font-bold text-gray-900 mb-4">Profile</h1>
-              <div className="w-20 h-20 bg-blue-100 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <span className="text-2xl font-bold text-blue-600">{user.name?.charAt(0).toUpperCase() || "U"}</span>
-              </div>
-              <h2 className="text-xl font-semibold text-gray-900">{user.name}</h2>
-              <p className="text-gray-600 mb-6">{user.email}</p>
-              <button
-                onClick={() => setUser(null)}
-                className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        )
+        // Render the actual ProfilePage component
+        return <ProfilePage />
       default:
         return <MapView user={user} onLogout={() => setUser(null)} />
     }

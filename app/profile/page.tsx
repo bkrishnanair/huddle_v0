@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, LogOut, Trophy, MapPin, Calendar, Users, Loader2 } from "lucide-react";
+import { ArrowLeft, LogOut, Trophy, MapPin, Calendar, Users } from "lucide-react";
 import { useAuth } from "@/lib/firebase-context";
 import Link from "next/link";
 
-// Interface for a single event object
+// ... (interfaces remain the same) ...
 interface GameEvent {
   id: string;
   title: string;
@@ -20,35 +20,69 @@ interface GameEvent {
   maxPlayers: number;
   currentPlayers: number;
 }
-
-// Interface for the user's statistics
 interface UserStats {
   joined: number;
   organized: number;
   upcoming: number;
 }
 
+
+// Skeleton Loader Component for the Profile Page
+const ProfileSkeleton = () => (
+  <div className="min-h-screen liquid-gradient p-4 animate-pulse">
+    <header className="relative bg-gradient-to-b from-blue-500/30 to-transparent p-4 text-white">
+      <div className="flex items-center justify-between">
+        <div className="h-8 w-20 bg-white/20 rounded-md"></div>
+        <div className="h-8 w-24 bg-white/20 rounded-md"></div>
+      </div>
+      <div className="text-center py-6">
+        <div className="w-24 h-24 bg-white/20 rounded-full mx-auto mb-4"></div>
+        <div className="h-6 w-40 bg-white/20 rounded-md mx-auto mb-2"></div>
+        <div className="h-4 w-52 bg-white/20 rounded-md mx-auto"></div>
+      </div>
+    </header>
+    <main className="px-4 -mt-10">
+      <Card className="glass-card mb-6 bg-white/10">
+        <CardContent className="p-4 grid grid-cols-3 gap-4">
+          <div className="text-center space-y-2">
+            <div className="h-6 w-8 mx-auto bg-white/20 rounded-md"></div>
+            <div className="h-4 w-20 mx-auto bg-white/20 rounded-md"></div>
+          </div>
+          <div className="text-center space-y-2">
+            <div className="h-6 w-8 mx-auto bg-white/20 rounded-md"></div>
+            <div className="h-4 w-20 mx-auto bg-white/20 rounded-md"></div>
+          </div>
+          <div className="text-center space-y-2">
+            <div className="h-6 w-8 mx-auto bg-white/20 rounded-md"></div>
+            <div className="h-4 w-20 mx-auto bg-white/20 rounded-md"></div>
+          </div>
+        </CardContent>
+      </Card>
+      <Card className="glass-card mb-6 bg-white/10 h-24"></Card>
+      <Card className="glass-card mb-6 bg-white/10 h-48"></Card>
+      <Card className="glass-card bg-white/10 h-32"></Card>
+    </main>
+  </div>
+);
+
+
 export default function ProfilePage() {
-  // Authentication and navigation hooks
   const { user, loading: authLoading, logout } = useAuth();
   const router = useRouter();
 
-  // State for user stats and events
   const [stats, setStats] = useState<UserStats>({ joined: 0, organized: 0, upcoming: 0 });
   const [recentEvents, setRecentEvents] = useState<GameEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Effect to fetch user data and associated events
   useEffect(() => {
-    // If auth is done and there's no user, redirect to home
     if (!authLoading && !user) {
       router.push("/");
       return;
     }
 
-    // If a user is logged in, fetch their events
     if (user) {
       const fetchUserEvents = async (userId: string) => {
+        setLoading(true);
         try {
           const response = await fetch(`/api/users/${userId}/events`);
           if (response.ok) {
@@ -57,7 +91,6 @@ export default function ProfilePage() {
             const joined = data.joinedEvents || [];
             const now = new Date();
 
-            // Calculate stats for the top card
             const upcomingCount = [...joined, ...organized].filter(
               (event) => new Date(event.date) > now
             ).length;
@@ -67,7 +100,6 @@ export default function ProfilePage() {
               upcoming: upcomingCount,
             });
 
-            // Get the 3 most recent events for the "Recent Events" card
             const allEvents = [...joined, ...organized]
               .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
               .slice(0, 3);
@@ -83,27 +115,17 @@ export default function ProfilePage() {
     }
   }, [user, authLoading, router]);
 
-  // Handler for the logout action
   const handleLogout = async () => {
     await logout();
     router.push("/");
   };
 
-  // Helper to format dates consistently
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
-  // Loading state while fetching user and event data
   if (loading || authLoading) {
-    return (
-      <div className="min-h-screen liquid-gradient flex items-center justify-center text-white">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" />
-          <p>Loading Profile...</p>
-        </div>
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   if (!user) return null;

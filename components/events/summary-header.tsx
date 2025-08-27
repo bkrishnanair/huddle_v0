@@ -52,3 +52,37 @@ export function SummaryHeader({
     </div>
   );
 }
+
+export function SummaryHeaderSkeleton() {
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 animate-pulse">
+            <Card className="glass-card p-4">
+                <CardContent className="flex items-center p-0">
+                    <div className="bg-white/20 p-3 rounded-full mr-4 h-12 w-12"></div>
+                    <div className="space-y-2">
+                        <div className="h-6 w-12 bg-white/20 rounded-md"></div>
+                        <div className="h-4 w-24 bg-white/20 rounded-md"></div>
+                    </div>
+                </CardContent>
+            </Card>
+            <Card className="glass-card p-4">
+                <CardContent className="flex items-center p-0">
+                    <div className="bg-white/20 p-3 rounded-full mr-4 h-12 w-12"></div>
+                    <div className="space-y-2">
+                        <div className="h-6 w-12 bg-white/20 rounded-md"></div>
+                        <div className="h-4 w-24 bg-white/20 rounded-md"></div>
+                    </div>
+                </CardContent>
+            </Card>
+            <Card className="glass-card p-4">
+                <CardContent className="flex items-center p-0">
+                    <div className="bg-white/20 p-3 rounded-full mr-4 h-12 w-12"></div>
+                    <div className="space-y-2">
+                        <div className="h-6 w-12 bg-white/20 rounded-md"></div>
+                        <div className="h-4 w-24 bg-white/20 rounded-md"></div>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    )
+}
