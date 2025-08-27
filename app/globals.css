@@ -51,6 +51,15 @@
     box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
   }
 
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
   @keyframes liquidFlow {
     0%,
     100% {
