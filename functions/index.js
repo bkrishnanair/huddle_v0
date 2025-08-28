@@ -1,89 +1,58 @@
 // functions/index.js
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+const { GoogleAuth } = require("google-auth-library");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-// Initialize the Firebase Admin SDK.
-// This is necessary for backend access to Firebase services.
 admin.initializeApp();
 
+// Initialize the Gemini AI model
+const genAI = new GoogleGenerativeAI(functions.config().gemini.api_key);
+const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
 /**
- * A scheduled Cloud Function that runs every 10 minutes.
- * It checks for upcoming events and sends push notifications to RSVP'd users.
+ * AI FEATURE: HTTP Callable function to generate event copy.
+ * This function is secure and can only be called by authenticated users.
  */
-exports.sendEventReminders = functions.pubsub.schedule("every 10 minutes").onRun(async (context) => {
-  console.log("Running scheduled event reminder function.");
-
-  const now = new Date();
-  // Set a time window: check for events starting in the next 25 to 35 minutes.
-  // This window prevents sending multiple notifications for the same event.
-  const startTime = new Date(now.getTime() + 25 * 60 * 1000); // 25 minutes from now
-  const endTime = new Date(now.getTime() + 35 * 60 * 1000); // 35 minutes from now
-
-  const db = admin.firestore();
-
-  try {
-    // 1. Query for events starting within our time window.
-    const eventsSnapshot = await db.collection("events")
-      .where("date", ">=", startTime.toISOString().split('T')[0])
-      .where("date", "<=", endTime.toISOString().split('T')[0])
-      .get();
-
-    if (eventsSnapshot.empty) {
-      console.log("No upcoming events found in the time window.");
-      return null;
-    }
-
-    const reminderPromises = [];
-
-    // 2. For each upcoming event, process the notifications.
-    eventsSnapshot.forEach(doc => {
-      const event = doc.data();
-      const eventTime = new Date(`${event.date}T${event.time}`);
-
-      // Double-check if the event is truly in our 25-35 minute window.
-      if (eventTime >= startTime && eventTime <= endTime && event.players && event.players.length > 0) {
-        console.log(`Found upcoming event: ${event.title}`);
-        
-        // 3. Get the list of RSVP'd user IDs.
-        const playerIds = event.players;
-
-        // 4. Look up users to get their FCM tokens.
-        const tokensPromise = db.collection("users").where(admin.firestore.FieldPath.documentId(), "in", playerIds).get().then(usersSnapshot => {
-          const tokens = [];
-          usersSnapshot.forEach(userDoc => {
-            const userData = userDoc.data();
-            if (userData.fcmTokens && userData.fcmTokens.length > 0) {
-              tokens.push(...userData.fcmTokens);
-            }
-          });
-          return tokens;
-        });
-        
-        // 5. Send notifications using the Firebase Admin SDK.
-        reminderPromises.push(tokensPromise.then(tokens => {
-          if (tokens.length > 0) {
-            const message = {
-              notification: {
-                title: "Event Reminder!",
-                body: `Your ${event.sport} game at ${event.location.address} starts in 30 minutes!`,
-              },
-              tokens: tokens,
-            };
-            
-            console.log(`Sending notification for "${event.title}" to ${tokens.length} users.`);
-            return admin.messaging().sendMulticast(message);
-          } else {
-            return null;
-          }
-        }));
-      }
-    });
-
-    await Promise.all(reminderPromises);
-    console.log("Event reminder processing finished.");
-  } catch (error) {
-    console.error("Error sending event reminders:", error);
+exports.generateEventCopy = functions.https.onCall(async (data, context) => {
+  // 1. Authentication Check: Ensure the user is logged in.
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      "unauthenticated",
+      "You must be logged in to use this feature."
+    );
   }
 
-  return null;
+  // 2. Data Validation: Ensure all required data is present.
+  const { sport, locationName, timeOfDay } = data;
+  if (!sport || !locationName || !timeOfDay) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Missing required fields: sport, locationName, or timeOfDay."
+    );
+  }
+
+  // 3. Construct a high-quality prompt for the Gemini model.
+  const prompt = `You are an assistant for a sports app called Huddle. Generate 3 catchy and exciting options for a pickup game title and a short, friendly description. The game is for ${sport} and is happening at ${locationName} in the ${timeOfDay}. For cricket, use terms like 'sixes' or 'wickets'. For basketball, use terms like 'hoops' or 'showdown'. The tone should be fun and welcoming. Return the response as a valid JSON array of objects, where each object has a 'title' and a 'description' key. Do not include any markdown formatting.`;
+
+  try {
+    // 4. Call the Gemini API.
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = await response.text();
+
+    // 5. Parse the response and return it to the client.
+    // The Gemini API may return the JSON string wrapped in markdown, so we clean it.
+    const cleanedText = text.replace(/```json\n|```/g, "").trim();
+    const suggestions = JSON.parse(cleanedText);
+    
+    return { suggestions };
+
+  } catch (error) {
+    console.error("Error calling Gemini API:", error);
+    throw new functions.https.HttpsError(
+      "internal",
+      "An error occurred while generating suggestions."
+    );
+  }
 });

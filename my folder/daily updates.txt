@@ -95,7 +95,9 @@ geofire-common` for geohash calculations.
   - Removed redundant `/api/auth/google
 
 
+generateEventCopy` using the Gemini API in `functions/index.js`.
+  - Added the `@google/generative-ai` dependency to `functions/package.json`.
+  - Integrated a "Generate with AI" button into `components/create-event-modal.tsx
+
 
 You are an assistant specialized in summarizing daily development activities. I will provide you with a text file containing my chat log with an AI code agent for today's work. Your task is to review this chat and create a clear, concise, and simple journal entry for today's development. Focus on what was implemented, built, or significant decisions made regarding the app's features or architecture. The entry should be easy to understand and serve as a quick reference for my progress.
-
-
