@@ -3,13 +3,15 @@
 import type React from "react"
 import { createContext, useContext, useEffect, useState, useCallback } from "react"
 import { type User, onAuthStateChanged, signOut } from "firebase/auth"
-import { auth } from "./firebase"
+import { auth, app } from "./firebase"
+import { FirebaseApp } from "firebase/app"
 
 interface FirebaseContextType {
   user: User | null
   loading: boolean
   error: string | null
   logout: () => Promise<void>;
+  app: FirebaseApp | null;
 }
 
 const FirebaseContext = createContext<FirebaseContextType>({
@@ -17,6 +19,7 @@ const FirebaseContext = createContext<FirebaseContextType>({
   loading: true,
   error: null,
   logout: async () => {},
+  app: null
 })
 
 export const useFirebase = () => {
@@ -72,5 +75,5 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  return <FirebaseContext.Provider value={{ user, loading, error, logout }}>{children}</FirebaseContext.Provider>
+  return <FirebaseContext.Provider value={{ user, loading, error, logout, app }}>{children}</FirebaseContext.Provider>
 }

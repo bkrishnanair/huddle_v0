@@ -13,6 +13,8 @@ Huddle is a geospatial social platform designed to help users discover, create, 
 *   **Backend**: Firebase (Serverless)
     *   **Authentication**: Firebase Authentication (Email/Password, Google Sign-In)
     *   **Database**: Cloud Firestore (NoSQL)
+    *   **Serverless Functions**: Firebase Cloud Functions
+*   **Generative AI**: Google Gemini
 *   **Geospatial**: Google Maps Platform & `geofire-common` library for location-based queries
 *   **UI**: Tailwind CSS with Shadcn/ui components
 *   **Deployment**: Vercel (Frontend) & Firebase (Backend)
@@ -23,56 +25,59 @@ Huddle is a geospatial social platform designed to help users discover, create, 
 /
 ├── app/                      # Next.js App Router: Contains all pages and API routes.
 │   ├── api/                  # Backend API endpoints.
-│   │   ├── events/           # Handles event creation and fetching.
-│   │   │   ├── nearby/       # CRITICAL: New endpoint for geospatial queries.
-│   │   └── ...               # Other routes for users, chat, etc.
-│   └── profile/              # The user profile page component.
 ├── components/               # All reusable React components.
-│   ├── ui/                   # Core UI elements from Shadcn (Button, Card, etc.).
-│   ├── events/               # Components specific to the event discovery page.
-│   └── ...                   # Other specific components (chat, auth, etc.).
+├── functions/                # NEW: Contains all backend Firebase Cloud Functions.
+│   ├── index.js              # Main entry point for Cloud Functions.
+│   └── package.json          # Dependencies for the Cloud Functions.
 ├── lib/                      # Core logic, context, and Firebase utilities.
-├── public/                   # Static assets (images, icons).
-├── .npmrc                    # NEW: Configuration file for PNPM to handle dependencies correctly.
-├── firebase.json             # Firebase project configuration.
+├── .npmrc                    # Configuration file for PNPM.
 ├── firestore.rules           # CRITICAL: Security rules for the Firestore database.
-├── next.config.mjs           # Next.js framework configuration.
-└── package.json              # Project dependencies and scripts.
+└── ...                       # Other project configuration files.
 ```
 
 ## Significant Files & Functionalities
 
 | File Name | Path | Functionality |
 | :--- | :--- | :--- |
-| **`events-page.tsx`** | `components/events-page.tsx` | **Core Component.** Manages the entire "Discover" experience. Fetches nearby events, handles client-side filtering, and renders the fallback UI if location access is denied. |
-| **`create-event-modal.tsx`**| `components/create-event-modal.tsx` | **Overhauled.** A modal with an interactive map, draggable marker, and Google Places Autocomplete for creating new events with precise locations. |
-| **`db.ts`** | `lib/db.ts` | **Crucial Logic.** Contains functions for all Firestore interactions, including the new `getNearbyEvents` for geospatial queries. |
+| **`events-page.tsx`** | `components/events-page.tsx` | **Core Component.** Manages the "Discover" experience, fetches nearby events, and handles client-side filtering. |
+| **`create-event-modal.tsx`**| `components/create-event-modal.tsx` | **Modified.** A modal for creating events, now with a "Generate with AI" button that calls our Cloud Function. |
+| **`index.js`** | `functions/index.js` | **New.** Contains the `generateEventCopy` HTTP Callable Cloud Function. This is the secure backend endpoint that communicates with the Google Gemini API. |
+| **`db.ts`** | `lib/db.ts` | **Crucial Logic.** Contains functions for all Firestore interactions, including `getNearbyEvents` for geospatial queries. |
 | **`route.ts`** | `app/api/events/nearby/route.ts` | **New API Endpoint.** The backend route that performs the efficient, location-based query for nearby events using geohashing. |
-| **`route.ts`** | `app/api/events/route.ts` | **Modified.** The `POST` handler was upgraded to add `geohash`, `GeoPoint`, and denormalized `organizerName`/`organizerPhotoURL` to new events. |
-| **`location-search.tsx`** | `components/location-search.tsx` | **New Component.** A reusable input that integrates Google Places Autocomplete for address searching. |
-| **`manual-location-search.tsx`** | `components/manual-location-search.tsx` | **New Component.** A user-friendly fallback UI that prompts for manual location input if geolocation fails. |
-| **`auth.ts`** | `lib/auth.ts` | **Modified.** Contains all client-side authentication logic, including the new `signInWithGoogle` function that handles the popup flow and new user creation. |
-| **`auth-screen.tsx`** | `components/auth-screen.tsx` | **Modified.** The UI for login/signup, now featuring a "Continue with Google" button. |
-| **`firestore.rules`** | `/firestore.rules` | **Security Critical.** Defines all security and access rules for the database. |
-| **`.npmrc`** | `/.npmrc` | **Deployment Critical.** Ensures Vercel's build process correctly handles peer dependency issues with `pnpm`. |
+| **`auth.ts`** | `lib/auth.ts` | **Modified.** Contains all client-side authentication logic, including the `signInWithGoogle` function. |
 
 ## Application Flow
 
-1.  **Onboarding**: A new user lands on the `AuthScreen`. They can sign up with email/password or use the new "Continue with Google" button. The logic in `lib/auth.ts` handles the Firebase call and ensures a new document is created in the `users` collection in Firestore.
-2.  **Event Discovery (Location Enabled)**: The user is directed to the `EventsPage`. The browser requests location permission. On success, the frontend calls the `GET /api/events/nearby` endpoint with the user's coordinates. The backend performs an efficient geospatial query and returns only the events within a 50km radius.
-3.  **Event Discovery (Location Denied)**: If the user denies permission, the `EventsPage` renders the `ManualLocationSearch` component. The user can type a city name, which is then geocoded to coordinates, and the flow proceeds as above.
-4.  **Client-Side Filtering**: The `EventsPage` stores the fetched events in a master state (`allNearbyEvents`). When the user interacts with the search bar, sport dropdown, or other filters, a derived state (`filteredEvents`) is instantly recalculated on the client, providing a fast and responsive UI.
-5.  **Event Creation**: A user clicks "Create Event," opening the `CreateEventModal`. They use the `LocationSearchInput` to find a general area, then drag the marker to pinpoint the exact spot. When they submit, the form data, including the marker's final coordinates and the location's name, is sent to `POST /api/events`. The backend then enriches this data with a geohash and denormalized organizer info before saving it to Firestore.
+1.  **Onboarding**: A new user signs in via the `AuthScreen` using Email or Google Sign-In.
+2.  **Event Discovery**: The `EventsPage` requests location permission. On success, it calls `GET /api/events/nearby` to fetch local events. If permission is denied, it renders the `ManualLocationSearch` component.
+3.  **Event Creation**: A user opens the `CreateEventModal`. They use the map and search to set a precise location.
+4.  **AI Content Generation**: The user can click "Generate with AI ✨". This triggers a call to the `generateEventCopy` Firebase Cloud Function, passing the sport, location, and time. The secure backend function constructs a prompt, queries the Gemini API, and returns three title/description pairs. The user can click a suggestion to auto-populate the form.
+5.  **Submission**: When submitted, the form data is sent to `POST /api/events`. The backend enriches this data with a geohash and denormalized organizer info before saving it to Firestore.
 
 ## Key Architectural Decisions
 
-1.  **Scalability (Geospatial Queries)**: The project has moved from a naive "fetch all" approach to a highly scalable one. By calculating and storing a `geohash` for each event, the backend can now query for events within a specific geographic area without having to check every single document in the database. This is the correct, production-grade way to build a location-aware application.
-2.  **Performance (Data Denormalization)**: To speed up the UI, event documents are now created with `organizerName` and `organizerPhotoURL` saved directly on them. This is a classic denormalization strategy. It avoids the need for the client to make a second database request to fetch the organizer's profile for every event card it needs to display, significantly reducing latency and database reads.
-3.  **User Experience (Optimistic UI & Skeletons)**: The app uses skeleton loaders to provide a better perceived performance while data is being fetched. Additionally, client-side filtering provides an instant response to user input, making the interface feel much faster than if it had to make an API call for every filter change.
+1.  **Scalability (Geospatial Queries)**: By storing a `geohash` for each event, the backend can efficiently query for events within a specific geographic area without checking every document.
+2.  **Performance (Data Denormalization)**: Event documents are created with `organizerName` and `organizerPhotoURL` saved directly on them. This denormalization strategy avoids extra database requests and significantly reduces latency.
+3.  **Secure Server-Side AI Integration**: To protect the expensive and sensitive Gemini API key, all AI-related logic is handled in a secure, authenticated Firebase Cloud Function (`generateEventCopy`). The client provides minimal context, and the server constructs the full prompt and communicates with the AI, ensuring the API key is never exposed on the client side.
 
 ## Getting Started: Next Steps & Advice
 
-1.  **Setup Environment Variables (CRITICAL)**: Before you can run the project, you **must** create a `.env.local` file in the root directory. You will need to populate it with credentials for both **Firebase** (from your Firebase project console) and **Google Maps Platform**. For the Maps API key, ensure you have enabled the **Maps JavaScript API**, **Places API**, and **Geocoding API**.
-2.  **Start at `events-page.tsx`**: This component is now the heart of the application's core user experience. Tracing its logic—from the initial data fetch to the client-side filtering—is the best way to understand how the app works.
-3.  **Review the API Routes**: Look at the difference between the old `GET /api/events` and the new `GET /api/events/nearby`. Then, examine `POST /api/events` to see exactly how the geohashing and denormalization are implemented. This will give you a full picture of the client-server interaction.
-4.  **Understand Denormalization Trade-offs**: Be aware that the current denormalization approach has a trade-off. If a user updates their name or profile picture, their old information will still be displayed on the events they've created. A future task would be to implement a Firebase Cloud Function to automatically update these events when a user's profile changes.
+1.  **Setup Environment Variables (CRITICAL)**:
+    *   Create a `.env.local` file in the **root directory** for your frontend keys (Firebase SDK, Google Maps).
+    *   For the Cloud Function, you must set the Gemini API key in a secure way. From the `functions` directory, run:
+        ```bash
+        # This will securely store your key with Google Cloud Secret Manager
+        firebase functions:secrets:set GEMINI_API_KEY
+        ```
+2.  **Install All Dependencies**: Remember that the `functions` directory has its own `package.json`.
+    ```bash
+    # Install root dependencies
+    pnpm install
+    # Install functions dependencies
+    cd functions
+    pnpm install
+    cd ..
+    ```
+3.  **Start at `create-event-modal.tsx`**: To understand the new AI feature, start here. Trace how it calls the `generateEventCopy` function and handles the response.
+4.  **Review the Cloud Function**: Examine `functions/index.js` to see how the secure, authenticated backend function is structured, how it constructs the prompt, and how it communicates with the Gemini API. This is a key example of a secure client-server interaction pattern.
+5.  **Understand Denormalization Trade-offs**: Be aware that if a user updates their name, their old name will still be on events they've created. A future task would be to write a Cloud Function to automatically update these events when a user's profile changes.

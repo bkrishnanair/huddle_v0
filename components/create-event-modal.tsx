@@ -7,20 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Sparkles, Loader2 } from "lucide-react"; // AI: Import Sparkles and Loader2
+import { X } from "lucide-react";
 import LocationSearchInput from "./location-search";
-// AI: Import the getFunctions and httpsCallable Firebase SDK modules.
+import AIGenerateButton from "./ai-generate-button";
+import AISuggestionsList from "./ai-suggestions-list";
 import { getFunctions, httpsCallable } from "firebase/functions";
-import { app } from "@/lib/firebase";
+import { useFirebase } from "@/lib/firebase-context"; // Import the useFirebase hook
+import { getApp } from "firebase/app";
 
-// AI: Define a type for the suggestions we expect back from the function.
-type AISuggestion = {
-  title: string;
-  description: string;
-};
-
-// ... (interfaces and constants remain the same) ...
 interface CreateEventModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -33,7 +27,6 @@ const SPORTS = [
   "Football", "Hockey", "Badminton", "Table Tennis"
 ];
 
-
 export default function CreateEventModal({ isOpen, onClose, onEventCreated, userLocation }: CreateEventModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -43,18 +36,14 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
     date: "",
     time: "",
     maxPlayers: 10,
-    // AI: Add a description field to the form data.
-    description: "",
+    description: "", // Add description field
   });
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const { app } = useFirebase(); // Get the app instance from the context
 
   const [mapCenter, setMapCenter] = useState(userLocation || { lat: 37.7749, lng: -122.4194 });
   const [markerPosition, setMarkerPosition] = useState(userLocation || { lat: 37.7749, lng: -122.4194 });
-
-  // AI: State to manage the AI generation process.
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
-  const [aiError, setAiError] = useState<string | null>(null);
-
 
   useEffect(() => {
     if (isOpen && userLocation) {
@@ -64,7 +53,6 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   }, [isOpen, userLocation]);
 
   const handlePlaceSelect = (place: google.maps.places.PlaceResult | null) => {
-    // ... (logic remains the same) ...
     if (place?.geometry?.location) {
       const newPosition = {
         lat: place.geometry.location.lat(),
@@ -77,15 +65,14 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    // ... (logic remains the same) ...
-     e.preventDefault();
+    e.preventDefault();
     if (!formData.sport) {
       alert("Please select a sport.");
       return;
     }
     if (!formData.location) {
-        alert("Please select a location from the search bar.");
-        return;
+      alert("Please select a location from the search bar.");
+      return;
     }
     setIsLoading(true);
 
@@ -123,36 +110,43 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // AI: This function calls our new Cloud Function.
   const handleGenerateCopy = async () => {
     if (!formData.sport || !formData.location || !formData.time) {
-      setAiError("Please select a sport, location, and time first.");
+      alert("Please select a sport, location, and time first to get the best suggestions.");
       return;
     }
     
+    if (!app) {
+      alert("Firebase is not initialized. Please try again later.");
+      return;
+    }
     setIsAiLoading(true);
-    setAiError(null);
-    setAiSuggestions([]);
-
-    const functions = getFunctions(app);
+    const functions = getFunctions(app); // Pass the app instance to getFunctions
     const generateEventCopy = httpsCallable(functions, 'generateEventCopy');
-    
-    const timeOfDay = parseInt(formData.time.split(":")[0]) < 12 ? "morning" : 
-                      parseInt(formData.time.split(":")[0]) < 17 ? "afternoon" : "evening";
-
     try {
-      const result: any = await generateEventCopy({
+      const timeOfDay = parseInt(formData.time.split(':')[0]) < 12 ? "morning" : parseInt(formData.time.split(':')[0]) < 18 ? "afternoon" : "evening";
+      const result = await generateEventCopy({
         sport: formData.sport,
-        locationName: formData.location.split(',')[0], // Use the general location name
+        locationName: formData.location,
         timeOfDay: timeOfDay,
       });
-      setAiSuggestions(result.data.suggestions);
-    } catch (error: any) {
-      console.error("Error calling generateEventCopy function:", error);
-      setAiError(error.message || "An unexpected error occurred.");
+      const data = result.data as { suggestions: any[] };
+      setSuggestions(data.suggestions);
+    } catch (error) {
+      console.error("Error calling generateEventCopy:", error);
+      alert("Failed to generate suggestions. Please try again.");
     } finally {
       setIsAiLoading(false);
     }
+  };
+
+  const handleSelectSuggestion = (suggestion: { title: string, description: string }) => {
+    setFormData(prev => ({
+      ...prev,
+      title: suggestion.title,
+      description: suggestion.description
+    }));
+    setSuggestions([]);
   };
 
   if (!isOpen) return null;
@@ -160,67 +154,48 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   const today = new Date().toISOString().split("T")[0];
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-md glass-card border-none rounded-2xl shadow-2xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center z-50 p-4 pt-12">
+      <div className="w-full max-w-md glass-card border-none rounded-2xl shadow-2xl max-h-[80vh] flex flex-col overflow-hidden">
         <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY as string}>
-          <CardHeader className="pb-4 border-b border-white/20">
-            {/* ... (header remains the same) ... */}
+          <div className="flex-shrink-0 p-6 pb-4 border-b border-white/20">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-xl text-white">Create New Game</CardTitle>
+              <h2 className="text-xl font-semibold text-white">Create New Game</h2>
               <Button variant="ghost" size="icon" onClick={onClose} className="text-white/80 hover:text-white hover:bg-white/20 rounded-full">
                 <X className="w-5 h-5" />
               </Button>
             </div>
-          </CardHeader>
+          </div>
 
-          <ScrollArea className="flex-grow">
-            <CardContent className="p-6">
+          <div className="flex-1 overflow-y-auto no-scrollbar">
+            <div className="p-6">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <Label htmlFor="title" className="text-white/90">Event Title</Label>
-                    {/* AI: The "Generate with AI" button. */}
-                    <Button type="button" variant="ghost" size="sm" onClick={handleGenerateCopy} disabled={isAiLoading} className="text-xs text-white/70 hover:text-white">
-                      {isAiLoading ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <Sparkles className="w-4 h-4 mr-2" />
-                      )}
-                      Generate with AI
-                    </Button>
-                  </div>
-                  <Input id="title" placeholder="e.g., Evening Basketball Run" value={formData.title} onChange={(e) => handleInputChange("title", e.target.value)} required className="glass border-white/30 text-white placeholder:text-white/60" />
-                  
-                  {/* AI: Displaying suggestions or errors. */}
-                  {aiError && <p className="text-red-400 text-xs mt-2">{aiError}</p>}
-                  {aiSuggestions.length > 0 && (
-                    <div className="mt-2 space-y-2">
-                      {aiSuggestions.map((suggestion, index) => (
-                        <div
-                          key={index}
-                          className="p-3 bg-white/10 rounded-lg cursor-pointer hover:bg-white/20"
-                          onClick={() => {
-                            handleInputChange("title", suggestion.title);
-                            handleInputChange("description", suggestion.description);
-                            setAiSuggestions([]); // Clear suggestions after selection
-                          }}
-                        >
-                          <p className="font-semibold text-white">{suggestion.title}</p>
-                          <p className="text-xs text-white/80">{suggestion.description}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* AI: Add a new Description field. */}
-                <div>
-                  <Label htmlFor="description" className="text-white/90">Description</Label>
-                  <Input id="description" placeholder="Add a short, friendly description..." value={formData.description} onChange={(e) => handleInputChange("description", e.target.value)} className="glass border-white/30 text-white placeholder:text-white/60" />
+                  <Label htmlFor="title" className="text-white/90">Event Title</Label>
+                  <Input
+                    id="title"
+                    placeholder="e.g., Evening Basketball Run"
+                    value={formData.title}
+                    onChange={(e) => handleInputChange("title", e.target.value)}
+                    required
+                    className="glass border-white/30 text-white placeholder:text-white/60"
+                  />
                 </div>
                 
-                {/* ... (Rest of the form remains the same) ... */}
-                 <div>
+                <AIGenerateButton onClick={handleGenerateCopy} isLoading={isAiLoading} />
+                <AISuggestionsList suggestions={suggestions} onSelect={handleSelectSuggestion} />
+
+                <div>
+                  <Label htmlFor="description" className="text-white/90">Description</Label>
+                  <Input
+                    id="description"
+                    placeholder="A short and friendly description of the game"
+                    value={formData.description}
+                    onChange={(e) => handleInputChange("description", e.target.value)}
+                    className="glass border-white/30 text-white placeholder:text-white/60"
+                  />
+                </div>
+
+                <div>
                   <Label htmlFor="sport" className="text-white/90">Sport</Label>
                   <Select required value={formData.sport} onValueChange={(value) => handleInputChange("sport", value)}>
                     <SelectTrigger className="glass border-white/30 text-white">
@@ -236,53 +211,78 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                   <Label htmlFor="location-search" className="text-white/90">Location</Label>
                   <LocationSearchInput onPlaceSelect={handlePlaceSelect} />
                   <div className="h-48 w-full rounded-lg overflow-hidden relative mt-2 border border-white/30">
-                      <Map
-                        defaultCenter={mapCenter}
-                        center={mapCenter}
-                        defaultZoom={15}
-                        gestureHandling={'greedy'}
-                        disableDefaultUI={true}
-                        mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID}
-                      >
-                        <AdvancedMarker
-                          position={markerPosition}
-                          draggable={true}
-                          onDragEnd={(e) => setMarkerPosition({ lat: e.latLng!.lat(), lng: e.latLng!.lng() })}
-                        />
-                      </Map>
+                    <Map
+                      defaultCenter={mapCenter}
+                      center={mapCenter}
+                      defaultZoom={15}
+                      gestureHandling={'greedy'}
+                      disableDefaultUI={true}
+                      mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID}
+                    >
+                      <AdvancedMarker
+                        position={markerPosition}
+                        draggable={true}
+                        onDragEnd={(e) => setMarkerPosition({ lat: e.latLng!.lat(), lng: e.latLng!.lng() })}
+                      />
+                    </Map>
                   </div>
-                   <p className="text-xs text-white/60 mt-2">Drag the pin to set the exact game location.</p>
+                  <p className="text-xs text-white/60 mt-2">Drag the pin to set the exact game location.</p>
                 </div>
 
-                 <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <Label htmlFor="date" className="text-white/90">Date</Label>
-                        <Input id="date" type="date" min={today} value={formData.date} onChange={(e) => handleInputChange("date", e.target.value)} required className="glass border-white/30 text-white" />
-                    </div>
-                    <div>
-                        <Label htmlFor="time" className="text-white/90">Time</Label>
-                        <Input id="time" type="time" value={formData.time} onChange={(e) => handleInputChange("time", e.target.value)} required className="glass border-white/30 text-white" />
-                    </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="date" className="text-white/90">Date</Label>
+                    <Input
+                      id="date"
+                      type="date"
+                      min={today}
+                      value={formData.date}
+                      onChange={(e) => handleInputChange("date", e.target.value)}
+                      required
+                      className="glass border-white/30 text-white"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="time" className="text-white/90">Time</Label>
+                    <Input
+                      id="time"
+                      type="time"
+                      value={formData.time}
+                      onChange={(e) => handleInputChange("time", e.target.value)}
+                      required
+                      className="glass border-white/30 text-white"
+                    />
+                  </div>
                 </div>
 
                 <div>
-                    <Label htmlFor="maxPlayers" className="text-white/90">Number of Players</Label>
-                    <Select value={String(formData.maxPlayers)} onValueChange={(v) => handleInputChange("maxPlayers", Number(v))}>
-                        <SelectTrigger className="glass border-white/30 text-white"><SelectValue /></SelectTrigger>
-                        <SelectContent className="glass-card">{Array.from({ length: 20 }, (_, i) => i + 2).map(n => <SelectItem key={n} value={String(n)}>{n} players</SelectItem>)}</SelectContent>
-                    </Select>
+                  <Label htmlFor="maxPlayers" className="text-white/90">Number of Players</Label>
+                  <Select value={String(formData.maxPlayers)} onValueChange={(v) => handleInputChange("maxPlayers", Number(v))}>
+                    <SelectTrigger className="glass border-white/30 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="glass-card">
+                      {Array.from({ length: 20 }, (_, i) => i + 2).map(n =>
+                        <SelectItem key={n} value={String(n)}>{n} players</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div className="pt-4">
-                  <Button type="submit" disabled={isLoading} className="w-full glass-card hover:glow text-white border-white/30">
+                <div className="pt-4 pb-2">
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full glass-card hover:glow text-white border-white/30"
+                  >
                     {isLoading ? "Creating..." : "Create Game"}
                   </Button>
                 </div>
               </form>
-            </CardContent>
-          </ScrollArea>
+            </div>
+          </div>
         </APIProvider>
-      </Card>
+      </div>
     </div>
   );
 }
