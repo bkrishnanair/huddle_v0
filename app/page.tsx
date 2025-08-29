@@ -4,17 +4,18 @@ import { useEffect, useState } from "react"
 import { useFirebase } from "@/lib/firebase-context"
 import { getUser } from "@/lib/db"
 import AuthScreen from "@/components/auth-screen"
+import LandingPage from "@/components/landing-page"
 import MapView from "@/components/map-view"
 import EventsPage from "@/components/events-page"
 import ChatPage from "@/components/chat-page"
 import BottomNavigation from "@/components/bottom-navigation"
-import ProfilePage from "@/app/profile/page" // Import the redesigned profile page
+import ProfilePage from "@/app/profile/page"
 
 export default function Home() {
   const { user: firebaseUser, loading: authLoading, error: authError } = useFirebase()
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("map")
+  const [showLandingPage, setShowLandingPage] = useState(true)
 
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -26,8 +27,7 @@ export default function Home() {
           photoURL: firebaseUser.photoURL,
         }
         setUser(optimisticUser)
-        setLoading(false)
-
+        
         try {
           const userProfile = await getUser(firebaseUser.uid)
           if (userProfile) {
@@ -38,14 +38,11 @@ export default function Home() {
         }
       } else {
         setUser(null)
-        setLoading(false)
       }
     }
-
-    if (!authLoading) {
-      loadUserProfile()
-    }
-  }, [firebaseUser, authLoading])
+    
+    loadUserProfile()
+  }, [firebaseUser])
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab)
@@ -53,6 +50,10 @@ export default function Home() {
 
   const handleSwitchToMap = () => {
     setActiveTab("map")
+  }
+
+  const handleGetStarted = () => {
+    setShowLandingPage(false)
   }
 
   if (authError) {
@@ -74,7 +75,7 @@ export default function Home() {
     )
   }
 
-  if (authLoading || loading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen liquid-gradient flex items-center justify-center text-white">
         <div className="text-center">
@@ -85,30 +86,37 @@ export default function Home() {
     )
   }
 
-  if (!user) {
-    return <AuthScreen onLogin={setUser} />
+  if (!user && showLandingPage) {
+    return <LandingPage onGetStarted={handleGetStarted} />
   }
 
-  const renderActiveTab = () => {
-    switch (activeTab) {
-      case "map":
-        return <MapView user={user} onLogout={() => setUser(null)} />
-      case "events":
-        return <EventsPage user={user} onSwitchToMap={handleSwitchToMap} />
-      case "chat":
-        return <ChatPage />
-      case "profile":
-        // Render the actual ProfilePage component
-        return <ProfilePage />
-      default:
-        return <MapView user={user} onLogout={() => setUser(null)} />
+  if (!user && !showLandingPage) {
+    return <AuthScreen onLogin={setUser} onBackToLanding={() => setShowLandingPage(true)} />
+  }
+
+  if (user) {
+    const renderActiveTab = () => {
+      switch (activeTab) {
+        case "map":
+          return <MapView user={user} onLogout={() => setUser(null)} />
+        case "events":
+          return <EventsPage user={user} onSwitchToMap={handleSwitchToMap} />
+        case "chat":
+          return <ChatPage />
+        case "profile":
+          return <ProfilePage />
+        default:
+          return <MapView user={user} onLogout={() => setUser(null)} />
+      }
     }
+
+    return (
+      <div className="relative">
+        {renderActiveTab()}
+        <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
+      </div>
+    )
   }
 
-  return (
-    <div className="relative">
-      {renderActiveTab()}
-      <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
-    </div>
-  )
+  return null
 }

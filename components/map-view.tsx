@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button"
 import { Plus, MapPin, AlertCircle } from "lucide-react"
 import EventDetailsModal from "./event-details-modal"
 import CreateEventModal from "./create-event-modal"
-import SharedHeader from "./shared-header"
 import FirebaseDebug from "./firebase-debug"
 import MapsDebug from "./maps-debug"
 import { ErrorBoundary } from "./error-boundary"
 import { APIProvider, Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps"
 import MapsApiValidator from "./maps-api-validator"
 import { mapsValidator } from "@/lib/maps-debug"
+import { mapStyles } from "@/lib/map-styles" // Import the dark map styles
 
 // ... (interfaces and helper functions remain the same) ...
 interface MapViewProps {
@@ -245,10 +245,8 @@ export default function MapView({ user, onLogout }: MapViewProps) {
   return (
     <ErrorBoundary>
       <div className="h-screen flex flex-col liquid-gradient">
-        <SharedHeader user={user} onLogout={onLogout} />
-
         {/* Map Container */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative z-0">
           <APIProvider
             apiKey={mapsApiKey}
             onLoad={() => {
@@ -277,6 +275,7 @@ export default function MapView({ user, onLogout }: MapViewProps) {
                 fullscreenControl: true,
                 tilt: mapId ? 45 : 0,
                 gestureHandling: "greedy",
+                styles: mapStyles, // Apply the dark map styles
               }}
             >
               {/* User Location Marker with Advanced Marker */}

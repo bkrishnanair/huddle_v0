@@ -1,22 +1,13 @@
-// functions/index.js
-const functions = require("firebase-functions");
-const admin = require("firebase-admin");
-const { GoogleAuth } = require("google-auth-library");
+const { onCall } = require("firebase-functions/v2/https");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const functions = require("firebase-functions");
 
-admin.initializeApp();
+// Initialize the Gemini client with the API key from environment variables
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Initialize the Gemini AI model
-const genAI = new GoogleGenerativeAI(functions.config().gemini.api_key);
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-/**
- * AI FEATURE: HTTP Callable function to generate event copy.
- * This function is secure and can only be called by authenticated users.
- */
-exports.generateEventCopy_old = functions.https.onCall(async (data, context) => {
+exports.generateEventCopy = onCall(async (request) => {
   // 1. Authentication Check: Ensure the user is logged in.
-  if (!context.auth) {
+  if (!request.auth) {
     throw new functions.https.HttpsError(
       "unauthenticated",
       "You must be logged in to use this feature."
@@ -24,7 +15,7 @@ exports.generateEventCopy_old = functions.https.onCall(async (data, context) => 
   }
 
   // 2. Data Validation: Ensure all required data is present.
-  const { sport, locationName, timeOfDay } = data;
+  const { sport, locationName, timeOfDay } = request.data;
   if (!sport || !locationName || !timeOfDay) {
     throw new functions.https.HttpsError(
       "invalid-argument",
@@ -32,22 +23,22 @@ exports.generateEventCopy_old = functions.https.onCall(async (data, context) => 
     );
   }
 
-  // 3. Construct a high-quality prompt for the Gemini model.
+  // 3. Construct the Prompt for Gemini
   const prompt = `You are an assistant for a sports app called Huddle. Generate 3 catchy and exciting options for a pickup game title and a short, friendly description. The game is for ${sport} and is happening at ${locationName} in the ${timeOfDay}. For cricket, use terms like 'sixes' or 'wickets'. For basketball, use terms like 'hoops' or 'showdown'. The tone should be fun and welcoming. Return the response as a valid JSON array of objects, where each object has a 'title' and a 'description' key. Do not include any markdown formatting.`;
 
   try {
-    // 4. Call the Gemini API.
+    // 4. Call the Gemini API
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = await response.text();
-
-    // 5. Parse the response and return it to the client.
-    // The Gemini API may return the JSON string wrapped in markdown, so we clean it.
-    const cleanedText = text.replace(/```json\n|```/g, "").trim();
-    const suggestions = JSON.parse(cleanedText);
+    let text = await response.text();
     
-    return { suggestions };
+    // Clean the response to ensure it's valid JSON
+    text = text.replace(/```json/g, "").replace(/```/g, "").trim();
 
+    // 5. Parse and Return the JSON Response
+    const suggestions = JSON.parse(text);
+    return { suggestions };
   } catch (error) {
     console.error("Error calling Gemini API:", error);
     throw new functions.https.HttpsError(
@@ -56,4 +47,3 @@ exports.generateEventCopy_old = functions.https.onCall(async (data, context) => 
     );
   }
 });
-exports.generateEventCopy = require('./generateEventCopy').generateEventCopy;
