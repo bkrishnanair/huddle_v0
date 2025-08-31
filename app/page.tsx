@@ -1,73 +1,28 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useFirebase } from "@/lib/firebase-context"
-import { getUser } from "@/lib/db"
-import AuthScreen from "@/components/auth-screen"
 import LandingPage from "@/components/landing-page"
-import MapView from "@/components/map-view"
-import EventsPage from "@/components/events-page"
-import ChatPage from "@/components/chat-page"
-import BottomNavigation from "@/components/bottom-navigation"
-import ProfilePage from "@/app/profile/page"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
+import AuthScreen from "@/components/auth-screen"
+import { useRouter } from "next/navigation"
 
 export default function Home() {
-  const { user: firebaseUser, loading: authLoading, error: authError } = useFirebase()
-  const [user, setUser] = useState(null)
-  const [activeTab, setActiveTab] = useState("map")
+  const { user, loading, error } = useFirebase()
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const router = useRouter()
 
-  useEffect(() => {
-    const loadUserProfile = async () => {
-      if (firebaseUser) {
-        const optimisticUser = {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          name: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "User",
-          photoURL: firebaseUser.photoURL,
-        }
-        setUser(optimisticUser)
-
-        try {
-          const userProfile = await getUser(firebaseUser.uid)
-          if (userProfile) {
-            setUser({ ...optimisticUser, ...userProfile })
-          }
-        } catch (error) {
-          console.error("Error fetching user profile:", error)
-        }
-      } else {
-        setUser(null)
-      }
-    }
-
-    loadUserProfile()
-  }, [firebaseUser])
-
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab)
+  if (user) {
+    router.push("/map")
+    return null
   }
 
-  const handleSwitchToMap = () => {
-    setActiveTab("map")
-  }
-
-  const handleGetStarted = () => {
-    setIsAuthModalOpen(true)
-  }
-
-  const handleLogin = (userData: any) => {
-    setUser(userData)
-    setIsAuthModalOpen(false)
-  }
-
-  if (authError) {
+  if (error) {
     return (
       <div className="min-h-screen liquid-gradient flex items-center justify-center p-4 text-white">
         <div className="text-center max-w-md glass-card p-8 rounded-2xl">
           <h1 className="text-2xl font-bold mb-4">Firebase Error</h1>
-          <p className="mb-6">{authError}</p>
+          <p className="mb-6">{error}</p>
           <div className="bg-white/10 border border-white/20 rounded-lg p-4 text-left">
             <h3 className="font-semibold mb-2">Troubleshooting:</h3>
             <ul className="text-sm space-y-1">
@@ -81,7 +36,7 @@ export default function Home() {
     )
   }
 
-  if (authLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen liquid-gradient flex items-center justify-center text-white">
         <div className="text-center">
@@ -92,48 +47,25 @@ export default function Home() {
     )
   }
 
-  if (!user) {
-    return (
-      <>
-        <LandingPage onGetStarted={handleGetStarted} />
-
-        <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
-          <DialogContent className="glass-card border-white/20 backdrop-blur-xl bg-white/10 max-w-md p-0 gap-0 rounded-2xl overflow-hidden">
-            <div className="relative">
-              <AuthScreen
-                onLogin={handleLogin}
-                // Removed onBackToLanding prop since modal handles closing
-              />
-            </div>
-          </DialogContent>
-        </Dialog>
-      </>
-    )
+  const handleGetStarted = () => {
+    setIsAuthModalOpen(true)
   }
 
-  if (user) {
-    const renderActiveTab = () => {
-      switch (activeTab) {
-        case "map":
-          return <MapView user={user} onLogout={() => setUser(null)} />
-        case "events":
-          return <EventsPage user={user} onSwitchToMap={handleSwitchToMap} />
-        case "chat":
-          return <ChatPage />
-        case "profile":
-          return <ProfilePage />
-        default:
-          return <MapView user={user} onLogout={() => setUser(null)} />
-      }
-    }
-
-    return (
-      <div className="relative">
-        {renderActiveTab()}
-        <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
-      </div>
-    )
+  const handleLogin = () => {
+    setIsAuthModalOpen(false)
   }
 
-  return null
+  return (
+    <>
+      <LandingPage onGetStarted={handleGetStarted} />
+
+      <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
+        <DialogContent className="glass-card border-white/20 backdrop-blur-xl bg-white/10 max-w-md p-0 gap-0 rounded-2xl overflow-hidden">
+          <div className="relative">
+            <AuthScreen onLogin={handleLogin} />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
 }
