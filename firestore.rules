@@ -9,16 +9,21 @@ service cloud.firestore {
     
     // Events collection
     match /events/{eventId} {
-      // Anyone authenticated can read events (to see them on the map)
-      allow read: if request.auth != null;
+      // Allow public read access for viewing events on the map
+      allow read: if true;
       
       // Only authenticated users can create events
       allow create: if request.auth != null 
         && request.auth.uid == request.resource.data.createdBy;
       
       allow update: if request.auth != null && (
+        // Event organizer can update any field
         request.auth.uid == resource.data.createdBy ||
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['players', 'currentPlayers'])
+        // Regular players can only update players and currentPlayers (for RSVP)
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['players', 'currentPlayers'])) ||
+        // Only organizer can update checkedInPlayers array
+        (request.auth.uid == resource.data.createdBy && 
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['checkedInPlayers']))
       );
       
       // Only the event creator can delete events

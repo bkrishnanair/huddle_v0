@@ -1,0 +1,102 @@
+August 16th 
+
+lib/db.ts` for fetching user events and sending/getting chat messages.
+  - Created `components/chat-list.tsx` to display a list of user's events as chats.
+  - Built the main `components/chat-page.tsx` to fetch user events, display the chat list, and manage selected chat state.
+  - Updated `components/event-chat.tsx` to handle sending new messages and integrate with the chat page.
+  - Implemented the backend API route `app/api/events/[id]/chat/route.ts` for sending messages securely.
+- Refactored the profile page (`app/profile/page.tsx`):
+  - Created a reusable `components/profile/event-list.tsx` component for displaying lists of events.
+  - Implemented a tabbed layout ("Organized" and "Joined") using the new `EventList` component for better organization.
+- Redesigned the events page (`components/events-page.tsx`):
+  - Created a new, visually rich `components/events/event-card.tsx` component for displaying individual events.
+  - Designed and implemented a `components/events/summary-header.tsx` to provide quick statistics (Total, Today, Your Upcoming).
+  - Refactored the main events page to use the `SummaryHeader`, a responsive grid of `EventCard
+
+
+- Implemented push notification feature:
+  - Added frontend logic to request notification permission and get FCM token.
+  - Created a new file (`lib/notifications.ts`) for FCM logic.
+  - Modified `lib/db.ts` to save FCM tokens to user documents.
+  - Integrated notification permission request into `app/layout.tsx` using a new component (`components/notification-permission-handler.tsx`).
+  - Set up backend Cloud Functions directory and basic files manually (`functions/package.json`, `functions/index.js`) for scheduled notification logic (requires manual Firebase login and deployment).
+- Enhanced events page (`components/events-page.tsx`):
+  - Added client-side filtering and search.
+  - Implemented a text input search bar, sport type filter, and date picker (using shadcn/ui components).
+  - Updated filtering logic to filter events based on title, sport type, and selected date.
+
+
+August 17th
+
+- Resolved dependency conflicts (React 19) and fixed invalid packages.
+- Set up development server by renaming `env.local` to `.env.local`.
+- Created missing `components/ui/avatar.tsx` component.
+- Fixed missing exports in `lib/db.ts`, `lib/firebase-context.tsx`, `components/chat-page.tsx`, and `components/event-chat.tsx`.
+- Updated component import statements to match default/named exports.
+
+logout` function to `FirebaseContextType` and implemented it using `signOut` from Firebase.
+  - Imported the `Badge` component from `@/components/ui/badge` in `app/profile/page.tsx`.
+  - Removed erroneous HTML tags (`<strong>`) from a comparison in `components/chat-page.tsx`.
+  - Added null checks for the `auth` object in `lib/firebase-context.tsx` before using Firebase auth functions (`signOut`, `onAuthStateChanged`) to address TypeScript errors related to `Auth | null`.
+- Continued refactoring and redesigning UI components:
+  - Redesigned `components/chat-page.tsx` to match the "glassmorphism" aesthetic, improving layout and loading states.
+  - Redesigned `app/profile/page.tsx` based on provided design reference, organizing content into distinct sections (header, stats, achievements, recent events, quick actions) using `glass-card
+
+
+August 17th
+
+- Completely redesigned the Profile Page (`app/profile/page.tsx`) to match the new "glassmorphism" design using `liquid-gradient` and `glass-card` components, while preserving all original functionality (stats, achievements, events, quick actions).
+- Fixed a TypeScript error in `components/ui/calendar.tsx` by updating the `react-day-picker` component to use the correct `Chevron` component API for navigation icons (v8+).
+- Overhauled the Create Event Modal (`components/create-event-modal.tsx`):
+  - Fixed centering and scrolling issues using Flexbox and `ScrollArea`.
+  - Added a dedicated time input field.
+  - Applied consistent "glassmorphism" styling.
+- Resolved a radix-ui error in `components/create-event-modal.tsx` by removing an invalid `<SelectItem value="">` and using the `<SelectValue placeholder="...">` prop correctly.
+- Implemented a permanent architectural fix for authentication:
+  - Created `lib/firebase-admin.ts` to securely initialize the Firebase Admin SDK for server-side use.
+  - Refactored `lib/auth.ts` to separate client-side (`getCurrentUser`) and server-side (`getServerCurrentUser`) authentication logic.
+  - Updated the Events API route (`app/api/events/route.ts`) to use the correct server-side `getServerCurrentUser` function, resolving the 401 Unauthorized error.
+  - Further refactored auth by creating a dedicated `lib/auth-server.ts` file for server-only logic, importing `cookies` and `firebase-admin`, and ensuring `lib/auth.ts` is purely client-side compatible, fixing the "next/headers" build error.
+
+
+August 26th :
+
+Implemented several map optimizations:
+  - Used client-side caching for event lists displayed on the map.
+  - Optimized map queries by fetching events only within the current viewport.
+  - Memoized map marker components to prevent unnecessary re-renders.
+  - Configured the map to use a vector map with Map ID styling for better visual clarity and performance.
+
+
+geofire-common` for geohash calculations.
+  - Modified POST /api/events to add geohash and GeoPoint during event creation.
+  - Created `createEvent` function in `lib/db.ts`.
+  - Created new GET /api/events/nearby endpoint for radius-based event fetching.
+  - Updated the Discover Events page to use /api/events/nearby for efficient, localized data fetching.
+  - Implemented client-side filtering (search, sport, date, time of day, availability) on the fetched nearby events for instant results.
+  - Established clear state management for `allNearbyEvents` and `filteredEvents` on the Discover page.
+- Optimized event display by denormalizing data:
+  - Modified the POST /api/events endpoint to embed `organizerName` and `organizerPhotoURL` into new event documents.
+  - Updated `EventCard` and `EventCardSkeleton` components to display organizer info directly from the event object.
+- Overhauled the Create Event modal location input:
+  - Replaced static input with an interactive map (defaults to user location).
+  - Added a draggable marker to pinpoint event location.
+  - Integrated Google Places Autocomplete API for location search above the map.
+  - Synced search selection to update form input, re-center map, and move marker.
+- Implemented location permission fallback:
+  - Created `ManualLocationSearch` component for denied permission states.
+  - Updated `EventsPage` to conditionally render `ManualLocationSearch` if `locationAccessDenied`.
+  - Added manual search functionality in fallback to geocode and fetch nearby events.
+- Implemented Google Sign-In:
+  - Added `signInWithGoogle` function to `lib/auth.ts` using `signInWithPopup`.
+  - Added Firestore user creation logic within `signInWithGoogle` for new users.
+  - Added "Continue with Google" button to `AuthScreen`.
+  - Removed redundant `/api/auth/google
+
+
+generateEventCopy` using the Gemini API in `functions/index.js`.
+  - Added the `@google/generative-ai` dependency to `functions/package.json`.
+  - Integrated a "Generate with AI" button into `components/create-event-modal.tsx
+
+
+You are an assistant specialized in summarizing daily development activities. I will provide you with a text file containing my chat log with an AI code agent for today's work. Your task is to review this chat and create a clear, concise, and simple journal entry for today's development. Focus on what was implemented, built, or significant decisions made regarding the app's features or architecture. The entry should be easy to understand and serve as a quick reference for my progress.
