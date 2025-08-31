@@ -10,12 +10,13 @@ import EventsPage from "@/components/events-page"
 import ChatPage from "@/components/chat-page"
 import BottomNavigation from "@/components/bottom-navigation"
 import ProfilePage from "@/app/profile/page"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
 
 export default function Home() {
   const { user: firebaseUser, loading: authLoading, error: authError } = useFirebase()
   const [user, setUser] = useState(null)
   const [activeTab, setActiveTab] = useState("map")
-  const [showLandingPage, setShowLandingPage] = useState(true)
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
 
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -27,7 +28,7 @@ export default function Home() {
           photoURL: firebaseUser.photoURL,
         }
         setUser(optimisticUser)
-        
+
         try {
           const userProfile = await getUser(firebaseUser.uid)
           if (userProfile) {
@@ -40,7 +41,7 @@ export default function Home() {
         setUser(null)
       }
     }
-    
+
     loadUserProfile()
   }, [firebaseUser])
 
@@ -53,7 +54,12 @@ export default function Home() {
   }
 
   const handleGetStarted = () => {
-    setShowLandingPage(false)
+    setIsAuthModalOpen(true)
+  }
+
+  const handleLogin = (userData: any) => {
+    setUser(userData)
+    setIsAuthModalOpen(false)
   }
 
   if (authError) {
@@ -86,12 +92,23 @@ export default function Home() {
     )
   }
 
-  if (!user && showLandingPage) {
-    return <LandingPage onGetStarted={handleGetStarted} />
-  }
+  if (!user) {
+    return (
+      <>
+        <LandingPage onGetStarted={handleGetStarted} />
 
-  if (!user && !showLandingPage) {
-    return <AuthScreen onLogin={setUser} onBackToLanding={() => setShowLandingPage(true)} />
+        <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
+          <DialogContent className="glass-card border-white/20 backdrop-blur-xl bg-white/10 max-w-md p-0 gap-0 rounded-2xl overflow-hidden">
+            <div className="relative">
+              <AuthScreen
+                onLogin={handleLogin}
+                // Removed onBackToLanding prop since modal handles closing
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      </>
+    )
   }
 
   if (user) {

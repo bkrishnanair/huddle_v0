@@ -21,7 +21,7 @@ Huddle is a geospatial social platform designed to help users discover, create, 
 *   **Package Manager**: PNPM
 
 ## Project Structure
-```
+\`\`\`
 /
 ├── app/                      # Next.js App Router: Contains all pages and API routes.
 │   ├── api/                  # Backend API endpoints.
@@ -33,7 +33,7 @@ Huddle is a geospatial social platform designed to help users discover, create, 
 ├── .npmrc                    # Configuration file for PNPM.
 ├── firestore.rules           # CRITICAL: Security rules for the Firestore database.
 └── ...                       # Other project configuration files.
-```
+\`\`\`
 
 ## Significant Files & Functionalities
 
@@ -65,19 +65,19 @@ Huddle is a geospatial social platform designed to help users discover, create, 
 1.  **Setup Environment Variables (CRITICAL)**:
     *   Create a `.env.local` file in the **root directory** for your frontend keys (Firebase SDK, Google Maps).
     *   For the Cloud Function, you must set the Gemini API key in a secure way. From the `functions` directory, run:
-        ```bash
+        \`\`\`bash
         # This will securely store your key with Google Cloud Secret Manager
         firebase functions:secrets:set GEMINI_API_KEY
-        ```
+        \`\`\`
 2.  **Install All Dependencies**: Remember that the `functions` directory has its own `package.json`.
-    ```bash
+    \`\`\`bash
     # Install root dependencies
     pnpm install
     # Install functions dependencies
     cd functions
     pnpm install
     cd ..
-    ```
+    \`\`\`
 3.  **Start at `create-event-modal.tsx`**: To understand the new AI feature, start here. Trace how it calls the `generateEventCopy` function and handles the response.
 4.  **Review the Cloud Function**: Examine `functions/index.js` to see how the secure, authenticated backend function is structured, how it constructs the prompt, and how it communicates with the Gemini API. This is a key example of a secure client-server interaction pattern.
 5.  **Understand Denormalization Trade-offs**: Be aware that if a user updates their name, their old name will still be on events they've created. A future task would be to write a Cloud Function to automatically update these events when a user's profile changes.

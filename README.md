@@ -57,10 +57,10 @@ Ensure you have the following installed:
 
 ### 2. Clone the Repository
 
-```bash
+\`\`\`bash
 git clone https://github.com/bkrishnanair/huddle_v0.git
 cd huddle_v0
-```
+\`\`\`
 
 ### 3. Set Up Environment Variables
 
@@ -68,11 +68,11 @@ This project requires API keys from Firebase, Google Cloud, and Google AI to fun
 
 
 1.  Create a `.env.local` file in the root of the project:
-    ```bash
+    \`\`\`bash
     touch .env.local
-    ```
+    \`\`\`
 2.  Add the following environment variables to the file, replacing the placeholders with your actual project credentials:
-    ```env
+    \`\`\`env
     # Firebase Configuration
     NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain
@@ -84,7 +84,7 @@ This project requires API keys from Firebase, Google Cloud, and Google AI to fun
     # Google Maps Configuration
     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
     NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID=your_google_maps_map_id
-    ```
+    \`\`\`
     > **Note:** For the Google Maps API Key, ensure you have enabled the **Maps JavaScript API**, **Places API**, and **Geocoding API** in your Google Cloud Console.
 
 ### 4. Install Dependencies and Run
@@ -92,7 +92,7 @@ This project requires API keys from Firebase, Google Cloud, and Google AI to fun
 This project uses `pnpm`. The repository includes an `.npmrc` file to automatically handle peer dependency issues during installation.
 This project uses a monorepo-like structure with a separate `functions` directory. You will need to install dependencies in both the root and the `functions` directory.
 
-```bash
+\`\`\`bash
 # Install all project dependencies
 pnpm install
 # Navigate to the functions directory and install its dependencies
@@ -102,7 +102,7 @@ cd ..
 
 # Run the development server
 pnpm run dev
-```
+\`\`\`
 
 The application should now be running on [http://localhost:3000](http://localhost:3000).
 
