@@ -1,4 +1,3 @@
-
 August 16th 
 
 lib/db.ts` for fetching user events and sending/getting chat messages.
