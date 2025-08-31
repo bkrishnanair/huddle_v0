@@ -1,27 +1,37 @@
-"use client";
+"use client"
 
-import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, MapPin, Users, X, Loader2 } from "lucide-react"; // FINAL POLISH: Import Loader2 icon
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Calendar, Clock, MapPin, Users, X, Loader2, UserCheck, UserCircle } from "lucide-react"
 
-// ... (interface remains the same) ...
 interface GameEvent {
-  id: string;
-  title: string;
-  sport: string;
-  location: any;
-  date: string;
-  time: string;
-  maxPlayers: number;
-  currentPlayers: number;
-  players: string[];
+  id: string
+  title: string
+  sport: string
+  location: any
+  date: string
+  time: string
+  maxPlayers: number
+  currentPlayers: number
+  players: string[]
+  createdBy: string
+  playerDetails?: Array<{
+    id: string
+    displayName: string
+    photoURL?: string
+  }>
+  checkedInPlayers?: string[]
 }
+
 interface EventDetailsModalProps {
-  event: GameEvent;
-  isOpen: boolean;
-  onClose: () => void;
-  onEventUpdated: (updatedEvent: GameEvent) => void;
+  event: GameEvent
+  isOpen: boolean
+  onClose: () => void
+  onEventUpdated: (updatedEvent: GameEvent) => void
+  currentUserId?: string
 }
 
 export default function EventDetailsModal({
@@ -29,49 +39,117 @@ export default function EventDetailsModal({
   isOpen,
   onClose,
   onEventUpdated,
+  currentUserId = "user-123", // TODO: Get from auth context
 }: EventDetailsModalProps) {
-  // FINAL POLISH: Add loading state for the RSVP action.
-  const [isRsvpLoading, setIsRsvpLoading] = useState(false);
+  const [isRsvpLoading, setIsRsvpLoading] = useState(false)
+  const [checkingInPlayer, setCheckingInPlayer] = useState<string | null>(null)
+  const [eventWithDetails, setEventWithDetails] = useState<GameEvent>(event)
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (isOpen && event.id) {
+      loadEventDetails()
+    }
+  }, [isOpen, event.id])
 
-  const handleRsvp = async () => {
-    setIsRsvpLoading(true); // FINAL POLISH: Set loading to true on click.
+  const loadEventDetails = async () => {
     try {
-      const response = await fetch(`/api/events/${event.id}/rsvp`, {
-        method: "POST",
-      });
-
+      const response = await fetch(`/api/events/${event.id}/details`)
       if (response.ok) {
-        const updatedEvent = await response.json();
-        onEventUpdated(updatedEvent.event);
-      } else {
-        console.error("Failed to RSVP");
-        // Here you would show an error toast to the user.
+        const eventData = await response.json()
+        setEventWithDetails(eventData)
       }
     } catch (error) {
-      console.error("Error during RSVP:", error);
-    } finally {
-      setIsRsvpLoading(false); // FINAL POLISH: Reset loading state.
+      console.error("Error loading event details:", error)
     }
-  };
+  }
 
-  const isFull = event.currentPlayers >= event.maxPlayers;
-  // This is a placeholder for the current user's ID.
-  // In a real app, this would come from an auth context.
-  const currentUserId = "user-123"; 
-  const hasJoined = event.players.includes(currentUserId);
+  if (!isOpen) return null
+
+  const handleRsvp = async () => {
+    setIsRsvpLoading(true)
+    try {
+      const hasJoined = eventWithDetails.players.includes(currentUserId)
+      const action = hasJoined ? "leave" : "join"
+
+      const response = await fetch(`/api/events/${eventWithDetails.id}/rsvp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        const updatedEvent = result.event
+        setEventWithDetails(updatedEvent)
+        onEventUpdated(updatedEvent)
+        // Reload details to get updated player list
+        await loadEventDetails()
+      } else {
+        console.error("Failed to RSVP")
+      }
+    } catch (error) {
+      console.error("Error during RSVP:", error)
+    } finally {
+      setIsRsvpLoading(false)
+    }
+  }
+
+  const handleCheckIn = async (playerId: string) => {
+    setCheckingInPlayer(playerId)
+    try {
+      const response = await fetch(`/api/events/${eventWithDetails.id}/checkin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId }),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        setEventWithDetails(result.event)
+        onEventUpdated(result.event)
+      } else {
+        console.error("Failed to check in player")
+      }
+    } catch (error) {
+      console.error("Error checking in player:", error)
+    } finally {
+      setCheckingInPlayer(null)
+    }
+  }
+
+  const isFull = eventWithDetails.currentPlayers >= eventWithDetails.maxPlayers
+  const hasJoined = eventWithDetails.players.includes(currentUserId)
+  const isOrganizer = eventWithDetails.createdBy === currentUserId
 
   const renderRsvpButton = () => {
     if (hasJoined) {
-      return <Button className="w-full" disabled>You've Joined</Button>;
+      return (
+        <Button
+          onClick={handleRsvp}
+          variant="outline"
+          className="w-full bg-green-500/20 border-green-500/50 text-green-300 hover:bg-green-500/30"
+          disabled={isRsvpLoading}
+        >
+          {isRsvpLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Leaving...
+            </>
+          ) : (
+            "Leave Game"
+          )}
+        </Button>
+      )
     }
     if (isFull) {
-      return <Button className="w-full" disabled>Event is Full</Button>;
+      return (
+        <Button className="w-full" disabled>
+          Event is Full
+        </Button>
+      )
     }
     return (
       <Button onClick={handleRsvp} className="w-full" disabled={isRsvpLoading}>
-        {/* FINAL POLISH: Show spinner and "Joining..." text when loading. */}
         {isRsvpLoading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -81,37 +159,119 @@ export default function EventDetailsModal({
           "Join Game"
         )}
       </Button>
-    );
-  };
+    )
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="w-full max-w-md glass-card border-none rounded-2xl shadow-2xl relative">
+      <div className="w-full max-w-lg glass-card border-none rounded-2xl shadow-2xl relative max-h-[90vh] overflow-hidden">
         <div className="p-6">
           <div className="flex justify-between items-start mb-4">
             <div>
-              <h2 className="text-2xl font-bold text-white">{event.title}</h2>
+              <h2 className="text-2xl font-bold text-white">{eventWithDetails.title}</h2>
               <Badge variant="secondary" className="bg-white/20 text-white border-none mt-1">
-                {event.sport}
+                {eventWithDetails.sport}
               </Badge>
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose} className="text-white/80 hover:text-white hover:bg-white/20 rounded-full absolute top-4 right-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="text-white/80 hover:text-white hover:bg-white/20 rounded-full absolute top-4 right-4"
+            >
               <X className="w-5 h-5" />
             </Button>
           </div>
 
-          <div className="space-y-3 text-sm text-white/80">
-            <div className="flex items-center"><MapPin className="w-4 h-4 mr-3 text-blue-300" /><span>{event.location}</span></div>
-            <div className="flex items-center"><Calendar className="w-4 h-4 mr-3 text-green-300" /><span>{new Date(event.date).toLocaleDateString("en-US", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
-            <div className="flex items-center"><Clock className="w-4 h-4 mr-3 text-purple-300" /><span>{event.time}</span></div>
-            <div className="flex items-center"><Users className="w-4 h-4 mr-3 text-yellow-300" /><span>{event.currentPlayers} / {event.maxPlayers} Players</span></div>
-          </div>
+          <Tabs defaultValue="details" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 bg-white/10">
+              <TabsTrigger value="details" className="text-white data-[state=active]:bg-white/20">
+                Details
+              </TabsTrigger>
+              <TabsTrigger value="players" className="text-white data-[state=active]:bg-white/20">
+                Players
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="details" className="mt-4">
+              <div className="space-y-3 text-sm text-white/80">
+                <div className="flex items-center">
+                  <MapPin className="w-4 h-4 mr-3 text-blue-300" />
+                  <span>{eventWithDetails.location}</span>
+                </div>
+                <div className="flex items-center">
+                  <Calendar className="w-4 h-4 mr-3 text-green-300" />
+                  <span>
+                    {new Date(eventWithDetails.date).toLocaleDateString("en-US", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </span>
+                </div>
+                <div className="flex items-center">
+                  <Clock className="w-4 h-4 mr-3 text-purple-300" />
+                  <span>{eventWithDetails.time}</span>
+                </div>
+                <div className="flex items-center">
+                  <Users className="w-4 h-4 mr-3 text-yellow-300" />
+                  <span>
+                    {eventWithDetails.currentPlayers} / {eventWithDetails.maxPlayers} Players
+                  </span>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="players" className="mt-4">
+              <div className="space-y-3 max-h-60 overflow-y-auto">
+                {eventWithDetails.playerDetails && eventWithDetails.playerDetails.length > 0 ? (
+                  eventWithDetails.playerDetails.map((player) => {
+                    const isCheckedIn = eventWithDetails.checkedInPlayers?.includes(player.id)
+                    return (
+                      <div key={player.id} className="flex items-center justify-between p-3 bg-white/10 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="w-8 h-8">
+                            <AvatarImage src={player.photoURL || "/placeholder.svg"} />
+                            <AvatarFallback>
+                              <UserCircle className="w-8 h-8 text-white/70" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-white font-medium">{player.displayName}</p>
+                            {isCheckedIn && (
+                              <p className="text-green-300 text-xs flex items-center">
+                                <UserCheck className="w-3 h-3 mr-1" />
+                                Checked In
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {isOrganizer && !isCheckedIn && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleCheckIn(player.id)}
+                            disabled={checkingInPlayer === player.id}
+                            className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                          >
+                            {checkingInPlayer === player.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Check In"}
+                          </Button>
+                        )}
+                      </div>
+                    )
+                  })
+                ) : (
+                  <p className="text-white/60 text-center py-4">No players joined yet</p>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
 
-        <div className="bg-white/10 px-6 py-4 rounded-b-2xl">
-          {renderRsvpButton()}
-        </div>
+        <div className="bg-white/10 px-6 py-4 rounded-b-2xl">{renderRsvpButton()}</div>
       </div>
     </div>
-  );
+  )
 }
