@@ -24,6 +24,7 @@ interface GameEvent {
     photoURL?: string
   }>
   checkedInPlayers?: string[]
+  isBoosted?: boolean
 }
 
 interface EventDetailsModalProps {
@@ -44,6 +45,7 @@ export default function EventDetailsModal({
   const [isRsvpLoading, setIsRsvpLoading] = useState(false)
   const [checkingInPlayer, setCheckingInPlayer] = useState<string | null>(null)
   const [eventWithDetails, setEventWithDetails] = useState<GameEvent>(event)
+  const [isBoostLoading, setIsBoostLoading] = useState(false)
 
   useEffect(() => {
     if (isOpen && event.id) {
@@ -114,6 +116,29 @@ export default function EventDetailsModal({
       console.error("Error checking in player:", error)
     } finally {
       setCheckingInPlayer(null)
+    }
+  }
+
+  const handleBoostEvent = async () => {
+    setIsBoostLoading(true)
+    try {
+      const response = await fetch(`/api/events/${eventWithDetails.id}/boost`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        const updatedEvent = { ...eventWithDetails, isBoosted: true }
+        setEventWithDetails(updatedEvent)
+        onEventUpdated(updatedEvent)
+      } else {
+        console.error("Failed to boost event")
+      }
+    } catch (error) {
+      console.error("Error boosting event:", error)
+    } finally {
+      setIsBoostLoading(false)
     }
   }
 
@@ -221,6 +246,35 @@ export default function EventDetailsModal({
                   </span>
                 </div>
               </div>
+
+              {isOrganizer && !eventWithDetails.isBoosted && (
+                <div className="mt-4 pt-4 border-t border-white/20">
+                  <Button
+                    onClick={handleBoostEvent}
+                    disabled={isBoostLoading}
+                    className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold"
+                  >
+                    {isBoostLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Boosting...
+                      </>
+                    ) : (
+                      <>🚀 Boost Event (Free)</>
+                    )}
+                  </Button>
+                  <p className="text-xs text-white/60 mt-2 text-center">Make your event more visible on the map</p>
+                </div>
+              )}
+
+              {eventWithDetails.isBoosted && (
+                <div className="mt-4 pt-4 border-t border-white/20">
+                  <div className="flex items-center justify-center space-x-2 text-yellow-400">
+                    <span className="text-lg">🚀</span>
+                    <span className="font-semibold">This event is boosted!</span>
+                  </div>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="players" className="mt-4">

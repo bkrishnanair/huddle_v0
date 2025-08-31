@@ -32,6 +32,7 @@ interface GameEvent {
   currentPlayers: number
   createdBy: string
   players: string[]
+  isBoosted?: boolean
 }
 
 const getSportColor = (sport: string): string => {
@@ -46,7 +47,6 @@ const getSportColor = (sport: string): string => {
   }
   return colors[sport] || colors.default
 }
-
 
 export default function MapView({ user, onLogout }: MapViewProps) {
   const [events, setEvents] = useState<GameEvent[]>([])
@@ -78,73 +78,73 @@ export default function MapView({ user, onLogout }: MapViewProps) {
   // FIX: Rewrote the geolocation logic for clarity and robust error handling.
   useEffect(() => {
     // A fallback default location in case everything else fails.
-    const defaultLocation = { lat: 37.7749, lng: -122.4194 };
+    const defaultLocation = { lat: 37.7749, lng: -122.4194 }
 
     const handleSuccess = (position: GeolocationPosition) => {
       const location = {
         lat: position.coords.latitude,
         lng: position.coords.longitude,
-      };
-      setUserLocation(location);
-      setMapCenter(location);
-      console.log("Geolocation successful:", location);
-    };
+      }
+      setUserLocation(location)
+      setMapCenter(location)
+      console.log("Geolocation successful:", location)
+    }
 
     const handleError = (error: GeolocationPositionError) => {
-      let errorMessage = "An unknown error occurred.";
+      let errorMessage = "An unknown error occurred."
       switch (error.code) {
         case error.PERMISSION_DENIED:
-          errorMessage = "Location permission denied. Please enable it in your browser settings.";
-          break;
+          errorMessage = "Location permission denied. Please enable it in your browser settings."
+          break
         case error.POSITION_UNAVAILABLE:
-          errorMessage = "Location information is unavailable.";
-          break;
+          errorMessage = "Location information is unavailable."
+          break
         case error.TIMEOUT:
-          errorMessage = "The request to get user location timed out.";
-          break;
+          errorMessage = "The request to get user location timed out."
+          break
       }
-      console.error("Error getting location:", errorMessage, error);
+      console.error("Error getting location:", errorMessage, error)
       // Set a user-friendly error message to be displayed in the UI if needed
       // setMapsError(`Could not get location: ${errorMessage}`);
-      
+
       // Fallback to a default location so the map can still render.
-      setUserLocation(defaultLocation);
-      setMapCenter(defaultLocation);
-    };
+      setUserLocation(defaultLocation)
+      setMapCenter(defaultLocation)
+    }
 
     // Check if the Geolocation API is supported by the browser.
     if (!navigator.geolocation) {
-      console.error("Geolocation is not supported by this browser.");
-      setUserLocation(defaultLocation);
-      setMapCenter(defaultLocation);
+      console.error("Geolocation is not supported by this browser.")
+      setUserLocation(defaultLocation)
+      setMapCenter(defaultLocation)
     } else {
       // Request the user's current position.
       navigator.geolocation.getCurrentPosition(handleSuccess, handleError, {
         enableHighAccuracy: true,
         timeout: 10000,
         maximumAge: 0,
-      });
+      })
     }
-  }, []); // This effect runs only once when the component mounts.
+  }, []) // This effect runs only once when the component mounts.
 
   useEffect(() => {
     const loadEvents = async () => {
       try {
-        const response = await fetch("/api/events");
+        const response = await fetch("/api/events")
         if (response.ok) {
-          const data = await response.json();
+          const data = await response.json()
           // Ensure that the response has an events array
-          setEvents(data.events || []); 
+          setEvents(data.events || [])
         } else {
-           console.error("Failed to fetch events with status:", response.status);
+          console.error("Failed to fetch events with status:", response.status)
         }
       } catch (error) {
-        console.error("Failed to load events:", error);
+        console.error("Failed to load events:", error)
       }
-    };
+    }
 
-    loadEvents();
-  }, []);
+    loadEvents()
+  }, [])
 
   // ... (rest of the component remains the same) ...
   const handleLogout = async () => {
@@ -295,8 +295,15 @@ export default function MapView({ user, onLogout }: MapViewProps) {
                   title={`${event.title} - ${event.sport}`}
                   onClick={() => setSelectedEvent(event)}
                 >
-                  <Pin background={getSportColor(event.sport)} borderColor="#ffffff" glyphColor="#ffffff" scale={1.3}>
-                    <div className="text-xs font-bold">{event.sport.charAt(0)}</div>
+                  <Pin
+                    background={getSportColor(event.sport)}
+                    borderColor={event.isBoosted ? "#fbbf24" : "#ffffff"}
+                    glyphColor="#ffffff"
+                    scale={event.isBoosted ? 1.6 : 1.3}
+                  >
+                    <div className={`text-xs font-bold ${event.isBoosted ? "animate-pulse" : ""}`}>
+                      {event.isBoosted ? "🚀" : event.sport.charAt(0)}
+                    </div>
                   </Pin>
                 </AdvancedMarker>
               ))}
@@ -319,9 +326,13 @@ export default function MapView({ user, onLogout }: MapViewProps) {
               <div className="w-3 h-3 bg-blue-400 rounded-full glow"></div>
               <span>Your location</span>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 mb-2">
               <div className="w-3 h-3 bg-orange-400 rounded-full glow"></div>
               <span>Games nearby</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-yellow-400">🚀</span>
+              <span>Boosted events</span>
             </div>
           </div>
 
