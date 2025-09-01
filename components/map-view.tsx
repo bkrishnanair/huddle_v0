@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Plus, MapPin, AlertCircle } from "lucide-react"
 import EventDetailsModal from "./event-details-modal"
 import CreateEventModal from "./create-event-modal"
-import FirebaseDebug from "./firebase-debug"
 import MapsDebug from "./maps-debug"
 import { ErrorBoundary } from "./error-boundary"
 import { APIProvider, Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps"
@@ -353,7 +352,6 @@ export default function MapView({ user, onLogout }: MapViewProps) {
 
         {process.env.NODE_ENV === "development" && (
           <div className="fixed bottom-4 left-4 space-y-2 max-w-sm">
-            <FirebaseDebug />
             <MapsDebug />
             <MapsApiValidator apiKey={mapsApiKey} mapId={mapId} onValidationComplete={setValidationResult} />
           </div>

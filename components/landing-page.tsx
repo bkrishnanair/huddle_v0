@@ -97,7 +97,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
           <Button 
             variant="ghost" 
             onClick={onGetStarted}
-            className="text-white/90 hover:text-white hover:bg-white/20 rounded-full px-6"
+            className="glass-card text-white/90 hover:text-white hover:bg-white/20 rounded-full px-6"
           >
             Get Started
           </Button>
@@ -159,13 +159,14 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 Start Playing Today
                 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Button>
-              <Button 
-                variant="ghost" 
-                className="text-white/90 hover:text-white hover:bg-white/20 px-8 py-4 text-lg"
-              >
-                <Play className="mr-2 w-5 h-5" />
-                How it Works
-              </Button>
+            {/* <Button 
+              variant="ghost" 
+              className="text-white/90 hover:text-white hover:bg-white/20 px-8 py-4 text-lg"
+            >
+              <Play className="mr-2 w-5 h-5" />
+              How it Works
+            </Button>
+            */}
             </div>
 
             {/* Use Cases Section */}

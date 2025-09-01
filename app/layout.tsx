@@ -6,6 +6,7 @@ import { FirebaseProvider } from "@/lib/firebase-context"
 import { NotificationPermissionHandler } from "@/components/notification-permission-handler"
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import { Toaster } from "@/components/ui/sonner"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -26,6 +27,7 @@ export default function RootLayout({
         <FirebaseProvider>
           <NotificationPermissionHandler />
           {children}
+          <Toaster />
           <Analytics />
           <SpeedInsights />
         </FirebaseProvider>

@@ -10,6 +10,7 @@ import { Send, MessageCircle } from "lucide-react"
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/lib/firebase-context"
+import { toast } from "sonner"
 
 interface ChatMessage {
   id: string
@@ -70,11 +71,15 @@ export default function EventChat({ eventId }: EventChatProps) {
 
       if (response.ok) {
         setNewMessage("")
+        // Do not show a toast for every message to avoid being noisy.
+        // The message appearing in the chat is sufficient feedback.
       } else {
-        console.error("Failed to send message")
+        const errorData = await response.json()
+        toast.error(`Failed to send message: ${errorData.error}`)
       }
     } catch (error) {
       console.error("Error sending message:", error)
+      toast.error("An unexpected error occurred while sending your message.")
     } finally {
       setSending(false)
     }

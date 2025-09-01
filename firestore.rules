@@ -2,9 +2,30 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users collection - users can read/write their own data
+    // Users collection
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Users can read their own profile, and other users can read public profiles
+      allow read: if request.auth != null;
+      // Users can only write to their own profile
+      allow write: if request.auth != null && request.auth.uid == userId;
+
+      // Connections subcollection
+      match /connections/{connectionId} {
+        // A user can read their own connections list
+        allow read: if request.auth != null && request.auth.uid == userId;
+
+        // A user can create a connection document in another user's subcollection (send a request)
+        // A user can also update their own connection document (accept a request)
+        allow write: if request.auth != null && 
+          (
+            // Case 1: Sending a request
+            // The connectionId is the ID of the user sending the request
+            (request.auth.uid == connectionId && request.resource.data.status == 'pending') ||
+            // Case 2: Accepting a request
+            // The userId is the ID of the user accepting the request
+            (request.auth.uid == userId && request.resource.data.status == 'accepted')
+          );
+      }
     }
     
     // Events collection
