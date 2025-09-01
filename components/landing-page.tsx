@@ -51,18 +51,18 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
     },
     {
       icon: <MapPin className="w-8 h-8" />,
-      title: "Discover Venues",
-      description: "Explore the best courts, fields, and sports facilities nearby"
+      title: "Explore Nearby Games",
+      description: "Explore games happening near you on an interactive map. Filter by sport, time, and find your next game instantly."
     },
     {
       icon: <Calendar className="w-8 h-8" />,
-      title: "Never Miss a Game",
-      description: "Schedule and join games with real-time updates and reminders"
+      title: "Stay in the Loop, Always.",
+      description: "Get real-time event updates, chat directly with players, and receive timely push notifications so you're always in the know."
     },
     {
       icon: <MessageCircle className="w-8 h-8" />,
-      title: "Stay Connected",
-      description: "Chat with your team and coordinate game plans seamlessly"
+      title: "Build Your Sports Community",
+      description: "Connect with local players, expand your sports network, and find your perfect match."
     }
   ];
 
@@ -109,11 +109,10 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
             {/* Main Tagline */}
             <div className="mb-8">
               <h2 className="text-5xl md:text-6xl font-bold text-white mb-4 leading-tight">
-                Your Game is Waiting. <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">Find it with Huddle.</span>
+                Stop Searching, Start Playing. <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">Find Your Huddle.</span>
               </h2>
               <p className="text-xl text-white/80 max-w-2xl mx-auto leading-relaxed">
-                Discover, join, and organize sports games in your community. 
-                Connect with local players and never miss the perfect game.
+                Discover and join local sports games in real-time. Connect with players, organize events effortlessly, and never miss a moment of the action.
               </p>
             </div>
 
@@ -156,7 +155,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 onClick={onGetStarted}
                 className="glass-card hover:glow text-white border-white/30 px-8 py-4 text-lg font-semibold group"
               >
-                Start Playing Today
+                Join the Huddle
                 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             {/* <Button 
@@ -173,36 +172,36 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
             <div className="max-w-5xl mx-auto w-full">
                 <h3 className="text-3xl font-bold text-white mb-8">Built for Every Player</h3>
                 <div className="grid md:grid-cols-3 gap-8">
-                    {/* Card 1: The Weekend Warrior */}
+                    {/* Card 1: The Casual Player */}
                     <Card className="glass-card border-white/20 text-left">
                         <CardContent className="p-6">
                             <div className="w-12 h-12 glass rounded-lg flex items-center justify-center mb-4">
                                 <Trophy className="w-6 h-6" />
                             </div>
-                            <h4 className="text-xl font-semibold text-white mb-2">For the Weekend Warrior</h4>
-                            <p className="text-white/70">You love the game but can't commit to a league. With Huddle, you can find a high-quality cricket match or a casual basketball run whenever your schedule opens up. Spend less time searching and more time playing.</p>
+                            <h4 className="text-xl font-semibold text-white mb-2">For the Casual Player</h4>
+                            <p className="text-white/70">Play When You Can. Love playing but short on time? Huddle helps you find quality games that fit your schedule, from casual runs to organized matches. Less searching, more playing.</p>
                         </CardContent>
                     </Card>
 
-                    {/* Card 2: The Team Captain */}
+                    {/* Card 2: The Organizer */}
                     <Card className="glass-card border-white/20 text-left">
                         <CardContent className="p-6">
                             <div className="w-12 h-12 glass rounded-lg flex items-center justify-center mb-4">
                                 <Users className="w-6 h-6" />
                             </div>
-                            <h4 className="text-xl font-semibold text-white mb-2">For the Team Captain</h4>
-                            <p className="text-white/70">Stop chasing RSVPs in endless group chats. Create your event on Huddle, set the number of players you need, and watch your roster fill up in real-time. We make organizing effortless so you can focus on the win.</p>
+                            <h4 className="text-xl font-semibold text-white mb-2">For the Organizer</h4>
+                            <p className="text-white/70">Effortless Event Management. Say goodbye to group chat chaos. Create events, manage RSVPs, track attendance with check-ins, and even get AI assistance for event descriptions. Focus on the game, not the logistics.</p>
                         </CardContent>
                     </Card>
 
-                    {/* Card 3: The Newcomer */}
+                    {/* Card 3: The Explorer */}
                     <Card className="glass-card border-white/20 text-left">
                         <CardContent className="p-6">
                             <div className="w-12 h-12 glass rounded-lg flex items-center justify-center mb-4">
                                 <MapPin className="w-6 h-6" />
                             </div>
-                            <h4 className="text-xl font-semibold text-white mb-2">For the Newcomer</h4>
-                            <p className="text-white/70">Just moved to a new city? Huddle is your key to the local sports scene. Discover popular courts, fields, and communities. Meet new people and find your team, no matter where you are.</p>
+                            <h4 className="text-xl font-semibold text-white mb-2">For the Explorer</h4>
+                            <p className="text-white/70">Discover Your Sports Scene. New in town or just looking for something new? Explore nearby games on the map, filter by sport and time, and instantly connect with local communities. Your next favorite game is waiting.</p>
                         </CardContent>
                     </Card>
                 </div>
