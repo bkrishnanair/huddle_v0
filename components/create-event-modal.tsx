@@ -317,7 +317,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="glass-card">
-                      {Array.from({ length: 20 }, (_, i) => i + 2).map((n) => (
+                      {Array.from({ length: 49 }, (_, i) => i + 2).map((n) => (
                         <SelectItem key={n} value={String(n)}>
                           {n} players
                         </SelectItem>

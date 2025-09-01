@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { signInWithEmail, signUpWithEmail, signInWithGoogle } from "@/lib/auth"
-// import { ArrowLeft } from 'lucide-react';
 
 interface AuthScreenProps {
   onLogin: (user: any) => void
@@ -63,7 +62,17 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
 
   return (
     <div className="p-6">
-      <Tabs defaultValue="login" className="w-full">
+      {/* Hero Section */}
+      <div className="text-center mb-8">
+        <h2 className="text-4xl md:text-5xl font-bold text-white mb-3 leading-tight">
+          Stop Searching, Start Playing. <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">Find Your Huddle.</span>
+        </h2>
+        <p className="text-lg text-white/80 max-w-2xl mx-auto leading-relaxed">
+          Discover and join local sports games in real-time. Connect with players, organize events effortlessly, and never miss a moment of the action.
+        </p>
+      </div>
+
+      <Tabs defaultValue="login" className="w-full max-w-sm mx-auto">
         <TabsList className="grid w-full grid-cols-2 bg-white/10 border border-white/20 rounded-lg p-1 h-auto">
           <TabsTrigger
             value="login"
