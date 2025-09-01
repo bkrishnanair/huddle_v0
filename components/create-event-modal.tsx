@@ -13,8 +13,9 @@ import LocationSearchInput from "./location-search"
 import AIGenerateButton from "./ai-generate-button"
 import AISuggestionsList from "./ai-suggestions-list"
 import { getFunctions, httpsCallable } from "firebase/functions"
-import { useFirebase } from "@/lib/firebase-context" // Import the useFirebase hook
-import type { google } from "googlemaps" // Import the google variable
+import { useFirebase } from "@/lib/firebase-context"
+import { toast } from "sonner"
+import type { google } from "googlemaps"
 
 interface CreateEventModalProps {
   isOpen: boolean
@@ -51,14 +52,14 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
     date: "",
     time: "",
     maxPlayers: 10,
-    description: "", // Add description field
+    description: "",
     isRecurring: false,
     recurringFrequency: "weekly",
     recurringCount: 4,
   })
   const [isAiLoading, setIsAiLoading] = useState(false)
   const [suggestions, setSuggestions] = useState([])
-  const { app } = useFirebase() // Get the app instance from the context
+  const { app } = useFirebase()
 
   const [mapCenter, setMapCenter] = useState(userLocation || { lat: 37.7749, lng: -122.4194 })
   const [markerPosition, setMarkerPosition] = useState(userLocation || { lat: 37.7749, lng: -122.4194 })
@@ -85,11 +86,11 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.sport) {
-      alert("Please select a sport.")
+      toast.error("Please select a sport.")
       return
     }
     if (!formData.location) {
-      alert("Please select a location from the search bar.")
+      toast.error("Please select a location from the search bar.")
       return
     }
     setIsLoading(true)
@@ -109,22 +110,20 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
 
       if (response.ok) {
         const data = await response.json()
+        toast.success(formData.isRecurring ? "Recurring events created successfully!" : "Event created successfully!")
         if (formData.isRecurring && data.events) {
-          // Multiple events created for recurring
-          onEventCreated(data.events[0]) // Show the first event
+          onEventCreated(data.events[0])
         } else {
-          // Single event created
           onEventCreated(data.event)
         }
         onClose()
       } else {
         const errorData = await response.json()
-        console.error("Failed to create event:", errorData.error)
-        alert(`Error: ${errorData.error}`)
+        toast.error(`Error: ${errorData.error}`)
       }
     } catch (error) {
       console.error("Client-side error creating event:", error)
-      alert("An unexpected error occurred. Please try again.")
+      toast.error("An unexpected error occurred. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -136,16 +135,16 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
 
   const handleGenerateCopy = async () => {
     if (!formData.sport || !formData.location || !formData.time) {
-      alert("Please select a sport, location, and time first to get the best suggestions.")
+      toast.error("Please select a sport, location, and time first.")
       return
     }
 
     if (!app) {
-      alert("Firebase is not initialized. Please try again later.")
+      toast.error("Firebase is not initialized. Please try again later.")
       return
     }
     setIsAiLoading(true)
-    const functions = getFunctions(app) // Pass the app instance to getFunctions
+    const functions = getFunctions(app)
     const generateEventCopy = httpsCallable(functions, "generateEventCopy")
     try {
       const timeOfDay =
@@ -161,9 +160,10 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
       })
       const data = result.data as { suggestions: any[] }
       setSuggestions(data.suggestions)
+      toast.success("AI suggestions generated!")
     } catch (error) {
       console.error("Error calling generateEventCopy:", error)
-      alert("Failed to generate suggestions. Please try again.")
+      toast.error("Failed to generate AI suggestions. Please try again.")
     } finally {
       setIsAiLoading(false)
     }

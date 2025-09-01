@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, Clock, MapPin, Users, X, Loader2, UserCheck, UserCircle } from "lucide-react"
+import { toast } from "sonner"
 
 interface GameEvent {
   id: string
@@ -59,9 +60,12 @@ export default function EventDetailsModal({
       if (response.ok) {
         const eventData = await response.json()
         setEventWithDetails(eventData)
+      } else {
+        toast.error("Failed to load event details.")
       }
     } catch (error) {
       console.error("Error loading event details:", error)
+      toast.error("An unexpected error occurred while loading details.")
     }
   }
 
@@ -84,13 +88,15 @@ export default function EventDetailsModal({
         const updatedEvent = result.event
         setEventWithDetails(updatedEvent)
         onEventUpdated(updatedEvent)
-        // Reload details to get updated player list
+        toast.success(hasJoined ? "Successfully left the event." : "Successfully joined the event!")
         await loadEventDetails()
       } else {
-        console.error("Failed to RSVP")
+        const errorData = await response.json()
+        toast.error(`Failed to ${action} event: ${errorData.error}`)
       }
     } catch (error) {
       console.error("Error during RSVP:", error)
+      toast.error("An unexpected error occurred during RSVP.")
     } finally {
       setIsRsvpLoading(false)
     }
@@ -109,11 +115,14 @@ export default function EventDetailsModal({
         const result = await response.json()
         setEventWithDetails(result.event)
         onEventUpdated(result.event)
+        toast.success("Player checked in successfully.")
       } else {
-        console.error("Failed to check in player")
+        const errorData = await response.json()
+        toast.error(`Failed to check in player: ${errorData.error}`)
       }
     } catch (error) {
       console.error("Error checking in player:", error)
+      toast.error("An unexpected error occurred during check-in.")
     } finally {
       setCheckingInPlayer(null)
     }
@@ -132,11 +141,14 @@ export default function EventDetailsModal({
         const updatedEvent = { ...eventWithDetails, isBoosted: true }
         setEventWithDetails(updatedEvent)
         onEventUpdated(updatedEvent)
+        toast.success("Event boosted successfully!")
       } else {
-        console.error("Failed to boost event")
+        const errorData = await response.json()
+        toast.error(`Failed to boost event: ${errorData.error}`)
       }
     } catch (error) {
       console.error("Error boosting event:", error)
+      toast.error("An unexpected error occurred while boosting.")
     } finally {
       setIsBoostLoading(false)
     }

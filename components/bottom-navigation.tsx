@@ -11,7 +11,7 @@ const HuddleLogo = () => (
     viewBox="0 0 24 24"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    className="w-6 h-6 text-white"
+    className="w-6 h-6 text-black"
   >
     <path
       d="M4 4V20M20 4V20M4 12H20M12 4V12C12 14.2091 10.2091 16 8 16C5.79086 16 4 14.2091 4 12"
@@ -27,10 +27,10 @@ export default function BottomNavigation() {
   const pathname = usePathname()
 
   const tabs = [
-    { id: "map", label: "Map", icon: MapPin, href: "/map" },
-    { id: "events", label: "Events", icon: Calendar, href: "/events" },
-    { id: "chat", label: "Chat", icon: MessageCircle, href: "/chat" },
-    { id: "profile", label: "Profile", icon: User, href: "/profile" },
+    { id: "map", label: "Map", icon: MapPin, href: "/map", className: "text-black" },
+    { id: "events", label: "Events", icon: Calendar, href: "/events", className: "text-black" },
+    { id: "chat", label: "Chat", icon: MessageCircle, href: "/chat", className: "text-black" },
+    { id: "profile", label: "Profile", icon: User, href: "/profile", className: "text-black" },
   ]
 
   return (
@@ -50,11 +50,11 @@ export default function BottomNavigation() {
               className={`
                 flex flex-col items-center justify-center w-16 h-16 rounded-2xl
                 transition-all duration-300 ease-in-out
-                ${isActive ? "bg-white/20" : "text-white/70 hover:bg-white/10"}
+                ${isActive ? "bg-white/20" : "text-black/70 hover:bg-white/10"}
               `}
             >
-              <Icon className="w-6 h-6 mb-1 text-white" />
-              <span className="text-xs font-light text-white">{tab.label}</span>
+              <Icon className="w-6 h-6 mb-1 text-black" />
+              <span className="text-xs font-light text-black">{tab.label}</span>
             </Link>
           )
         })}
