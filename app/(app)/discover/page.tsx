@@ -1,13 +1,12 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { Search, Plus, CalendarIcon, Clock, Users } from "lucide-react"
+import { Search, CalendarIcon, Clock, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import CreateEventModal from "@/components/create-event-modal"
 import EventDetailsModal from "@/components/event-details-modal"
 import { EventCard, EventCardSkeleton } from "@/components/events/event-card"
 import { SummaryHeader, SummaryHeaderSkeleton } from "@/components/events/summary-header"
@@ -15,10 +14,8 @@ import { useAuth } from "@/lib/firebase-context"
 import { format } from "date-fns"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-// UX: Import the new manual search component.
 import ManualLocationSearch from "@/components/manual-location-search"
 
-// ... (interfaces and constants remain the same) ...
 interface GameEvent {
   id: string
   title: string
@@ -51,13 +48,12 @@ const SPORTS = [
   "Table Tennis",
 ]
 
-export default function EventsPage() {
+export default function DiscoverPage() {
   const { user } = useAuth()
 
   const [allNearbyEvents, setAllNearbyEvents] = useState<GameEvent[]>([])
 
   const [loading, setLoading] = useState(true)
-  const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null)
 
   // Filter states
@@ -68,7 +64,6 @@ export default function EventsPage() {
   const [showOnlyAvailable, setShowOnlyAvailable] = useState(false)
   const [selectedDistance, setSelectedDistance] = useState("All")
 
-  // UX: State to track if the user has denied location access.
   const [locationAccessDenied, setLocationAccessDenied] = useState(false)
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
 
@@ -83,11 +78,9 @@ export default function EventsPage() {
     return R * c
   }
 
-  // UX: This function is now abstracted to be called by either the geolocation success or manual search.
   const loadNearbyEvents = (latitude: number, longitude: number) => {
     setLoading(true)
     setUserLocation({ lat: latitude, lng: longitude })
-    // When we load events for a new location, the denial state is no longer relevant.
     setLocationAccessDenied(false)
     fetch(`/api/events/nearby?lat=${latitude}&lon=${longitude}&radius=50000`)
       .then((res) => res.json())
@@ -103,16 +96,14 @@ export default function EventsPage() {
   }
 
   useEffect(() => {
-    // Attempt to get user's location on initial load.
     navigator.geolocation.getCurrentPosition(
       (position) => {
         loadNearbyEvents(position.coords.latitude, position.coords.longitude)
       },
       (error) => {
-        // UX: If geolocation fails, set the denial state to true to render the manual search UI.
         console.error("Geolocation error:", error)
         setLocationAccessDenied(true)
-        setLoading(false) // Stop the main loading indicator.
+        setLoading(false)
       },
     )
   }, [])
@@ -153,7 +144,6 @@ export default function EventsPage() {
   ])
 
   const summaryStats = useMemo(() => {
-    // ... (summary logic remains the same) ...
     const now = new Date()
     const today = now.toISOString().split("T")[0]
     const eventsToday = allNearbyEvents.filter((e) => e.date === today).length
@@ -172,13 +162,8 @@ export default function EventsPage() {
           <h1 className="text-3xl font-bold text-white">Discover Events</h1>
           <p className="text-white/80">Find and join games happening around you.</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)} className="glass-card mt-4 md:mt-0">
-          <Plus className="w-4 h-4 mr-2" />
-          Create Event
-        </Button>
       </header>
 
-      {/* UX: Conditional rendering based on location access. */}
       {locationAccessDenied ? (
         <ManualLocationSearch onLocationSubmit={({ lat, lng }) => loadNearbyEvents(lat, lng)} />
       ) : (
@@ -274,19 +259,6 @@ export default function EventsPage() {
             </div>
           )}
         </>
-      )}
-
-      {/* ... (Modals remain the same) ... */}
-      {showCreateModal && (
-        <CreateEventModal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onEventCreated={(newEvent) => {
-            setAllNearbyEvents((prev) => [newEvent, ...prev])
-            setShowCreateModal(false)
-          }}
-          userLocation={userLocation} // This needs to be updated to pass the user's location
-        />
       )}
 
       {selectedEvent && (

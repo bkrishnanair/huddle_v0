@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, Clock, MapPin, Users, X, Loader2, UserCheck, UserCircle } from "lucide-react"
 import { toast } from "sonner"
+import EventChat from "@/components/event-chat"
 
 interface GameEvent {
   id: string
@@ -201,8 +202,8 @@ export default function EventDetailsModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="w-full max-w-lg glass-card border-none rounded-2xl shadow-2xl relative max-h-[90vh] overflow-hidden">
-        <div className="p-6">
+      <div className="w-full max-w-lg glass-card border-none rounded-2xl shadow-2xl relative max-h-[90vh] flex flex-col">
+        <div className="p-6 flex-shrink-0">
           <div className="flex justify-between items-start mb-4">
             <div>
               <h2 className="text-2xl font-bold text-white">{eventWithDetails.title}</h2>
@@ -221,12 +222,15 @@ export default function EventDetailsModal({
           </div>
 
           <Tabs defaultValue="details" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-white/10">
+            <TabsList className="grid w-full grid-cols-3 bg-white/10">
               <TabsTrigger value="details" className="text-white data-[state=active]:bg-white/20">
                 Details
               </TabsTrigger>
               <TabsTrigger value="players" className="text-white data-[state=active]:bg-white/20">
                 Players
+              </TabsTrigger>
+              <TabsTrigger value="chat" className="text-white data-[state=active]:bg-white/20">
+                Chat
               </TabsTrigger>
             </TabsList>
 
@@ -272,7 +276,7 @@ export default function EventDetailsModal({
                         Boosting...
                       </>
                     ) : (
-                      <>🚀 Boost Event (Free)</>
+                      "🚀 Boost Event (Free)"
                     )}
                   </Button>
                   <p className="text-xs text-white/60 mt-2 text-center">Make your event more visible on the map</p>
@@ -333,10 +337,16 @@ export default function EventDetailsModal({
                 )}
               </div>
             </TabsContent>
+            
+            <TabsContent value="chat" className="mt-4 flex-grow h-0">
+               <div className="h-full flex flex-col">
+                 <EventChat eventId={eventWithDetails.id} />
+               </div>
+            </TabsContent>
           </Tabs>
         </div>
 
-        <div className="bg-white/10 px-6 py-4 rounded-b-2xl">{renderRsvpButton()}</div>
+        <div className="bg-white/10 px-6 py-4 rounded-b-2xl mt-auto flex-shrink-0">{renderRsvpButton()}</div>
       </div>
     </div>
   )
