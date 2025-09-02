@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { MapPin, CalendarDays, Search, User } from "lucide-react"
+import { MapPin, Calendar, Search, User } from "lucide-react"
 
 const HuddleLogo = () => (
   <svg
@@ -29,7 +29,7 @@ export default function BottomNavigation() {
   const tabs = [
     { id: "map", label: "Map", icon: MapPin, href: "/map", className: "text-black" },
     { id: "discover", label: "Discover", icon: Search, href: "/discover", className: "text-black" },
-    { id: "my-events", label: "My Events", icon: CalendarDays, href: "/my-events", className: "text-black" },
+    { id: "my-events", label: "My Events", icon: Calendar, href: "/my-events", className: "text-black" },
     { id: "profile", label: "Profile", icon: User, href: "/profile", className: "text-black" },
   ]
 

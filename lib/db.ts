@@ -172,25 +172,30 @@ export const leaveEvent = async (eventId: string, userId: string) => {
   }
 }
 
-export const getUserEvents = async (userId: string) => {
-  // ... (function remains the same) ...
+export const getUserOrganizedEvents = async (userId: string) => {
   if (!userId) return []
+  try {
+    const eventsRef = collection(db, "events")
+    const q = query(eventsRef, where("createdBy", "==", userId))
+    const querySnapshot = await getDocs(q)
+    return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+  } catch (error) {
+    console.error("Error fetching organized events:", error)
+    throw new Error("Failed to fetch organized events.")
+  }
+}
 
-  const eventsRef = collection(db, "events")
-
-  // Query for events created by the user
-  const createdQuery = query(eventsRef, where("createdBy", "==", userId))
-
-  // Query for events where the user is a player
-  const joinedQuery = query(eventsRef, where("players", "array-contains", userId))
-
-  const [createdSnapshot, joinedSnapshot] = await Promise.all([getDocs(createdQuery), getDocs(joinedQuery)])
-
-  const eventsMap = new Map()
-  createdSnapshot.docs.forEach((doc) => eventsMap.set(doc.id, { id: doc.id, ...doc.data() }))
-  joinedSnapshot.docs.forEach((doc) => eventsMap.set(doc.id, { id: doc.id, ...doc.data() }))
-
-  return Array.from(eventsMap.values())
+export const getUserJoinedEvents = async (userId: string) => {
+  if (!userId) return []
+  try {
+    const eventsRef = collection(db, "events")
+    const q = query(eventsRef, where("players", "array-contains", userId))
+    const querySnapshot = await getDocs(q)
+    return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+  } catch (error) {
+    console.error("Error fetching joined events:", error)
+    throw new Error("Failed to fetch joined events.")
+  }
 }
 
 export const checkInPlayer = async (eventId: string, playerId: string, organizerId: string) => {

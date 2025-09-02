@@ -1,7 +1,7 @@
-// components/profile/event-list.tsx
-import React from "react";
+"use client"
+import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Users } from "lucide-react";
+import { Calendar, Users, Loader2 } from "lucide-react";
 
 interface GameEvent {
   id: string;
@@ -15,11 +15,39 @@ interface GameEvent {
 }
 
 interface EventListProps {
-  events: GameEvent[];
-  emptyStateMessage: string;
+  userId: string;
+  eventType: 'organized' | 'joined';
 }
 
-export function EventList({ events, emptyStateMessage }: EventListProps) {
+export function EventList({ userId, eventType }: EventListProps) {
+  const [events, setEvents] = useState<GameEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(`/api/users/${userId}/events?type=${eventType}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch events with status: ${response.status}`);
+        }
+        const data = await response.json();
+        setEvents(data.events || []);
+      } catch (err: any) {
+        setError(err.message);
+        console.error(`Error fetching ${eventType} events:`, err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (userId) {
+      fetchEvents();
+    }
+  }, [userId, eventType]);
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString("en-US", {
@@ -27,6 +55,26 @@ export function EventList({ events, emptyStateMessage }: EventListProps) {
       day: "numeric",
     });
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-8">
+        <Loader2 className="w-8 h-8 text-white/50 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8 text-red-400">
+        <p>Error loading events: {error}</p>
+      </div>
+    );
+  }
+
+  const emptyStateMessage = eventType === 'organized'
+    ? "You haven't organized any events yet."
+    : "You haven't joined any events yet.";
 
   if (events.length === 0) {
     return (
@@ -41,7 +89,7 @@ export function EventList({ events, emptyStateMessage }: EventListProps) {
     <div className="space-y-3">
       {events.map((event) => (
         <Card key={event.id} className="bg-white/10 rounded-lg p-4">
-          <CardContent>
+          <CardContent className="p-0">
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-medium text-white">{event.title}</h3>
               <span className="text-xs bg-blue-500/30 text-blue-200 px-2 py-1 rounded">

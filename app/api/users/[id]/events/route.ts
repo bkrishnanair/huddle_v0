@@ -1,29 +1,36 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { getCurrentUser } from "@/lib/auth"
-import { getUserJoinedEvents, getUserOrganizedEvents } from "@/lib/db"
+import { type NextRequest, NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth-server";
+import { getUserOrganizedEvents, getUserJoinedEvents } from "@/lib/db";
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { id } = await params
-    const user = await getCurrentUser()
+    const { id } = params;
+    const user = await getCurrentUser();
+    
+    const { searchParams } = new URL(request.url);
+    const eventType = searchParams.get('type');
 
     if (!user) {
-      return NextResponse.json({ error: "Authentication required" }, { status: 401 })
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
-    // Users can only access their own events
     if (user.uid !== id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    const [joinedEvents, organizedEvents] = await Promise.all([getUserJoinedEvents(id), getUserOrganizedEvents(id)])
+    let events;
+    if (eventType === 'organized') {
+      events = await getUserOrganizedEvents(id);
+    } else if (eventType === 'joined') {
+      events = await getUserJoinedEvents(id);
+    } else {
+      return NextResponse.json({ error: "Invalid event type specified" }, { status: 400 });
+    }
 
-    return NextResponse.json({
-      joinedEvents,
-      organizedEvents,
-    })
+    return NextResponse.json({ events });
+
   } catch (error) {
-    console.error("Error fetching user events:", error)
-    return NextResponse.json({ error: "Failed to fetch user events" }, { status: 500 })
+    console.error("Error in GET /api/users/[id]/events:", error);
+    return NextResponse.json({ error: "Failed to fetch user events" }, { status: 500 });
   }
 }
