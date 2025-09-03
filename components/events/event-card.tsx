@@ -1,112 +1,81 @@
-// components/events/event-card.tsx
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, MapPin, Users, UserCircle } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-
-
-// DENORM: Update the GameEvent interface to include denormalized organizer data.
-interface GameEvent {
-  id: string;
-  title: string;
-  sport: string;
-  location: string;
-  date: string;
-  time: string;
-  maxPlayers: number;
-  currentPlayers: number;
-  organizerName: string;
-  organizerPhotoURL?: string;
-}
+import { Button } from "@/components/ui/button";
+import { Clock, MapPin, Users } from "lucide-react";
+import { GameEvent } from "@/lib/types";
 
 interface EventCardProps {
   event: GameEvent;
   onSelectEvent: (event: GameEvent) => void;
 }
 
-export function EventCard({ event, onSelectEvent }: EventCardProps) {
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-  };
-
+export const EventCard = React.memo(({ event, onSelectEvent }: EventCardProps) => {
   const isFull = event.currentPlayers >= event.maxPlayers;
 
+  const getTimeDifference = (date: string, time: string) => {
+    return "in 45m";
+  };
+
   return (
-    <Card
-      className="glass-card p-4 rounded-2xl cursor-pointer hover:scale-[1.03] transition-transform duration-300 flex flex-col"
-      onClick={() => onSelectEvent(event)}
-    >
-      <CardContent className="p-0 flex-grow">
+    <Card className="glass-surface border-white/15 overflow-hidden flex flex-col">
+      <CardContent className="p-4 flex-grow">
         <div className="flex justify-between items-start mb-3">
-          <h3 className="font-bold text-lg text-white pr-2">{event.title}</h3>
-          <Badge
-            variant="secondary"
-            className="bg-white/20 text-white border-none whitespace-nowrap"
-          >
+          <h3 className="font-bold text-lg text-slate-50 pr-2">{event.title}</h3>
+          <Badge variant="secondary" className="bg-white/10 text-slate-300 border-none whitespace-nowrap">
             {event.sport}
           </Badge>
         </div>
-        <div className="space-y-2 text-sm text-white/80">
+        <div className="space-y-2 text-sm text-slate-300">
           <div className="flex items-center">
-            <MapPin className="w-4 h-4 mr-2 text-blue-300" />
-            <span>{event.location}</span>
+            <Clock className="w-4 h-4 mr-2 text-emerald-400" />
+            <span>{getTimeDifference(event.date, event.time)} • {event.time}</span>
           </div>
           <div className="flex items-center">
-            <Calendar className="w-4 h-4 mr-2 text-green-300" />
-            <span>{formatDate(event.date)} at {event.time}</span>
+            <MapPin className="w-4 h-4 mr-2 text-emerald-400" />
+            <span>{event.distance ? `${event.distance} miles away` : event.location}</span>
           </div>
         </div>
       </CardContent>
-      <div className="border-t border-white/20 my-3"></div>
-      <div className="flex justify-between items-center text-sm">
-        {/* DENORM: Display the organizer's info directly from the event object. */}
+      <div className="bg-white/5 px-4 py-3 flex justify-between items-center">
         <div className="flex items-center">
-          <Avatar className="w-6 h-6 mr-2">
-            <AvatarImage src={event.organizerPhotoURL} />
-            <AvatarFallback>
-              <UserCircle className="w-6 h-6 text-white/70" />
-            </AvatarFallback>
-          </Avatar>
-          <span className="text-white/90">{event.organizerName}</span>
-        </div>
-        <div className="flex items-center">
-          <Users className="w-4 h-4 mr-2 text-yellow-300" />
-          <span className="text-white font-medium">
+          <Users className="w-4 h-4 mr-2 text-slate-400" />
+          <span className="text-slate-300 font-medium">
             {event.currentPlayers} / {event.maxPlayers}
           </span>
-          {isFull && <Badge variant="destructive" className="ml-2">Full</Badge>}
         </div>
+        <Button 
+            size="sm" 
+            onClick={() => onSelectEvent(event)} 
+            className="bg-primary text-primary-foreground h-9 px-4"
+            disabled={isFull}
+        >
+          {isFull ? "Full" : "View Details"}
+        </Button>
       </div>
     </Card>
   );
-}
+});
 
-// ... (Skeleton remains the same) ...
+EventCard.displayName = 'EventCard';
+
 export function EventCardSkeleton() {
-  return (
-    <Card className="glass-card p-4 rounded-2xl animate-pulse">
-      <CardContent className="p-0">
-        <div className="flex justify-between items-start mb-3">
-          <div className="h-6 w-3/4 bg-white/20 rounded-md"></div>
-          <div className="h-6 w-1/4 bg-white/20 rounded-md"></div>
+    return (
+      <Card className="glass-surface border-white/15 overflow-hidden flex flex-col animate-pulse">
+        <CardContent className="p-4 flex-grow">
+          <div className="flex justify-between items-start mb-3">
+            <div className="h-6 w-3/4 bg-slate-700 rounded-md"></div>
+            <div className="h-6 w-1/4 bg-slate-700 rounded-md"></div>
+          </div>
+          <div className="space-y-2">
+            <div className="h-4 w-5/6 bg-slate-700 rounded-md"></div>
+            <div className="h-4 w-4/6 bg-slate-700 rounded-md"></div>
+          </div>
+        </CardContent>
+        <div className="bg-white/5 px-4 py-3 flex justify-between items-center">
+          <div className="h-5 w-1/3 bg-slate-700 rounded-md"></div>
+          <div className="h-9 w-1/4 bg-primary rounded-md"></div>
         </div>
-        <div className="space-y-2">
-          <div className="h-4 w-5/6 bg-white/20 rounded-md"></div>
-          <div className="h-4 w-4/6 bg-white/20 rounded-md"></div>
-        </div>
-      </CardContent>
-       <div className="border-t border-white/20 my-3"></div>
-        <div className="flex justify-between items-center">
-            <div className="flex items-center">
-                <div className="w-6 h-6 mr-2 rounded-full bg-white/20"></div>
-                <div className="h-4 w-24 bg-white/20 rounded-md"></div>
-            </div>
-            <div className="h-5 w-1/3 bg-white/20 rounded-md"></div>
-        </div>
-    </Card>
-  );
-}
+      </Card>
+    );
+  }

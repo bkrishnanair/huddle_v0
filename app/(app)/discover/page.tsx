@@ -1,276 +1,157 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { Search, CalendarIcon, Clock, Users } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useAuth } from "@/lib/firebase-context"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import EventDetailsModal from "@/components/event-details-modal"
 import { EventCard, EventCardSkeleton } from "@/components/events/event-card"
-import { SummaryHeader, SummaryHeaderSkeleton } from "@/components/events/summary-header"
-import { useAuth } from "@/lib/firebase-context"
-import { format } from "date-fns"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import ManualLocationSearch from "@/components/manual-location-search"
+import EventDetailsModal from "@/components/event-details-modal"
+import CreateEventModal from "@/components/create-event-modal"
+import { Chip } from "@/components/ui/chip"
+import { Search, SlidersHorizontal, PlusCircle, Star } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { GameEvent } from "@/lib/types"
 
-interface GameEvent {
-  id: string
-  title: string
-  sport: string
-  location: any
-  date: string
-  time: string
-  maxPlayers: number
-  currentPlayers: number
-  createdBy: string
-  players: string[]
-  organizerName: string
-  organizerPhotoURL?: string
-  latitude?: number
-  longitude?: number
-  isBoosted?: boolean
-}
+const SPORTS_FILTERS = ["All", "Basketball", "Soccer", "Tennis", "Volleyball", "Football"];
 
-const SPORTS = [
-  "All",
-  "Basketball",
-  "Soccer",
-  "Tennis",
-  "Cricket",
-  "Baseball",
-  "Volleyball",
-  "Football",
-  "Hockey",
-  "Badminton",
-  "Table Tennis",
-]
+const ActionableEmptyState = ({ onOpenCreateModal }: { onOpenCreateModal: () => void }) => (
+    <div className="text-center glass-surface border-white/15 rounded-2xl p-8 mt-8">
+        <PlusCircle className="w-16 h-16 text-emerald-400 mx-auto mb-4" />
+        <h3 className="text-2xl font-bold text-slate-50 mb-2">No Games Nearby</h3>
+        <p className="text-slate-300 mb-6">Your area is waiting for a leader. Be the one to get the ball rolling.</p>
+        <Button size="lg" onClick={onOpenCreateModal} className="h-12 px-8 text-lg">
+            Host the First Game
+        </Button>
+    </div>
+);
 
 export default function DiscoverPage() {
-  const { user } = useAuth()
+    const { user } = useAuth();
+    const [allNearbyEvents, setAllNearbyEvents] = useState<GameEvent[]>([]);
+    const [userProfile, setUserProfile] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null);
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+    
+    const [searchQuery, setSearchQuery] = useState("");
+    const [activeSport, setActiveSport] = useState("All");
+    const [sortBy, setSortBy] = useState("soonest");
 
-  const [allNearbyEvents, setAllNearbyEvents] = useState<GameEvent[]>([])
+    useEffect(() => {
+        navigator.geolocation.getCurrentPosition(position => {
+            setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+        });
 
-  const [loading, setLoading] = useState(true)
-  const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null)
+        const fetchInitialData = async () => {
+            if (!user || !userLocation) return;
+            setLoading(true);
+            try {
+                // For Discover page, we do a broad search
+                const radius = 50000; // 50km
+                const [profileRes, eventsRes] = await Promise.all([
+                    fetch(`/api/users/${user.uid}/profile`),
+                    fetch(`/api/events?lat=${userLocation.lat}&lon=${userLocation.lng}&radius=${radius}`)
+                ]);
+                
+                if (profileRes.ok) setUserProfile((await profileRes.json()).profile);
+                if (eventsRes.ok) setAllNearbyEvents((await eventsRes.json()).events || []);
+            } catch (error) {
+                console.error("Failed to fetch initial data:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        fetchInitialData();
+    }, [user, userLocation]);
 
-  // Filter states
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedSport, setSelectedSport] = useState("All")
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
-  const [selectedTime, setSelectedTime] = useState("All")
-  const [showOnlyAvailable, setShowOnlyAvailable] = useState(false)
-  const [selectedDistance, setSelectedDistance] = useState("All")
+    const { recommendedEvents, otherEvents } = useMemo(() => {
+        const filtered = allNearbyEvents.filter(event => {
+            const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesSport = activeSport === 'All' || event.sport === activeSport;
+            return matchesSearch && matchesSport;
+        });
 
-  const [locationAccessDenied, setLocationAccessDenied] = useState(false)
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
+        const favoriteSports = userProfile?.favoriteSports || [];
+        const recommended: GameEvent[] = [];
+        const others: GameEvent[] = [];
 
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 3959 // Earth's radius in miles
-    const dLat = ((lat2 - lat1) * Math.PI) / 180
-    const dLon = ((lon2 - lon1) * Math.PI) / 180
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    return R * c
-  }
+        if (favoriteSports.length > 0 && activeSport === 'All' && searchQuery === '') {
+            filtered.forEach(event => {
+                if (favoriteSports.includes(event.sport)) recommended.push(event);
+                else others.push(event);
+            });
+        } else {
+            others.push(...filtered);
+        }
 
-  const loadNearbyEvents = (latitude: number, longitude: number) => {
-    setLoading(true)
-    setUserLocation({ lat: latitude, lng: longitude })
-    setLocationAccessDenied(false)
-    fetch(`/api/events/nearby?lat=${latitude}&lon=${longitude}&radius=50000`)
-      .then((res) => res.json())
-      .then((data) => {
-        setAllNearbyEvents(data.events || [])
-      })
-      .catch((error) => {
-        console.error("Error loading nearby events:", error)
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }
+        others.sort((a, b) => {
+            if (sortBy === 'soonest') return new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime();
+            if (sortBy === 'closest') return (a.distance || 999) - (b.distance || 999);
+            return 0;
+        });
 
-  useEffect(() => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        loadNearbyEvents(position.coords.latitude, position.coords.longitude)
-      },
-      (error) => {
-        console.error("Geolocation error:", error)
-        setLocationAccessDenied(true)
-        setLoading(false)
-      },
-    )
-  }, [])
+        return { recommendedEvents: recommended, otherEvents: others };
+    }, [allNearbyEvents, searchQuery, activeSport, sortBy, userProfile]);
 
-  const filteredEvents = useMemo(() => {
-    return allNearbyEvents.filter((event) => {
-      const matchesSearch =
-        event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        event.sport.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesSport = selectedSport === "All" || event.sport === selectedSport
-      const matchesDate = !selectedDate || event.date === format(selectedDate, "yyyy-MM-dd")
-      const eventHour = Number.parseInt(event.time.split(":")[0])
-      const matchesTime =
-        selectedTime === "All" ||
-        (selectedTime === "Morning" && eventHour >= 5 && eventHour < 12) ||
-        (selectedTime === "Afternoon" && eventHour >= 12 && eventHour < 17) ||
-        (selectedTime === "Evening" && eventHour >= 17 && eventHour < 22)
-      const matchesAvailability = !showOnlyAvailable || event.currentPlayers < event.maxPlayers
 
-      let matchesDistance = true
-      if (selectedDistance !== "All" && userLocation && event.latitude && event.longitude) {
-        const distance = calculateDistance(userLocation.lat, userLocation.lng, event.latitude, event.longitude)
-        const maxDistance = selectedDistance === "1" ? 1 : selectedDistance === "5" ? 5 : 10
-        matchesDistance = distance <= maxDistance
-      }
+    return (
+        <div className="min-h-screen liquid-gradient p-4 md:p-8">
+            <header className="mb-8">
+                <h1 className="text-3xl font-bold text-slate-50 mb-2">Discover</h1>
+                <p className="text-slate-300">Find games happening around you.</p>
+            </header>
 
-      return matchesSearch && matchesSport && matchesDate && matchesTime && matchesAvailability && matchesDistance
-    })
-  }, [
-    allNearbyEvents,
-    searchQuery,
-    selectedSport,
-    selectedDate,
-    selectedTime,
-    showOnlyAvailable,
-    selectedDistance,
-    userLocation,
-  ])
+            <div className="space-y-4 mb-8">
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Input placeholder="Search by name or sport..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 glass-surface border-white/15 h-12" />
+                </div>
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                     <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                        {SPORTS_FILTERS.map(sport => <Chip key={sport} isActive={activeSport === sport} onClick={() => setActiveSport(sport)}>{sport}</Chip>)}
+                     </div>
+                     <Select value={sortBy} onValueChange={setSortBy}>
+                        <SelectTrigger className="w-full md:w-[180px] glass-surface border-white/15 h-11">
+                             <SlidersHorizontal className="w-4 h-4 mr-2" />
+                             <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                             <SelectItem value="soonest">Sort: Soonest</SelectItem>
+                             <SelectItem value="closest">Sort: Closest</SelectItem>
+                        </SelectContent>
+                     </Select>
+                </div>
+            </div>
 
-  const summaryStats = useMemo(() => {
-    const now = new Date()
-    const today = now.toISOString().split("T")[0]
-    const eventsToday = allNearbyEvents.filter((e) => e.date === today).length
-    const yourUpcoming = user
-      ? allNearbyEvents.filter(
-          (e) => new Date(e.date) >= now && (e.createdBy === user.uid || e.players.includes(user.uid)),
-        ).length
-      : 0
-    return { totalEvents: allNearbyEvents.length, eventsToday, yourUpcoming }
-  }, [allNearbyEvents, user])
+            {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"><EventCardSkeleton /><EventCardSkeleton /><EventCardSkeleton /></div>
+            ) : (
+                <>
+                    {recommendedEvents.length > 0 && (
+                        <section className="mb-8">
+                            <h2 className="text-2xl font-bold text-slate-50 mb-4 flex items-center gap-2"><Star className="w-6 h-6 text-yellow-400" /> Recommended For You</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {recommendedEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} />)}
+                            </div>
+                        </section>
+                    )}
+                     <section>
+                            {recommendedEvents.length > 0 && <h2 className="text-2xl font-bold text-slate-50 mb-4">All Other Games</h2>}
+                            {(otherEvents.length > 0) ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {otherEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} />)}
+                                </div>
+                            ) : recommendedEvents.length === 0 ? (
+                                <ActionableEmptyState onOpenCreateModal={() => setShowCreateModal(true)} />
+                            ) : null}
+                     </section>
+                </>
+            )}
 
-  return (
-    <div className="min-h-screen liquid-gradient p-4 md:p-8">
-      <header className="flex flex-col md:flex-row justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Discover Events</h1>
-          <p className="text-white/80">Find and join games happening around you.</p>
+             {selectedEvent && <EventDetailsModal event={selectedEvent} isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} onEventUpdated={() => {}} />}
+             {showCreateModal && <CreateEventModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onEventCreated={() => {}} userLocation={userLocation} />}
         </div>
-      </header>
-
-      {locationAccessDenied ? (
-        <ManualLocationSearch onLocationSubmit={({ lat, lng }) => loadNearbyEvents(lat, lng)} />
-      ) : (
-        <>
-          {loading ? <SummaryHeaderSkeleton /> : <SummaryHeader {...summaryStats} />}
-
-          <div className="glass-card p-4 rounded-2xl mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-center">
-              <div className="relative flex-grow lg:col-span-2">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70" />
-                <Input
-                  placeholder="Search by name or sport..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 glass border-white/20 text-white placeholder:text-white/60"
-                />
-              </div>
-
-              <Select value={selectedSport} onValueChange={setSelectedSport}>
-                <SelectTrigger className="glass border-white/20 text-white">
-                  <SelectValue placeholder="Filter by sport" />
-                </SelectTrigger>
-                <SelectContent className="glass-card">
-                  {SPORTS.map((sport) => (
-                    <SelectItem key={sport} value={sport}>
-                      {sport}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={selectedDistance} onValueChange={setSelectedDistance}>
-                <SelectTrigger className="glass border-white/20 text-white">
-                  <SelectValue placeholder="Distance" />
-                </SelectTrigger>
-                <SelectContent className="glass-card">
-                  <SelectItem value="All">Any Distance</SelectItem>
-                  <SelectItem value="1">Within 1 mile</SelectItem>
-                  <SelectItem value="5">Within 5 miles</SelectItem>
-                  <SelectItem value="10">Within 10 miles</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant={"outline"} className="glass border-white/20 text-white w-full justify-start">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 glass-card">
-                  <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus />
-                </PopoverContent>
-              </Popover>
-
-              <Select value={selectedTime} onValueChange={setSelectedTime}>
-                <SelectTrigger className="glass border-white/20 text-white">
-                  <Clock className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Filter by time" />
-                </SelectTrigger>
-                <SelectContent className="glass-card">
-                  <SelectItem value="All">Any Time</SelectItem>
-                  <SelectItem value="Morning">Morning (5am-12pm)</SelectItem>
-                  <SelectItem value="Afternoon">Afternoon (12pm-5pm)</SelectItem>
-                  <SelectItem value="Evening">Evening (5pm-10pm)</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <div className="flex items-center space-x-2 text-white justify-center lg:justify-start lg:col-start-5">
-                <Users className="w-4 h-4" />
-                <Label htmlFor="availability-switch">Open Spots Only</Label>
-                <Switch id="availability-switch" checked={showOnlyAvailable} onCheckedChange={setShowOnlyAvailable} />
-              </div>
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <EventCardSkeleton />
-              <EventCardSkeleton />
-              <EventCardSkeleton />
-            </div>
-          ) : filteredEvents.length === 0 ? (
-            <div className="text-center glass-card p-8 rounded-2xl">
-              <h3 className="text-xl font-semibold text-white mb-2">No Events Found</h3>
-              <p className="text-white/70 mb-4">Try adjusting your filters or creating a new event!</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredEvents.map((event) => (
-                <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} />
-              ))}
-            </div>
-          )}
-        </>
-      )}
-
-      {selectedEvent && (
-        <EventDetailsModal
-          event={selectedEvent}
-          isOpen={!!selectedEvent}
-          onClose={() => setSelectedEvent(null)}
-          onEventUpdated={(updatedEvent) => {
-            setAllNearbyEvents((prev) => prev.map((e) => (e.id === updatedEvent.id ? updatedEvent : e)))
-          }}
-        />
-      )}
-    </div>
-  )
+    );
 }

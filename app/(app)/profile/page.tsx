@@ -1,241 +1,164 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useFirebase } from "@/lib/firebase-context"
-import { getUser, getUserEvents } from "@/lib/db"
-import { signOut } from "firebase/auth"
-import { auth } from "@/lib/firebase"
+import { useAuth } from "@/lib/firebase-context"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Calendar, MapPin, Users, Trophy, Target, Pencil, Star } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Trophy, LogOut, Settings, UserCircle, Pencil } from "lucide-react"
 import EditProfileModal from "@/components/profile/edit-profile-modal"
+import { signOut } from "firebase/auth"
+import { auth } from "@/lib/firebase"
+import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
 
-const FirstGameBadge = () => (
-  <div className="flex items-center p-3 bg-yellow-500/20 rounded-lg">
-    <Star className="w-6 h-6 text-yellow-400 mr-3" />
-    <div>
-      <h4 className="text-white font-semibold">First Game Joined!</h4>
-      <p className="text-yellow-300/80 text-sm">Welcome to the community!</p>
-    </div>
-  </div>
+function ProfileSkeleton() {
+    return (
+        <div className="min-h-screen liquid-gradient p-4 md:p-6 pb-24 animate-pulse">
+            <header className="flex justify-end items-center gap-2 mb-6">
+                <Skeleton className="h-10 w-10 rounded-lg bg-slate-700" />
+                <Skeleton className="h-10 w-10 rounded-lg bg-slate-700" />
+            </header>
+            <div className="flex flex-col items-center text-center -mt-10 space-y-6">
+                <div className="flex flex-col items-center text-center">
+                    <Skeleton className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-slate-800" />
+                    <Skeleton className="h-8 w-48 mb-2 rounded-md bg-slate-700" />
+                    <Skeleton className="h-5 w-64 rounded-md bg-slate-700" />
+                    <Skeleton className="h-9 w-32 rounded-md mt-4 bg-slate-700" />
+                </div>
+                <div className="grid grid-cols-3 gap-4 w-full">
+                    <Skeleton className="h-24 rounded-lg bg-slate-700" />
+                    <Skeleton className="h-24 rounded-lg bg-slate-700" />
+                    <Skeleton className="h-24 rounded-lg bg-slate-700" />
+                </div>
+                <Skeleton className="h-32 rounded-lg bg-slate-700 w-full" />
+                <Skeleton className="h-32 rounded-lg bg-slate-700 w-full" />
+            </div>
+        </div>
+    )
+}
+
+const StatCard = ({ label, value }: { label: string; value: number }) => (
+    <Card className="glass-surface border-none text-center">
+        <CardContent className="p-4">
+            <div className="text-2xl font-bold text-slate-50">{value}</div>
+            <div className="text-sm text-slate-400">{label}</div>
+        </CardContent>
+    </Card>
 )
-
 export default function ProfilePage() {
-  const { user: firebaseUser } = useFirebase()
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [userProfile, setUserProfile] = useState<any>(null)
-  const [userEvents, setUserEvents] = useState({ organized: [], joined: [] })
+  const [userStats, setUserStats] = useState({ organized: 0, joined: 0, upcoming: 0 })
   const [loading, setLoading] = useState(true)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
   const loadUserData = async () => {
-    if (!firebaseUser) return
-    setLoading(true)
-    try {
-      const [profile, eventsData] = await Promise.all([
-        getUser(firebaseUser.uid),
-        getUserEvents(firebaseUser.uid),
-      ])
-
-      setUserProfile(
-        profile || {
-          displayName: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "User",
-          email: firebaseUser.email,
-          photoURL: firebaseUser.photoURL,
-        },
-      )
-      setUserEvents({
-        organized: eventsData?.organizedEvents || [],
-        joined: eventsData?.joinedEvents || [],
-      })
-    } catch (error) {
-      console.error("Error loading user data:", error)
-      setUserEvents({ organized: [], joined: [] })
-    } finally {
-      setLoading(false)
+      if (!user) return
+      setLoading(true)
+      try {
+        const res = await fetch(`/api/users/${user.uid}/profile`)
+        if (res.ok) {
+          const data = await res.json()
+          setUserProfile(data.profile)
+          setUserStats(data.stats)
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error)
+      } finally {
+        setLoading(false)
+      }
     }
-  }
 
   useEffect(() => {
-    loadUserData()
-  }, [firebaseUser])
-
+    if (user) loadUserData()
+  }, [user])
+  
   const handleLogout = async () => {
     try {
       await signOut(auth)
+      toast.success("Logged out successfully")
       router.push("/")
     } catch (error) {
-      console.error("Error signing out:", error)
+      toast.error("Failed to log out")
     }
   }
 
-  if (!firebaseUser || loading) {
-    return (
-      <div className="min-h-screen liquid-gradient flex items-center justify-center text-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
-      </div>
-    )
+  const onProfileUpdate = () => {
+    setIsEditModalOpen(false)
+    loadUserData()
   }
 
-  const { organized, joined } = userEvents
-  const totalEvents = organized.length + joined.length
-  const upcomingEvents = [...organized, ...joined].filter(
-    (event) => new Date(event.date + " " + event.time) > new Date(),
-  ).length
+  if (authLoading || loading) {
+    return <ProfileSkeleton />
+  }
 
   return (
     <>
       <div className="min-h-screen liquid-gradient pb-24">
-        <div className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800 text-white">
-          <div className="absolute inset-0 bg-black/20"></div>
-          <div className="relative px-6 py-8">
-            <div className="flex items-center justify-between mb-6">
-              <Button variant="ghost" onClick={() => router.back()} className="text-white hover:bg-white/20">
-                Back
-              </Button>
-              <Button variant="ghost" onClick={handleLogout} className="text-white hover:bg-white/20">
-                Logout
-              </Button>
+        <header className="p-4 flex justify-end items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => { /* Open Settings */ }}>
+                <Settings className="w-5 h-5" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={handleLogout}>
+                <LogOut className="w-5 h-5" />
+            </Button>
+        </header>
+
+        <div className="px-4 md:px-6 -mt-10 space-y-6">
+            <div className="flex flex-col items-center text-center">
+                <Avatar className="w-24 h-24 mb-4 border-4 border-slate-800">
+                    <AvatarImage src={userProfile?.photoURL} />
+                    <AvatarFallback>
+                        <UserCircle className="w-full h-full text-slate-500" />
+                    </AvatarFallback>
+                </Avatar>
+                <h1 className="text-2xl font-bold text-slate-50">{userProfile?.displayName || "Huddle User"}</h1>
+                <p className="text-slate-400">{userProfile?.email}</p>
+                 <Button variant="secondary" size="sm" className="mt-4" onClick={() => setIsEditModalOpen(true)}>
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Edit Profile
+                </Button>
+            </div>
+          
+            <div className="grid grid-cols-3 gap-4">
+              <StatCard label="Joined" value={userStats.joined} />
+              <StatCard label="Organized" value={userStats.organized} />
+              <StatCard label="Upcoming" value={userStats.upcoming} />
             </div>
 
-            <div className="text-center">
-              <div className="w-24 h-24 bg-white/20 rounded-full mx-auto mb-4 flex items-center justify-center">
-                {userProfile?.photoURL ? (
-                  <img
-                    src={userProfile.photoURL || "/placeholder.svg"}
-                    alt="Profile"
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  <Users className="w-12 h-12 text-white" />
-                )}
-              </div>
-              <h1 className="text-2xl font-bold mb-2">{userProfile?.displayName || "User"}</h1>
-              <p className="text-white/80">{userProfile?.email}</p>
-              <Button onClick={() => setIsEditModalOpen(true)} className="mt-4">
-                <Pencil className="w-4 h-4 mr-2" />
-                Edit Profile
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <div className="px-6 py-6 space-y-6">
-          <Card className="glass-card border-white/20">
-            <CardHeader>
-              <CardTitle className="text-white">About Me</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-white/70">{userProfile?.bio || "No bio yet."}</p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {userProfile?.favoriteSports?.map((sport: string) => (
-                  <Badge key={sport} variant="secondary" className="bg-white/20 text-white">
-                    {sport}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="grid grid-cols-3 gap-4">
-            <Card className="glass-card border-white/20 text-center">
-              <CardContent className="p-4">
-                <div className="text-2xl font-bold text-white">{joined.length}</div>
-                <div className="text-sm text-white/70">Events Joined</div>
-              </CardContent>
-            </Card>
-            <Card className="glass-card border-white/20 text-center">
-              <CardContent className="p-4">
-                <div className="text-2xl font-bold text-white">{organized.length}</div>
-                <div className="text-sm text-white/70">Organized</div>
-              </CardContent>
-            </Card>
-            <Card className="glass-card border-white/20 text-center">
-              <CardContent className="p-4">
-                <div className="text-2xl font-bold text-white">{upcomingEvents}</div>
-                <div className="text-sm text-white/70">Upcoming</div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="glass-card border-white/20">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Trophy className="w-5 h-5" />
-                Achievements
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {userProfile?.badges?.includes("first_game") ? (
-                <FirstGameBadge />
-              ) : (
-                <p className="text-white/70">Join your first event to earn badges!</p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card border-white/20">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
-                Recent Events
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {totalEvents === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-white/70 mb-4">No events yet</p>
-                  <p className="text-white/50 text-sm mb-4">Start by joining or creating an event</p>
-                  <Button onClick={() => router.push("/events")} className="bg-blue-500 hover:bg-blue-600">
-                    Explore Events
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {[...organized, ...joined].slice(0, 3).map((event: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                      <div>
-                        <h4 className="text-white font-medium">{event.title}</h4>
-                        <p className="text-white/70 text-sm flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          {event.location}
-                        </p>
-                      </div>
-                      <Badge variant="secondary" className="bg-white/20 text-white">
-                        {event.sport}
+            <Card className="glass-surface border-white/15">
+              <CardHeader>
+                <CardTitle className="text-slate-50">About Me</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-slate-300 whitespace-pre-wrap">{userProfile?.bio || "No bio yet. Click 'Edit Profile' to add one."}</p>
+                {userProfile?.favoriteSports && userProfile.favoriteSports.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {userProfile.favoriteSports.map((sport: string) => (
+                      <Badge key={sport} variant="secondary">
+                        {sport}
                       </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-          <Card className="glass-card border-white/20">
-            <CardHeader>
-              <CardTitle className="text-white">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-white hover:bg-white/10"
-                onClick={() => router.push("/events")}
-              >
-                <Target className="w-4 h-4 mr-2" />
-                View My Events
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-white hover:bg-white/10"
-                onClick={() => router.push("/map")}
-              >
-                <MapPin className="w-4 h-4 mr-2" />
-                Find Nearby Events
-              </Button>
-            </CardContent>
-          </Card>
+            <Card className="glass-surface border-white/15">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-emerald-400" />
+                  Achievements
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-slate-300">Your trophy case is waiting. Join a game to start collecting!</p>
+              </CardContent>
+            </Card>
         </div>
       </div>
       {isEditModalOpen && (
@@ -243,10 +166,7 @@ export default function ProfilePage() {
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
           userProfile={userProfile}
-          onProfileUpdate={() => {
-            setIsEditModalOpen(false)
-            loadUserData() // Refresh profile data
-          }}
+          onProfileUpdate={onProfileUpdate}
         />
       )}
     </>
