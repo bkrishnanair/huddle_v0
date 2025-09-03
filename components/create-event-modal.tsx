@@ -87,7 +87,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
       const response = await fetch("/api/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, latitude: markerPosition.lat, longitude: markerPosition.lng }),
+        body: JSON.stringify({ ...formData, latitude: markerPosition.lat, longitude: markerPosition.lng, isBoosted: boostEvent }),
       })
 
       if (response.ok) {
@@ -172,11 +172,11 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                     <div>
                         <Label htmlFor="boost" className="font-bold flex items-center gap-2">
                             <Rocket className="w-5 h-5 text-yellow-400" />
-                            Boost Event (Coming Soon!)
+                            Boost Event
                         </Label>
                         <p className="text-sm text-slate-400 mt-1">Get your game featured to fill your roster faster.</p>
                     </div>
-                    <Switch id="boost" checked={boostEvent} onCheckedChange={setBoostEvent} disabled={true} />
+                    <Switch id="boost" checked={boostEvent} onCheckedChange={setBoostEvent} />
                 </div>
               </div>
             </form>

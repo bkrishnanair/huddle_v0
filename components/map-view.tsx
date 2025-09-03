@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Chip } from "@/components/ui/chip"
 import { Plus, MapPin, LocateFixed, AlertCircle } from "lucide-react"
-import EventDetailsModal from "./event-details-modal"
+import EventDetailsDrawer from "./event-details-drawer"
 import CreateEventModal from "./create-event-modal"
 import { APIProvider, Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps"
 import { mapStyles } from "@/lib/map-styles" 
@@ -120,7 +120,7 @@ export default function MapView({ user }: MapViewProps) {
   }
 
   return (
-    <div className="h-screen flex flex-col liquid-gradient">
+    <div className="h-screen flex flex-col liquid-gradient" id="map-view">
       <div className="flex-1 relative">
         <APIProvider apiKey={mapsApiKey}>
           <Map
@@ -163,9 +163,10 @@ export default function MapView({ user }: MapViewProps) {
         </div>
 
         <Button
+            id="create-event-button"
             onClick={() => setShowCreateModal(true)}
             size="lg"
-            className="absolute bottom-24 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg"
+            className="absolute bottom-44 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg"
         >
             <Plus className="w-6 h-6" />
         </Button>
@@ -174,14 +175,14 @@ export default function MapView({ user }: MapViewProps) {
             onClick={handleRecenter}
             variant="secondary"
             size="lg"
-            className="absolute bottom-6 right-6 h-14 w-14 rounded-full shadow-lg"
+            className="absolute bottom-28 right-6 h-14 w-14 rounded-full shadow-lg"
         >
             <LocateFixed className="w-6 h-6" />
         </Button>
       </div>
 
       {selectedEvent && (
-        <EventDetailsModal
+        <EventDetailsDrawer
           event={selectedEvent}
           isOpen={!!selectedEvent}
           onClose={() => setSelectedEvent(null)}
