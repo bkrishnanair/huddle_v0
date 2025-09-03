@@ -110,7 +110,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="glass-surface border-white/15 text-foreground p-0 gap-0 sm:max-w-md max-h-[90vh] flex flex-col">
         <DialogHeader className="p-6 pb-4">
-          <DialogTitle>Create New Game</DialogTitle>
+          <DialogTitle>Host a New Game</DialogTitle>
           <DialogDescription>Fill in the details to get your game on the map.</DialogDescription>
         </DialogHeader>
         
@@ -185,7 +185,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
 
         <DialogFooter className="p-6 pt-4 bg-slate-900/50 border-t border-border">
           <Button type="submit" form="event-form" disabled={isLoading} className="w-full" size="lg">
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Create Game"}
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Host Game"}
           </Button>
         </DialogFooter>
       </DialogContent>

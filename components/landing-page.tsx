@@ -24,17 +24,17 @@ interface LandingPageProps {
 
 const features = [
     {
-      icon: <MapPin className="w-8 h-8 text-emerald-400" />,
+      icon: <MapPin className="w-8 h-8 text-primary" />,
       title: "Find Games Instantly",
       description: "See every pickup game happening around you on a real-time map. Your next game is just a tap away."
     },
     {
-      icon: <Cpu className="w-8 h-8 text-emerald-400" />,
+      icon: <Cpu className="w-8 h-8 text-primary" />,
       title: "AI-Assisted Events",
       description: "Let AI help you craft the perfect event title and description to attract players and fill your roster faster."
     },
     {
-      icon: <CheckCircle className="w-8 h-8 text-emerald-400" />,
+      icon: <CheckCircle className="w-8 h-8 text-primary" />,
       title: "Verified Check-ins",
       description: "Build your reputation with our check-in system. Organizers see you're reliable, so you get more invites."
     }
@@ -103,7 +103,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                       <div
                         key={index}
                         className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                          index === currentFeature ? 'bg-emerald-400 w-6' : 'bg-slate-600'
+                          index === currentFeature ? 'bg-primary w-6' : 'bg-slate-600'
                         }`}
                       />
                     ))}
