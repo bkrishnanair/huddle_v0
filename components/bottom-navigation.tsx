@@ -5,21 +5,8 @@ import { usePathname } from "next/navigation"
 import { MapPin, Calendar, Search, User } from "lucide-react"
 
 const HuddleLogo = () => (
-  <svg
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className="w-6 h-6 text-black"
-  >
-    <path
-      d="M4 4V20M20 4V20M4 12H20M12 4V12C12 14.2091 10.2091 16 8 16C5.79086 16 4 14.2091 4 12"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-slate-50">
+    <path d="M4 4V20M20 4V20M4 12H20M12 4V12C12 14.2091 10.2091 16 8 16C5.79086 16 4 14.2091 4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 )
 
@@ -27,16 +14,16 @@ export default function BottomNavigation() {
   const pathname = usePathname()
 
   const tabs = [
-    { id: "map", label: "Map", icon: MapPin, href: "/map", className: "text-black" },
-    { id: "discover", label: "Discover", icon: Search, href: "/discover", className: "text-black" },
-    { id: "my-events", label: "My Events", icon: Calendar, href: "/my-events", className: "text-black" },
-    { id: "profile", label: "Profile", icon: User, href: "/profile", className: "text-black" },
+    { id: "map", label: "Map", icon: MapPin, href: "/map" },
+    { id: "discover", label: "Discover", icon: Search, href: "/discover" },
+    { id: "my-events", label: "My Events", icon: Calendar, href: "/my-events" },
+    { id: "profile", label: "Profile", icon: User, href: "/profile" },
   ]
 
   return (
-    <div className="fixed bottom-4 inset-x-0 z-50 flex justify-center">
-      <div className="flex items-center justify-around gap-2 rounded-full p-2 glass-card shadow-lg w-full max-w-md sm:max-w-lg">
-        <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+    <div className="fixed bottom-4 inset-x-0 z-50 flex justify-center px-4">
+      <div className="flex items-center justify-around gap-2 rounded-full p-2 glass-surface border-white/15 w-full max-w-md">
+        <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center">
           <HuddleLogo />
         </div>
         {tabs.map((tab) => {
@@ -49,12 +36,12 @@ export default function BottomNavigation() {
               href={tab.href}
               className={`
                 flex flex-col items-center justify-center w-16 h-16 rounded-2xl
-                transition-all duration-300 ease-in-out
-                ${isActive ? "bg-white/20" : "text-black/70 hover:bg-white/10"}
+                transition-colors duration-200
+                ${isActive ? "bg-white/10" : "text-slate-400 hover:bg-white/5"}
               `}
             >
-              <Icon className="w-6 h-6 mb-1 text-black" />
-              <span className="text-xs font-light text-black">{tab.label}</span>
+              <Icon className={`w-6 h-6 mb-1 ${isActive ? "text-emerald-400" : "text-slate-400"}`} />
+              <span className={`text-xs font-light ${isActive ? "text-slate-50" : "text-slate-400"}`}>{tab.label}</span>
             </Link>
           )
         })}

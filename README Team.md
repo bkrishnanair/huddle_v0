@@ -14,7 +14,7 @@ The app's foundation is a **secure route group** structure implemented with the 
 
 ## 2. Technology Stack
 
-*   **Framework**: Next.js (v15+) using the App Router
+*   **Framework**: Next.js (v15+) using the App Router with **Turbopack**
 *   **Language**: TypeScript
 *   **Backend**: Firebase (Serverless)
     *   **Authentication**: Firebase Authentication (Email/Password, Google Sign-In)
@@ -65,7 +65,7 @@ All API routes are located in the `app/api/` directory and are secured with Zod 
 
 | Endpoint | Method | Description |
 | :--- | :--- | :--- |
-| `/api/events` | `GET` | Fetches a list of all events. |
+| `/api/events` | `GET` | Fetches a list of all events, or nearby events if location data is provided. |
 | `/api/events` | `POST` | **Authenticated.** Creates a new single or recurring event. |
 | `/api/events/[id]/details` | `GET` | **Authenticated.** Fetches detailed information for a single event, including the profile data of all players. |
 | `/api/events/[id]/rsvp` | `POST` | **Authenticated.** Allows a user to RSVP for or leave an event. Awards "first_game" badge. |
@@ -91,7 +91,7 @@ All API routes are located in the `app/api/` directory and are secured with Zod 
 ## 7. Local Development Setup
 
 1.  **Environment Variables**: Create a `.env.local` file in the project root. It needs credentials for the Firebase Client SDK, Google Maps, and the Firebase Admin SDK (for server-side authentication). Refer to `README.md` for the full list of required variables.
-2.  **Install Dependencies**: This project uses PNPM. You only need to install dependencies in the root directory. The Cloud Functions dependencies are managed separately and are only needed for deployment.
+2.  **Install Dependencies**: This project uses PNPM. You only need to install dependencies in the root directory.
     \`\`\`bash
     pnpm install
     \`\`\`

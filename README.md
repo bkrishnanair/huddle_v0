@@ -33,7 +33,7 @@ This V2 release enhances the stable V1 foundation with social connectivity featu
 
 | Category      | Technology                                                                                             |
 | :------------ | :----------------------------------------------------------------------------------------------------- |
-| **Framework** | [**Next.js**](https://nextjs.org/) (v15+ with App Router)                                                |
+| **Framework** | [**Next.js**](https://nextjs.org/) (v15+ with App Router) & [**Turbopack**](https://turbo.build/pack) |
 | **Language**  | [**TypeScript**](https://www.typescriptlang.org/)                                                      |
 | **Backend**   | [**Firebase**](https://firebase.google.com/) (Serverless: Auth, Firestore, Cloud Functions)              |
 | **Validation**| [**Zod**](https://zod.dev/) (for server-side data validation)                                            |
@@ -100,7 +100,7 @@ The repository includes an `.npmrc` file to automatically handle peer dependency
 # Install root project dependencies
 pnpm install
 
-# Run the development server
+# Run the development server with Turbopack
 pnpm run dev
 \`\`\`
 
@@ -113,6 +113,7 @@ The application should now be running on [http://localhost:3000](http://localhos
 This project has been architected with a modern, secure, and scalable structure.
 
 *   **Secure by Default (Route Groups)**: The Next.js App Router's Route Groups are used to create a clear separation between public routes (the landing/login page) and private, authenticated routes (`/map`, `/events`, etc.). A secure layout file acts as a gateway, automatically redirecting unauthenticated users to the login page.
+*   **Cohesive UI/UX:** A new, consistent design system has been implemented using a "glassmorphism" aesthetic. All colors, typography, and component styles are defined as tokens in `tailwind.config.ts` and `globals.css`.
 *   **Server-Side Validation**: All critical API endpoints are secured with Zod schemas, ensuring that only valid data reaches the database.
 *   **Hybrid Data Fetching**: The app uses a hybrid model. Secure actions (like creating an event or sending a message) are handled by server-side API Routes, while real-time data (like chat messages) is streamed directly to the client using Firestore's `onSnapshot` listeners for maximum performance.
 *   **Performance (Data Denormalization)**: The Firestore schema uses denormalization for key relationships. For example, the `players` and `checkedInPlayers` arrays are stored directly on an event document. This avoids costly database joins and significantly speeds up data retrieval for common user flows.

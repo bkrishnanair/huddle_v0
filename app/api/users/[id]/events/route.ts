@@ -1,11 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-server";
+import { getServerCurrentUser } from "@/lib/auth-server";
 import { getUserOrganizedEvents, getUserJoinedEvents } from "@/lib/db";
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params;
-    const user = await getCurrentUser();
+    const user = await getServerCurrentUser();
     
     const { searchParams } = new URL(request.url);
     const eventType = searchParams.get('type');
