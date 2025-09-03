@@ -33,6 +33,7 @@ export default function BottomNavigation() {
           return (
             <Link
               key={tab.id}
+              id={`${tab.id}-button`}
               href={tab.href}
               className={`
                 flex flex-col items-center justify-center w-16 h-16 rounded-2xl
@@ -40,7 +41,7 @@ export default function BottomNavigation() {
                 ${isActive ? "bg-white/10" : "text-slate-400 hover:bg-white/5"}
               `}
             >
-              <Icon className={`w-6 h-6 mb-1 ${isActive ? "text-emerald-400" : "text-slate-400"}`} />
+              <Icon className={`w-6 h-6 mb-1 ${isActive ? "text-primary" : "text-slate-400"}`} />
               <span className={`text-xs font-light ${isActive ? "text-slate-50" : "text-slate-400"}`}>{tab.label}</span>
             </Link>
           )

@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Trophy, LogOut, Settings, UserCircle, Pencil } from "lucide-react"
+import { Trophy, LogOut, Settings, UserCircle, Pencil, Zap } from "lucide-react"
 import EditProfileModal from "@/components/profile/edit-profile-modal"
+import HuddleProModal from "@/components/huddle-pro-modal"
 import { signOut } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { toast } from "sonner"
@@ -55,6 +56,7 @@ export default function ProfilePage() {
   const [userStats, setUserStats] = useState({ organized: 0, joined: 0, upcoming: 0 })
   const [loading, setLoading] = useState(true)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isProModalOpen, setIsProModalOpen] = useState(false)
 
   const loadUserData = async () => {
       if (!user) return
@@ -149,6 +151,15 @@ export default function ProfilePage() {
             </Card>
 
             <Card className="glass-surface border-white/15">
+                <CardContent className="p-6">
+                    <Button className="w-full" onClick={() => setIsProModalOpen(true)}>
+                        <Zap className="w-5 h-5 mr-2" />
+                        Upgrade to Huddle Pro ✨
+                    </Button>
+                </CardContent>
+            </Card>
+
+            <Card className="glass-surface border-white/15">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Trophy className="w-5 h-5 text-emerald-400" />
@@ -169,6 +180,7 @@ export default function ProfilePage() {
           onProfileUpdate={onProfileUpdate}
         />
       )}
+      <HuddleProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
     </>
   )
 }
