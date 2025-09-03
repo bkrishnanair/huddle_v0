@@ -22,4 +22,5 @@ export interface GameEvent {
   playerDetails?: Player[];
   checkedInPlayers?: string[];
   distance?: number;
+  isBoosted?: boolean;
 }

@@ -30,6 +30,7 @@ export default function DiscoverPage() {
     const [allNearbyEvents, setAllNearbyEvents] = useState<GameEvent[]>([]);
     const [userProfile, setUserProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [initialLoadComplete, setInitialLoadComplete] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -47,8 +48,7 @@ export default function DiscoverPage() {
             if (!user || !userLocation) return;
             setLoading(true);
             try {
-                // For Discover page, we do a broad search
-                const radius = 50000; // 50km
+                const radius = 50000;
                 const [profileRes, eventsRes] = await Promise.all([
                     fetch(`/api/users/${user.uid}/profile`),
                     fetch(`/api/events?lat=${userLocation.lat}&lon=${userLocation.lng}&radius=${radius}`)
@@ -60,6 +60,7 @@ export default function DiscoverPage() {
                 console.error("Failed to fetch initial data:", error);
             } finally {
                 setLoading(false);
+                setInitialLoadComplete(true);
             }
         };
         
@@ -95,6 +96,43 @@ export default function DiscoverPage() {
         return { recommendedEvents: recommended, otherEvents: others };
     }, [allNearbyEvents, searchQuery, activeSport, sortBy, userProfile]);
 
+    const renderContent = () => {
+        if (!initialLoadComplete) {
+            return (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <EventCardSkeleton />
+                    <EventCardSkeleton />
+                    <EventCardSkeleton />
+                </div>
+            )
+        }
+        
+        const hasRecommended = recommendedEvents.length > 0;
+        const hasOther = otherEvents.length > 0;
+
+        if (!hasRecommended && !hasOther) {
+            return <ActionableEmptyState onOpenCreateModal={() => setShowCreateModal(true)} />
+        }
+
+        return (
+            <>
+                {hasRecommended && (
+                    <section className="mb-8">
+                        <h2 className="text-2xl font-bold text-slate-50 mb-4 flex items-center gap-2"><Star className="w-6 h-6 text-yellow-400" /> Recommended For You</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {recommendedEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} />)}
+                        </div>
+                    </section>
+                )}
+                 <section>
+                        {hasRecommended && <h2 className="text-2xl font-bold text-slate-50 mb-4">All Other Games</h2>}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {otherEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} />)}
+                        </div>
+                 </section>
+            </>
+        )
+    }
 
     return (
         <div className="min-h-screen liquid-gradient p-4 md:p-8">
@@ -104,7 +142,7 @@ export default function DiscoverPage() {
             </header>
 
             <div className="space-y-4 mb-8">
-                <div className="relative">
+                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <Input placeholder="Search by name or sport..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 glass-surface border-white/15 h-12" />
                 </div>
@@ -125,30 +163,7 @@ export default function DiscoverPage() {
                 </div>
             </div>
 
-            {loading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"><EventCardSkeleton /><EventCardSkeleton /><EventCardSkeleton /></div>
-            ) : (
-                <>
-                    {recommendedEvents.length > 0 && (
-                        <section className="mb-8">
-                            <h2 className="text-2xl font-bold text-slate-50 mb-4 flex items-center gap-2"><Star className="w-6 h-6 text-yellow-400" /> Recommended For You</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {recommendedEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} />)}
-                            </div>
-                        </section>
-                    )}
-                     <section>
-                            {recommendedEvents.length > 0 && <h2 className="text-2xl font-bold text-slate-50 mb-4">All Other Games</h2>}
-                            {(otherEvents.length > 0) ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {otherEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} />)}
-                                </div>
-                            ) : recommendedEvents.length === 0 ? (
-                                <ActionableEmptyState onOpenCreateModal={() => setShowCreateModal(true)} />
-                            ) : null}
-                     </section>
-                </>
-            )}
+            {renderContent()}
 
              {selectedEvent && <EventDetailsModal event={selectedEvent} isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} onEventUpdated={() => {}} />}
              {showCreateModal && <CreateEventModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onEventCreated={() => {}} userLocation={userLocation} />}

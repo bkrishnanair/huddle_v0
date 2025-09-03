@@ -1,33 +1,17 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
-import { Chip } from "@/components/ui/chip" // Assuming a Chip component exists
+import { Chip } from "@/components/ui/chip"
 import { Plus, MapPin, LocateFixed, AlertCircle } from "lucide-react"
 import EventDetailsModal from "./event-details-modal"
 import CreateEventModal from "./create-event-modal"
 import { APIProvider, Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps"
 import { mapStyles } from "@/lib/map-styles" 
+import { GameEvent } from "@/lib/types"
 
 interface MapViewProps {
   user: any
-  onLogout: () => void
-}
-
-interface GameEvent {
-  id: string
-  title: string
-  sport: string
-  location: string
-  latitude: number
-  longitude: number
-  date: string
-  time: string
-  maxPlayers: number
-  currentPlayers: number
-  createdBy: string
-  players: string[]
-  isBoosted?: boolean
 }
 
 const getSportColor = (sport: string): string => {
@@ -45,7 +29,6 @@ const getSportColor = (sport: string): string => {
 
 export default function MapView({ user }: MapViewProps) {
   const [events, setEvents] = useState<GameEvent[]>([])
-  const [filteredEvents, setFilteredEvents] = useState<GameEvent[]>([])
   const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
@@ -53,22 +36,12 @@ export default function MapView({ user }: MapViewProps) {
   const [mapsError, setMapsError] = useState<string | null>(null)
   const [map, setMap] = useState<google.maps.Map | null>(null)
 
-  const [activeFilters, setActiveFilters] = useState({
-    sport: 'All',
-    time: 'All',
-    distance: 'All'
-  });
+  const [activeSport, setActiveSport] = useState("All");
 
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID
 
   useEffect(() => {
-    const defaultLocation = { lat: 37.7749, lng: -122.4194 }
-    if (!navigator.geolocation) {
-      setUserLocation(defaultLocation)
-      setMapCenter(defaultLocation)
-      return
-    }
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const location = { lat: position.coords.latitude, lng: position.coords.longitude }
@@ -76,37 +49,48 @@ export default function MapView({ user }: MapViewProps) {
         setMapCenter(location)
       },
       () => {
-        setUserLocation(defaultLocation)
-        setMapCenter(defaultLocation)
+        setUserLocation({ lat: 37.7749, lng: -122.4194 })
+        setMapCenter({ lat: 37.7749, lng: -122.4194 })
       }
     )
   }, [])
 
-  useEffect(() => {
-    const loadEvents = async () => {
-      try {
-        const response = await fetch("/api/events")
-        if (response.ok) {
-          const data = await response.json()
-          setEvents(data.events || [])
-          setFilteredEvents(data.events || [])
-        }
-      } catch (error) {
-        console.error("Failed to load events:", error)
+  const fetchEventsInView = useCallback(async () => {
+    if (!map) return;
+    const bounds = map.getBounds();
+    if (!bounds) return;
+    const center = bounds.getCenter();
+    const ne = bounds.getNorthEast();
+    const radius = google.maps.geometry.spherical.computeDistanceBetween(center, ne);
+    
+    try {
+      const response = await fetch(`/api/events?lat=${center.lat()}&lon=${center.lng()}&radius=${radius}`);
+      if (response.ok) {
+        const data = await response.json();
+        setEvents(data.events || []);
       }
+    } catch (error) {
+      console.error("Failed to load events:", error);
     }
-    loadEvents()
-  }, [])
+  }, [map]);
 
+  useEffect(() => {
+    if (map) {
+        fetchEventsInView();
+    }
+  }, [map, fetchEventsInView]);
+  
   const handleRecenter = useCallback(() => {
     if (userLocation && map) {
       map.panTo(userLocation)
-      map.setZoom(14)
+      map.setZoom(17)
     }
   }, [userLocation, map]);
 
-  // Add filtering logic here
-  // ...
+  const filteredEvents = useMemo(() => {
+    if (activeSport === 'All') return events;
+    return events.filter(event => event.sport === activeSport);
+  }, [events, activeSport]);
 
   if (!mapsApiKey) {
     return (
@@ -140,15 +124,17 @@ export default function MapView({ user }: MapViewProps) {
       <div className="flex-1 relative">
         <APIProvider apiKey={mapsApiKey}>
           <Map
-            ref={(ref) => setMap(ref)}
+            onLoad={(map) => setMap(map)}
             mapId={mapId}
             defaultCenter={mapCenter}
-            defaultZoom={14}
+            defaultZoom={17}
             className="w-full h-full"
+            onIdle={fetchEventsInView}
             options={{
               disableDefaultUI: true,
               styles: mapStyles,
               gestureHandling: "greedy",
+              tilt: 45,
             }}
           >
             {userLocation && <AdvancedMarker position={userLocation} />}
@@ -170,9 +156,9 @@ export default function MapView({ user }: MapViewProps) {
 
         <div className="absolute top-4 left-4 right-4 z-10">
             <div className="flex items-center space-x-2 p-2 glass-surface rounded-full">
-                <Chip isActive={activeFilters.sport === 'All'} onClick={() => {}}>All</Chip>
-                <Chip isActive={activeFilters.sport === 'Basketball'} onClick={() => {}}>Basketball</Chip>
-                <Chip isActive={activeFilters.sport === 'Soccer'} onClick={() => {}}>Soccer</Chip>
+                <Chip isActive={activeSport === 'All'} onClick={() => setActiveSport('All')}>All</Chip>
+                <Chip isActive={activeSport === 'Basketball'} onClick={() => setActiveSport('Basketball')}>Basketball</Chip>
+                <Chip isActive={activeSport === 'Soccer'} onClick={() => setActiveSport('Soccer')}>Soccer</Chip>
             </div>
         </div>
 
