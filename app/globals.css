@@ -37,6 +37,17 @@
   }
 }
 
+/* 
+  The definitive fix for the Google Places Autocomplete z-index issue.
+  The .pac-container is the dropdown that Google injects into the body.
+  By giving it a very high z-index, we ensure it always appears above
+  any other UI element, including modals and dialogs.
+*/
+.pac-container {
+  z-index: 10000 !important;
+}
+
+
 @layer base {
   :root {
     --background: 240 55% 14%; /* A new, richer dark base */

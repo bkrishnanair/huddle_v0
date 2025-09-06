@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/firebase-context"
 import LandingPage from "@/components/landing-page"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
@@ -12,10 +12,12 @@ export default function Home() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const router = useRouter()
 
-  if (user) {
-    router.push("/discover")
-    return null
-  }
+  // Correctly handle the redirect as a side effect
+  useEffect(() => {
+    if (user) {
+      router.push("/discover")
+    }
+  }, [user, router])
 
   if (error) {
     return (
@@ -28,7 +30,9 @@ export default function Home() {
     )
   }
 
-  if (loading) {
+  // Render a loading state while checking for the user
+  // This also prevents a brief flash of the LandingPage before redirecting
+  if (loading || user) {
     return (
       <div className="min-h-screen liquid-gradient flex items-center justify-center text-white">
         <div className="text-center">
@@ -39,6 +43,7 @@ export default function Home() {
     )
   }
 
+  // Only render the landing page if the user is not logged in and loading is complete
   return (
     <>
       <LandingPage onGetStarted={() => setIsAuthModalOpen(true)} />

@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import type React from "react"
 import { useState, useEffect } from "react"
@@ -108,7 +108,17 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="glass-surface border-white/15 text-foreground p-0 gap-0 sm:max-w-md max-h-[90vh] flex flex-col">
+      <DialogContent 
+        className="glass-surface border-white/15 text-foreground p-0 gap-0 sm:max-w-md max-h-[90vh] flex flex-col"
+        onPointerDownOutside={(e) => {
+          const target = e.target as HTMLElement;
+          // IMPORTANT: This prevents the modal from closing when a click happens inside
+          // our custom command menu for location search.
+          if (target.closest('[cmdk-root]')) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader className="p-6 pb-4">
           <DialogTitle>Host a New Game</DialogTitle>
           <DialogDescription>Fill in the details to get your game on the map.</DialogDescription>
