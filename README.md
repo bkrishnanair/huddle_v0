@@ -33,11 +33,11 @@ This V2 release enhances the stable V1 foundation with social connectivity featu
 
 | Category      | Technology                                                                                             |
 | :------------ | :----------------------------------------------------------------------------------------------------- |
-| **Framework** | [**Next.js**](https://nextjs.org/) (v15+ with App Router) & [**Turbopack**](https://turbo.build/pack) |
+| **Framework** | [**Next.js**](https://nextjs.org/) (App Router) & [**React 18**](https://react.dev/) |
 | **Language**  | [**TypeScript**](https://www.typescriptlang.org/)                                                      |
-| **Backend**   | [**Firebase**](https://firebase.google.com/) (Serverless: Auth, Firestore, Cloud Functions)              |
+| **Backend**   | [**Firebase**](https://firebase.google.com/) (Serverless: Admin SDK, Auth, Firestore, Cloud Functions)   |
 | **Validation**| [**Zod**](https://zod.dev/) (for server-side data validation)                                            |
-| **Mapping**   | [**Google Maps Platform**](https://developers.google.com/maps)                                           |
+| **Mapping**   | [**Google Maps Platform**](https://developers.google.com/maps) (Modern Places API)                     |
 | **Styling**   | [**Tailwind CSS**](https://tailwindcss.com/) & [**Shadcn/ui**](https://ui.shadcn.com/)                   |
 | **Deployment**| [**Vercel**](https://vercel.com/) (Frontend) & [**Firebase**](https://firebase.google.com/) (Backend)    |
 | **Package Manager**| [**PNPM**](https://pnpm.io/)                                                                           |
@@ -53,7 +53,7 @@ Follow these instructions to get the project running on your local machine for d
 Ensure you have the following installed:
 *   [Node.js](https://nodejs.org/) (v18 or later)
 *   [PNPM](https://pnpm.io/installation)
-*   [Firebase CLI](https://firebase.google.com/docs/cli) (for deploying Cloud Functions)
+*   [Firebase CLI](https://firebase.google.com/docs/cli)
 
 ### 2. Clone the Repository
 
@@ -66,11 +66,11 @@ cd huddle_v0
 
 This project requires API keys from Firebase and Google Cloud to function.
 
-1.  Create a `.env.local` file in the root of the project:
+1.  Create a `.env` file in the root of the project:
     \`\`\`bash
-    touch .env.local
+    touch .env
     \`\`\`
-2.  Add the following environment variables to the file, replacing the placeholders with your actual project credentials:
+2.  Add the following environment variables to the file, replacing the placeholders with your actual project credentials. You can get the Admin SDK credentials from the Firebase Console under Project Settings > Service accounts.
     \`\`\`env
     # Firebase Client SDK Configuration (for the browser)
     NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
@@ -85,10 +85,10 @@ This project requires API keys from Firebase and Google Cloud to function.
     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
     NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID=your_google_maps_map_id
 
-    # Firebase Admin SDK Configuration (for the server - get from Firebase Console)
+    # Firebase Admin SDK Configuration (for the server)
     FIREBASE_PROJECT_ID=your_firebase_project_id
     FIREBASE_CLIENT_EMAIL=your_service_account_client_email
-    FIREBASE_PRIVATE_KEY=your_service_account_private_key
+    FIREBASE_PRIVATE_KEY="your_service_account_private_key"
     \`\`\`
     > **Note:** For the Google Maps API Key, ensure you have enabled the **Maps JavaScript API**, **Places API**, and **Geocoding API** in your Google Cloud Console.
 
@@ -100,7 +100,7 @@ The repository includes an `.npmrc` file to automatically handle peer dependency
 # Install root project dependencies
 pnpm install
 
-# Run the development server with Turbopack
+# Run the development server
 pnpm run dev
 \`\`\`
 
@@ -117,4 +117,5 @@ This project has been architected with a modern, secure, and scalable structure.
 *   **Server-Side Validation**: All critical API endpoints are secured with Zod schemas, ensuring that only valid data reaches the database.
 *   **Hybrid Data Fetching**: The app uses a hybrid model. Secure actions (like creating an event or sending a message) are handled by server-side API Routes, while real-time data (like chat messages) is streamed directly to the client using Firestore's `onSnapshot` listeners for maximum performance.
 *   **Performance (Data Denormalization)**: The Firestore schema uses denormalization for key relationships. For example, the `players` and `checkedInPlayers` arrays are stored directly on an event document. This avoids costly database joins and significantly speeds up data retrieval for common user flows.
+*   **Robust Server-Side Architecture**: The Firebase Admin SDK is initialized using a lazy-loaded singleton pattern. This ensures that the server's connection to Firebase is established reliably and efficiently, preventing crashes and authentication failures. All authenticated routes are protected by a centralized `verifySession` guard, which provides consistent security and error handling.
 ---

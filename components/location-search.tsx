@@ -1,100 +1,177 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useMapsLibrary } from "@vis.gl/react-google-maps";
 import {
   Command,
   CommandInput,
   CommandList,
-  CommandEmpty,
-  CommandGroup,
   CommandItem,
+  CommandEmpty,
 } from "@/components/ui/command";
-import { MapPin } from "lucide-react";
-import debounce from 'lodash.debounce';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Loader2 } from "lucide-react";
+
+type AutocompleteSuggestion = google.maps.places.AutocompleteSuggestion;
+type Place = google.maps.places.Place;
+type PlaceResult = google.maps.places.PlaceResult;
 
 interface LocationSearchInputProps {
-  onPlaceSelect: (place: google.maps.places.PlaceResult | null) => void;
+  onPlaceSelect: (place: PlaceResult | null) => void;
+  placeholder?: string;
 }
 
-export default function LocationSearchInput({ onPlaceSelect }: LocationSearchInputProps) {
+const toPlaceResult = (p: Place): PlaceResult => {
+  const name = p.displayName ?? undefined;
+  const formatted_address = p.formattedAddress ?? undefined;
+  const geometry = p.location
+    ? ({ location: p.location } as google.maps.places.PlaceGeometry)
+    : undefined;
+  return { name, formatted_address, geometry };
+};
+
+function debounce<F extends (...args: any[]) => void>(fn: F, delay = 300) {
+  let t: ReturnType<typeof setTimeout> | null = null;
+  return (...args: Parameters<F>) => {
+    if (t) clearTimeout(t);
+    t = setTimeout(() => fn(...args), delay);
+  };
+}
+
+export default function LocationSearchInput({
+  onPlaceSelect,
+  placeholder = "Search for a location…",
+}: LocationSearchInputProps) {
   const places = useMapsLibrary("places");
-  const [sessionToken, setSessionToken] = useState<google.maps.places.AutocompleteSessionToken>();
-  const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
+  const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [token, setToken] = useState<google.maps.places.AutocompleteSessionToken>();
 
   useEffect(() => {
-    if (places) {
-      setSessionToken(new places.AutocompleteSessionToken());
-    }
+    if (places) setToken(new places.AutocompleteSessionToken());
   }, [places]);
 
-  const fetchPredictions = useMemo(() => 
-    debounce((request: google.maps.places.AutocompletionRequest, callback: (results: google.maps.places.AutocompletePrediction[] | null) => void) => {
-      new places.AutocompleteService().getPlacePredictions(request, callback);
-    }, 300), 
-  [places]);
+  const fetchSuggestions = useMemo(
+    () =>
+      debounce(async (value: string) => {
+        if (!places || !value.trim()) {
+          setSuggestions([]);
+          setIsOpen(false);
+          setIsLoading(false);
+          return;
+        }
+        try {
+          const { suggestions: next } =
+            await places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+              input: value,
+              sessionToken: token,
+            });
+          setSuggestions(next ?? []);
+          setIsOpen(Boolean(next?.length));
+        } catch (e) {
+          console.error("[Maps] autocomplete failed", e);
+          setSuggestions([]);
+          setIsOpen(false);
+        } finally {
+          setIsLoading(false);
+        }
+      }, 300),
+    [places, token]
+  );
 
-  const handleInputChange = (value: string) => {
+  const onChange = (value: string) => {
     setInputValue(value);
-    if (value && places && sessionToken) {
-      const request = {
-        input: value,
-        sessionToken: sessionToken,
-      };
-      fetchPredictions(request, (results) => {
-        setPredictions(results || []);
-      });
+    if (value.trim()) {
+      setIsLoading(true);
+      fetchSuggestions(value);
     } else {
-      setPredictions([]);
+      setSuggestions([]);
+      setIsOpen(false);
+      setIsLoading(false);
     }
   };
 
-  const handlePredictionSelect = (prediction: google.maps.places.AutocompletePrediction) => {
-    if (!places) return;
+  const handleSelect = useCallback(
+    async (s: AutocompleteSuggestion) => {
+      if (!places || !s.placeId) return;
 
-    const placesService = new places.PlacesService(document.createElement('div'));
-    const request = {
-      placeId: prediction.place_id,
-      fields: ["geometry", "name", "formatted_address"],
-      sessionToken: sessionToken,
-    };
+      const label = s.placePrediction?.text?.text ?? "Unknown place";
+      setInputValue(label);
+      setIsOpen(false);
+      setIsLoading(true);
 
-    placesService.getDetails(request, (place, status) => {
-      if (status === google.maps.places.PlacesServiceStatus.OK && place) {
-        onPlaceSelect(place);
-        setInputValue(place.formatted_address || place.name || '');
-        setPredictions([]);
-        setSessionToken(new places.AutocompleteSessionToken());
+      try {
+        const place = new places.Place({ id: s.placeId });
+        await place.fetchFields({
+          fields: ["displayName", "formattedAddress", "location"],
+        });
+        onPlaceSelect(toPlaceResult(place));
+      } catch (e) {
+        console.error("[Maps] place details failed", e);
+        onPlaceSelect(null);
+      } finally {
+        setIsLoading(false);
+        // Regenerate session token for billing optimization
+        setToken(new places.AutocompleteSessionToken());
       }
-    });
-  };
+    },
+    [places, onPlaceSelect]
+  );
 
   return (
-    <Command shouldFilter={false} className="glass-surface rounded-lg">
-      <CommandInput
-        placeholder="Search for an address or place..."
-        value={inputValue}
-        onValueChange={handleInputChange}
-        className="text-white placeholder:text-white/60"
-      />
-      {predictions.length > 0 && (
-        <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
-          <CommandGroup>
-            {predictions.map((prediction) => (
-              <CommandItem
-                key={prediction.place_id}
-                onSelect={() => handlePredictionSelect(prediction)}
-                className="cursor-pointer"
-              >
-                <MapPin className="mr-2 h-4 w-4" />
-                {prediction.description}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        </CommandList>
-      )}
-    </Command>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <div className="relative w-full">
+          <Command shouldFilter={false} className="w-full">
+            <CommandInput
+              placeholder={placeholder}
+              value={inputValue}
+              onValueChange={onChange}
+              onFocus={() => {
+                if (suggestions.length > 0) setIsOpen(true);
+              }}
+              className="w-full"
+            />
+          </Command>
+          {isLoading && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+            </div>
+          )}
+        </div>
+      </PopoverTrigger>
+
+      <PopoverContent
+        align="start"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="w-[var(--radix-popover-trigger-width)] p-0"
+        sideOffset={4}
+      >
+        <Command shouldFilter={false}>
+          <CommandList>
+            <CommandEmpty>No results found.</CommandEmpty>
+            {suggestions.map((s) => {
+              const label = s.placePrediction?.text?.text ?? "Unknown place";
+              return (
+                <CommandItem
+                  key={s.placeId}
+                  value={label}
+                  onSelect={() => handleSelect(s)}
+                  // Fix for mobile: onMouseDown prevents input blur race condition
+                  onMouseDown={(e) => e.preventDefault()}
+                  className="cursor-pointer px-3 py-2"
+                >
+                  <div className="flex items-center space-x-2">
+                    <div className="text-sm">{label}</div>
+                  </div>
+                </CommandItem>
+              );
+            })}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }

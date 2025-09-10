@@ -67,6 +67,8 @@ export default function EventChat({ eventId }: EventChatProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: newMessage, userId: user.uid, userName: user.displayName }),
+        // CRITICAL FIX: Include credentials (the __session cookie) with the request.
+        credentials: 'include',
       })
 
       if (response.ok) {

@@ -6,42 +6,78 @@ import { Chip } from "@/components/ui/chip"
 import { Plus, MapPin, LocateFixed, AlertCircle } from "lucide-react"
 import EventDetailsDrawer from "./event-details-drawer"
 import CreateEventModal from "./create-event-modal"
-import { APIProvider, Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps"
-import { mapStyles } from "@/lib/map-styles" 
-import { GameEvent } from "@/lib/types"
+import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps"
+import { mapStyles } from "@/lib/map-styles"
+import { GameEvent as HuddleEvent } from "@/lib/types"
+import EventMarker from "./events/event-marker"
 
-interface MapViewProps {
-  user: any
+interface EventsMapProps {
+  events: HuddleEvent[];
+  onEventClick: (event: HuddleEvent) => void;
+  userLocation: { lat: number; lng: number } | null;
+  onIdle: (map: google.maps.Map) => void;
 }
 
-const getSportColor = (sport: string): string => {
-  const colors: { [key: string]: string } = {
-    Basketball: "#f97316",
-    Soccer: "#22c55e",
-    Tennis: "#eab308",
-    Baseball: "#dc2626",
-    Football: "#8b5cf6",
-    Volleyball: "#06b6d4",
-    default: "#ef4444",
-  }
-  return colors[sport] || colors.default
+function EventsMap({ events, onEventClick, userLocation, onIdle }: EventsMapProps) {
+    const map = useMap();
+
+    useEffect(() => {
+        if (map) {
+            const idleListener = map.addListener('idle', () => onIdle(map));
+            return () => {
+                google.maps.event.removeListener(idleListener);
+            };
+        }
+    }, [map, onIdle]);
+
+    const useV2Markers = process.env.NEXT_PUBLIC_FEATURE_MARKERS_V2 === 'true';
+
+    return (
+        <>
+            {userLocation && <AdvancedMarker position={userLocation} />}
+            {events.map((event) => {
+              if (useV2Markers) {
+                return (
+                  <AdvancedMarker
+                    key={event.id}
+                    position={{ lat: event.latitude, lng: event.longitude }}
+                  >
+                    <EventMarker
+                      event={event}
+                      zoom={map?.getZoom() || 17}
+                      onClick={() => onEventClick(event)}
+                    />
+                  </AdvancedMarker>
+                )
+              } else {
+                return (
+                  <AdvancedMarker
+                    key={event.id}
+                    position={{ lat: event.latitude, lng: event.longitude }}
+                    onClick={() => onEventClick(event)}
+                  />
+                )
+              }
+            })}
+        </>
+    )
 }
 
-export default function MapView({ user }: MapViewProps) {
-  const [events, setEvents] = useState<GameEvent[]>([])
-  const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null)
+export default function MapView({ user }: { user: any }) {
+  const [events, setEvents] = useState<HuddleEvent[]>([])
+  const [selectedEvent, setSelectedEvent] = useState<HuddleEvent | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 37.7749, lng: -122.4194 })
-  const [mapsError, setMapsError] = useState<string | null>(null)
-  const [map, setMap] = useState<google.maps.Map | null>(null)
-
+  const [isMounted, setIsMounted] = useState(false); // Hydration fix
+  
   const [activeSport, setActiveSport] = useState("All");
 
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID
 
   useEffect(() => {
+    setIsMounted(true); // Hydration fix: ensure this only runs on the client
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const location = { lat: position.coords.latitude, lng: position.coords.longitude }
@@ -55,7 +91,7 @@ export default function MapView({ user }: MapViewProps) {
     )
   }, [])
 
-  const fetchEventsInView = useCallback(async () => {
+  const fetchEventsInView = useCallback(async (map: google.maps.Map) => {
     if (!map) return;
     const bounds = map.getBounds();
     if (!bounds) return;
@@ -72,25 +108,33 @@ export default function MapView({ user }: MapViewProps) {
     } catch (error) {
       console.error("Failed to load events:", error);
     }
-  }, [map]);
-
-  useEffect(() => {
-    if (map) {
-        fetchEventsInView();
-    }
-  }, [map, fetchEventsInView]);
+  }, []);
   
-  const handleRecenter = useCallback(() => {
+  const handleRecenter = useCallback((map: google.maps.Map | null) => {
     if (userLocation && map) {
       map.panTo(userLocation)
       map.setZoom(17)
     }
-  }, [userLocation, map]);
+  }, [userLocation]);
 
   const filteredEvents = useMemo(() => {
     if (activeSport === 'All') return events;
     return events.filter(event => event.sport === activeSport);
   }, [events, activeSport]);
+
+  // Hydration fix: Render a loading state until the component is mounted on the client
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen liquid-gradient flex items-center justify-center">
+        <div className="text-center">
+          <div className="glass-surface rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <MapPin className="w-8 h-8 text-slate-50" />
+          </div>
+          <p className="text-slate-300 drop-shadow">Loading Map...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!mapsApiKey) {
     return (
@@ -124,33 +168,22 @@ export default function MapView({ user }: MapViewProps) {
       <div className="flex-1 relative">
         <APIProvider apiKey={mapsApiKey}>
           <Map
-            onLoad={(map) => setMap(map)}
             mapId={mapId}
             defaultCenter={mapCenter}
             defaultZoom={17}
             className="w-full h-full"
-            onIdle={fetchEventsInView}
-            options={{
-              disableDefaultUI: true,
-              styles: mapStyles,
-              gestureHandling: "greedy",
-              tilt: 45,
-            }}
+            // Corrected: Pass map options as direct props, not in an 'options' object
+            disableDefaultUI={true}
+            styles={mapStyles}
+            gestureHandling="greedy"
+            tilt={45}
           >
-            {userLocation && <AdvancedMarker position={userLocation} />}
-            {filteredEvents.map((event) => (
-              <AdvancedMarker
-                key={event.id}
-                position={{ lat: event.latitude, lng: event.longitude }}
-                onClick={() => setSelectedEvent(event)}
-              >
-                <Pin
-                  background={getSportColor(event.sport)}
-                  borderColor={event.isBoosted ? "#fbbf24" : "#ffffff"}
-                  glyphColor="#ffffff"
-                />
-              </AdvancedMarker>
-            ))}
+            <EventsMap 
+                events={filteredEvents} 
+                onEventClick={setSelectedEvent} 
+                userLocation={userLocation}
+                onIdle={fetchEventsInView}
+            />
           </Map>
         </APIProvider>
 
@@ -172,7 +205,7 @@ export default function MapView({ user }: MapViewProps) {
         </Button>
 
         <Button
-            onClick={handleRecenter}
+            onClick={() => handleRecenter(useMap())}
             variant="secondary"
             size="lg"
             className="absolute bottom-28 right-6 h-14 w-14 rounded-full shadow-lg"

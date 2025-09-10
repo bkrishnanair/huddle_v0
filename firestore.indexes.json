@@ -5,7 +5,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "createdBy",
+          "fieldPath": "hostId",
           "order": "ASCENDING"
         },
         {
@@ -15,11 +15,15 @@
       ]
     },
     {
-      "collectionGroup": "chat",
+      "collectionGroup": "events",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "timestamp",
+          "fieldPath": "players",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "date",
           "order": "ASCENDING"
         }
       ]

@@ -3,9 +3,16 @@ import { useState } from "react"
 import { useAuth } from "@/lib/firebase-context"
 import { Button } from "@/components/ui/button"
 import CreateEventModal from "@/components/create-event-modal"
-import { EventList } from "@/components/profile/event-list"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus } from "lucide-react"
+import dynamic from 'next/dynamic'
+
+// Dynamically import EventList with SSR disabled to prevent hydration mismatches.
+// This is a common pattern for components that depend on client-side data or APIs.
+const EventList = dynamic(() => import('@/components/profile/event-list').then(mod => mod.EventList), {
+  ssr: false,
+  loading: () => <p className="text-white/80">Loading events...</p>
+})
 
 export default function MyEventsPage() {
   const { user, loading } = useAuth()

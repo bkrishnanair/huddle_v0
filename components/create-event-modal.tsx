@@ -18,9 +18,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Rocket, Loader2 } from "lucide-react"
 import LocationSearchInput from "./location-search"
-import AIGenerateButton from "./ai-generate-button"
-import AISuggestionsList from "./ai-suggestions-list"
-import { useFirebase } from "@/lib/firebase-context"
 import { toast } from "sonner"
 
 interface CreateEventModalProps {
@@ -46,8 +43,6 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
     maxPlayers: 10,
     description: "",
   })
-  const [isAiLoading, setIsAiLoading] = useState(false)
-  const [suggestions, setSuggestions] = useState([])
   const [boostEvent, setBoostEvent] = useState(false)
   const [mapCenter, setMapCenter] = useState(userLocation || { lat: 37.7749, lng: -122.4194 })
   const [markerPosition, setMarkerPosition] = useState(userLocation || { lat: 37.7749, lng: -122.4194 })
@@ -75,6 +70,16 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
     }
   }
 
+  const handleMarkerDragEnd = (e: google.maps.MapMouseEvent) => {
+    if (e.latLng) {
+      const newPosition = {
+        lat: e.latLng.lat(),
+        lng: e.latLng.lng(),
+      };
+      setMarkerPosition(newPosition);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.sport || !formData.location || !markerPosition) {
@@ -88,19 +93,21 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...formData, latitude: markerPosition.lat, longitude: markerPosition.lng, isBoosted: boostEvent }),
+        credentials: 'include',
       })
 
+      const data = await response.json()
+
       if (response.ok) {
-        const data = await response.json()
         toast.success("Event created successfully!")
         onEventCreated(data.event)
         onClose()
       } else {
-        const errorData = await response.json()
-        toast.error(`Error: ${errorData.error}`)
+        const errorMessage = data.error || "An unknown error occurred."
+        toast.error(`Error: ${errorMessage}`)
       }
     } catch (error) {
-      toast.error("An unexpected error occurred.")
+      toast.error("An unexpected error occurred while creating the event.")
     } finally {
       setIsLoading(false)
     }
@@ -112,8 +119,6 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         className="glass-surface border-white/15 text-foreground p-0 gap-0 sm:max-w-md max-h-[90vh] flex flex-col"
         onPointerDownOutside={(e) => {
           const target = e.target as HTMLElement;
-          // IMPORTANT: This prevents the modal from closing when a click happens inside
-          // our custom command menu for location search.
           if (target.closest('[cmdk-root]')) {
             e.preventDefault();
           }
@@ -131,15 +136,10 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                 <Label htmlFor="title">Event Title</Label>
                 <Input id="title" placeholder="e.g., Evening Basketball Run" value={formData.title} onChange={(e) => handleInputChange("title", e.target.value)} required />
               </div>
-
-              <AIGenerateButton onClick={() => {}} isLoading={isAiLoading} />
-              <AISuggestionsList suggestions={suggestions} onSelect={() => {}} />
-
               <div>
                 <Label htmlFor="description">Description</Label>
                 <Input id="description" placeholder="A short and friendly description" value={formData.description} onChange={(e) => handleInputChange("description", e.target.value)} />
               </div>
-
               <div>
                 <Label htmlFor="sport">Sport</Label>
                 <Select required value={formData.sport} onValueChange={(value) => handleInputChange("sport", value)}>
@@ -147,17 +147,26 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                   <SelectContent>{SPORTS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-
               <div>
                 <Label htmlFor="location-search">Location</Label>
                 <LocationSearchInput onPlaceSelect={handlePlaceSelect} />
                 <div className="h-48 w-full rounded-lg overflow-hidden relative mt-2 border border-border">
-                  <Map defaultCenter={mapCenter} center={mapCenter} defaultZoom={15} gestureHandling={"greedy"} disableDefaultUI={true} mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID}>
-                    <AdvancedMarker position={markerPosition} draggable={true} onDragEnd={(e) => setMarkerPosition({ lat: e.latLng!.lat(), lng: e.latLng!.lng() })} />
+                  <Map 
+                    defaultCenter={mapCenter} 
+                    center={mapCenter} 
+                    defaultZoom={15} 
+                    gestureHandling={"greedy"} 
+                    disableDefaultUI={true} 
+                    mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID}
+                  >
+                    <AdvancedMarker 
+                      position={markerPosition} 
+                      draggable={true} 
+                      onDragEnd={handleMarkerDragEnd} 
+                    />
                   </Map>
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                   <div>
                       <Label htmlFor="date">Date</Label>
@@ -168,15 +177,15 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                       <Input id="time" type="time" value={formData.time} onChange={(e) => handleInputChange("time", e.target.value)} required />
                   </div>
               </div>
-
               <div>
                 <Label htmlFor="maxPlayers">Number of Players</Label>
                 <Select value={String(formData.maxPlayers)} onValueChange={(v) => handleInputChange("maxPlayers", Number(v))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{Array.from({ length: 49 }, (_, i) => i + 2).map(n => <SelectItem key={n} value={String(n)}>{n} players</SelectItem>)}</SelectContent>
+                  <SelectContent>
+                    {Array.from({ length: 49 }, (_, i) => i + 2).map(n => <SelectItem key={n} value={String(n)}>{n} players</SelectItem>)}
+                  </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-4 pt-4 border-t border-border">
                 <div className="flex items-center justify-between p-4 rounded-lg bg-white/5">
                     <div>

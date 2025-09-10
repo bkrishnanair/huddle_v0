@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { signInWithEmail, signUpWithEmail, signInWithGoogle } from "@/lib/auth"
 import { Loader2 } from "lucide-react"
+import type { UserCredential } from "firebase/auth"
 
 interface AuthScreenProps {
   onLogin: (user: any) => void
@@ -23,6 +24,28 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
   const [isLoading, setIsLoading] = useState(false)
   const { user } = useAuth()
 
+  // This function will be called after a successful Firebase login
+  const createSession = async (userCredential: UserCredential) => {
+    const idToken = await userCredential.user.getIdToken();
+    
+    // Call our own backend to create a session cookie
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${idToken}`,
+      },
+    });
+
+    if (res.ok) {
+      // If the session was created successfully, call the onLogin prop
+      onLogin(userCredential.user);
+    } else {
+      // If there was an error creating the session, show an error message
+      setError("Failed to create a session. Please try again.");
+    }
+  };
+  
   // Auto-login effect
   useEffect(() => {
     // Only trigger in login tab and when both fields are filled
@@ -48,7 +71,7 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
       } else {
         userCredential = await signInWithEmail(email, password)
       }
-      onLogin(userCredential)
+      await createSession(userCredential); // Create session after login/signup
     } catch (err: any) {
       // Map Firebase error codes to more user-friendly messages
       let message = "An unexpected error occurred.";
@@ -68,7 +91,7 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
     setError(null)
     try {
       const userCredential = await signInWithGoogle()
-      onLogin(userCredential)
+      await createSession(userCredential); // Create session after Google sign-in
     } catch (err: any) {
       setError(err.message)
     } finally {

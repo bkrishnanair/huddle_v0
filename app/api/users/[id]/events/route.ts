@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getServerCurrentUser } from "@/lib/auth-server";
-import { getUserOrganizedEvents, getUserJoinedEvents } from "@/lib/db";
+// CORRECT: Use the new server-side database library.
+import { getUserOrganizedEvents, getUserJoinedEvents } from "@/lib/db-server";
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -14,6 +15,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
+    // Security check: A user can only request their own events.
     if (user.uid !== id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }

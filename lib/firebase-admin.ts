@@ -1,28 +1,69 @@
 // lib/firebase-admin.ts
-import * as admin from "firebase-admin";
+import * as fbAdmin from 'firebase-admin';
+// CORRECT: Import the specific service getters from the 'firebase-admin' package.
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import { getAuth, Auth } from 'firebase-admin/auth';
 
 // This file is for SERVER-SIDE use only. It uses the Admin SDK.
 
-// Securely parse the service account key from environment variables.
-// This prevents sensitive credentials from being hardcoded in the source code.
-const serviceAccount: admin.ServiceAccount = {
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'), // Replaces escaped newlines
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-};
-
-// Check if the admin app has already been initialized to prevent errors.
-if (!admin.apps.length) {
-  try {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-    console.log("Firebase Admin SDK initialized successfully.");
-  } catch (error: any) {
-    // Provide a more helpful error message if initialization fails.
-    console.error("Firebase Admin initialization error:", `[${error.code}] ${error.message}`);
-  }
+declare global {
+  var _firebaseAdminInstance: fbAdmin.app.App | undefined;
 }
 
-// Export the initialized admin instance for use in other server-side files.
-export { admin };
+function initializeFirebaseAdmin(): fbAdmin.app.App {
+  if (global._firebaseAdminInstance) {
+    return global._firebaseAdminInstance;
+  }
+
+  if (fbAdmin.apps.length > 0) {
+    const defaultApp = fbAdmin.app();
+    global._firebaseAdminInstance = defaultApp;
+    return defaultApp;
+  }
+
+  const serviceAccount = {
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+  };
+
+  if (!serviceAccount.projectId || !serviceAccount.privateKey || !serviceAccount.clientEmail) {
+    throw new Error(
+      "Firebase Admin SDK credentials are not set in the environment. " +
+      "Please check your .env or .env.local file."
+    );
+  }
+  
+  console.log(`🚀 Initializing Firebase Admin SDK for project: ${serviceAccount.projectId}`);
+
+  const instance = fbAdmin.initializeApp({
+    credential: fbAdmin.credential.cert(serviceAccount),
+  });
+  
+  global._firebaseAdminInstance = instance;
+  return instance;
+}
+
+function getFirebaseAdmin(): fbAdmin.app.App {
+  return initializeFirebaseAdmin();
+}
+
+/**
+ * A getter for the Firebase Admin Auth service.
+ * Ensures the SDK is initialized before returning the service.
+ */
+export function getAdminAuth(): Auth {
+  return getAuth(getFirebaseAdmin());
+}
+
+/**
+ * A getter for the Firestore database instance from the Admin SDK.
+ * Ensures the SDK is initialized before returning the service.
+ */
+export function getAdminDb(): Firestore {
+  // CRITICAL FIX: The function was calling itself recursively. It must call `getFirestore`.
+  return getFirestore(getFirebaseAdmin());
+}
+
+// Re-exporting the original admin namespace for utility types, etc.
+export const admin = fbAdmin;
