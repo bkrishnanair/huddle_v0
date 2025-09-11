@@ -1,18 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configure for Replit environment - allow all hosts for proxy support
+  // Configure for Replit development environment - allow proxy in dev mode only
   async headers() {
-    return [
+    return process.env.NODE_ENV === 'development' ? [
       {
         source: '/:path*',
         headers: [
           {
             key: 'X-Frame-Options',
-            value: 'ALLOWALL',
+            value: 'SAMEORIGIN',
           },
         ],
       },
-    ]
+    ] : []
   },
   // Allow all external hosts for development in Replit proxy environment
   experimental: {

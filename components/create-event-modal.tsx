@@ -144,7 +144,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         </DialogHeader>
         
         <div className="flex-1 overflow-y-auto no-scrollbar px-6">
-          <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY as string}>
+          <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY as string} libraries={["places"]}>
             <form id="event-form" onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Label htmlFor="title">Event Title</Label>

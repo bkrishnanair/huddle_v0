@@ -1,11 +1,13 @@
 "use client"
 import { useState } from "react"
+import dynamic from "next/dynamic"
 import { useAuth } from "@/lib/firebase-context"
 import { Button } from "@/components/ui/button"
 import CreateEventModal from "@/components/create-event-modal"
-import { EventList } from "@/components/profile/event-list"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus } from "lucide-react"
+
+const EventList = dynamic(() => import("@/components/profile/event-list").then((mod) => ({ default: mod.EventList })), { ssr: false })
 
 export default function MyEventsPage() {
   const { user, loading } = useAuth()
