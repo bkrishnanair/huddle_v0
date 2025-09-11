@@ -18,8 +18,9 @@ const nextConfig = {
   experimental: {
     allowedDevOrigins: [
       "http://localhost:5000",
-      "https://*.replit.dev",
-      "https://*.repl.co"
+      "https://*.replit.dev", 
+      "https://*.repl.co",
+      "https://890e1d31-0971-4897-8cc3-591745b1c5d3-00-o71u8enpgqms.riker.replit.dev"
     ],
   },
   eslint: {
