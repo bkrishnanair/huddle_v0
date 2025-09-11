@@ -6,10 +6,20 @@ import { useMapsLibrary } from "@vis.gl/react-google-maps";
 
 // SEARCH: Define the props for our new component.
 interface LocationSearchInputProps {
+  value: string;
+  onChange: (value: string) => void;
   onPlaceSelect: (place: google.maps.places.PlaceResult | null) => void;
+  placeholder?: string;
+  className?: string;
 }
 
-export default function LocationSearchInput({ onPlaceSelect }: LocationSearchInputProps) {
+export default function LocationSearchInput({ 
+  value, 
+  onChange, 
+  onPlaceSelect, 
+  placeholder = "Search for an address or place...", 
+  className 
+}: LocationSearchInputProps) {
   // SEARCH: Get a reference to the input element.
   const inputRef = useRef<HTMLInputElement>(null);
   // SEARCH: Load the 'places' library from Google Maps.
@@ -37,19 +47,43 @@ export default function LocationSearchInput({ onPlaceSelect }: LocationSearchInp
     const listener = autocomplete.addListener("place_changed", () => {
       // SEARCH: When a place is selected, call the onPlaceSelect callback
       // with the details of the selected place.
-      onPlaceSelect(autocomplete.getPlace());
+      const place = autocomplete.getPlace();
+      onPlaceSelect(place);
+      // Update the input value with the formatted address
+      if (place?.formatted_address || place?.name) {
+        onChange(place.formatted_address || place.name || "");
+      }
     });
 
     // SEARCH: Clean up the listener when the component unmounts.
     return () => google.maps.event.removeListener(listener);
-  }, [autocomplete, onPlaceSelect]);
+  }, [autocomplete, onPlaceSelect, onChange]);
+
+  // Handle manual typing in the input
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(e.target.value);
+  };
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Allow normal autocomplete behavior for arrow keys and enter
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter') {
+      return; // Let Google's autocomplete handle these
+    }
+  };
 
   return (
     <div className="relative">
       <Input
         ref={inputRef}
-        placeholder="Search for an address or place..."
-        className="glass border-white/30 text-white placeholder:text-white/60 w-full"
+        value={value}
+        onChange={handleInputChange}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        className={`glass border-white/30 text-white placeholder:text-white/60 w-full ${className || ""}`}
+        autoComplete="off"
+        // Touch support
+        onTouchStart={(e) => e.currentTarget.focus()}
       />
     </div>
   );

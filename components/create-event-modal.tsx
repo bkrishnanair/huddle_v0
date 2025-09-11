@@ -37,10 +37,10 @@ const SPORTS = [
 
 export default function CreateEventModal({ isOpen, onClose, onEventCreated, userLocation }: CreateEventModalProps) {
   const [isLoading, setIsLoading] = useState(false)
+  // Unified state management for location
   const [formData, setFormData] = useState({
     title: "",
     sport: "",
-    location: "",
     date: "",
     time: "",
     maxPlayers: 10,
@@ -49,13 +49,17 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   const [isAiLoading, setIsAiLoading] = useState(false)
   const [suggestions, setSuggestions] = useState([])
   const [boostEvent, setBoostEvent] = useState(false)
-  const [mapCenter, setMapCenter] = useState(userLocation || { lat: 37.7749, lng: -122.4194 })
-  const [markerPosition, setMarkerPosition] = useState(userLocation || { lat: 37.7749, lng: -122.4194 })
+  
+  // Unified location state
+  const [center, setCenter] = useState(userLocation || { lat: 37.7749, lng: -122.4194 })
+  const [marker, setMarker] = useState(userLocation || { lat: 37.7749, lng: -122.4194 })
+  const [locationText, setLocationText] = useState("")
 
   useEffect(() => {
     if (isOpen && userLocation) {
-      setMapCenter(userLocation)
-      setMarkerPosition(userLocation)
+      setCenter(userLocation)
+      setMarker(userLocation)
+      setLocationText("") // Reset location text when modal opens
     }
   }, [isOpen, userLocation])
 
@@ -69,16 +73,35 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         lat: place.geometry.location.lat(),
         lng: place.geometry.location.lng(),
       }
-      handleInputChange("location", place.formatted_address || place.name || "")
-      setMapCenter(newPosition)
-      setMarkerPosition(newPosition)
+      // Update unified location state
+      setCenter(newPosition)
+      setMarker(newPosition)
+      // locationText is already updated by the controlled input
     }
   }
 
+  const handleLocationTextChange = (value: string) => {
+    setLocationText(value)
+  }
+
+  const handleMarkerDrag = (e: google.maps.MapMouseEvent) => {
+    if (e.latLng) {
+      const newPosition = {
+        lat: e.latLng.lat(),
+        lng: e.latLng.lng(),
+      }
+      setMarker(newPosition)
+      // Optionally reverse geocode to update locationText
+      // For now, keep the existing locationText when dragging
+    }
+  }
+
+  const isValidLocation = locationText.trim() !== "" && marker && (marker.lat !== 37.7749 || marker.lng !== -122.4194 || locationText !== "")
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.sport || !formData.location || !markerPosition) {
-      toast.error("Please fill in all required fields.")
+    if (!formData.sport || !isValidLocation) {
+      toast.error("Please fill in all required fields and select a valid location.")
       return
     }
     setIsLoading(true)
@@ -87,7 +110,13 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
       const response = await fetch("/api/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, latitude: markerPosition.lat, longitude: markerPosition.lng, isBoosted: boostEvent }),
+        body: JSON.stringify({ 
+          ...formData, 
+          location: locationText, 
+          latitude: marker.lat, 
+          longitude: marker.lng, 
+          isBoosted: boostEvent 
+        }),
       })
 
       if (response.ok) {
@@ -140,10 +169,25 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
 
               <div>
                 <Label htmlFor="location-search">Location</Label>
-                <LocationSearchInput onPlaceSelect={handlePlaceSelect} />
+                <LocationSearchInput 
+                  value={locationText}
+                  onChange={handleLocationTextChange}
+                  onPlaceSelect={handlePlaceSelect}
+                />
                 <div className="h-48 w-full rounded-lg overflow-hidden relative mt-2 border border-border">
-                  <Map defaultCenter={mapCenter} center={mapCenter} defaultZoom={15} gestureHandling={"greedy"} disableDefaultUI={true} mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID}>
-                    <AdvancedMarker position={markerPosition} draggable={true} onDragEnd={(e) => setMarkerPosition({ lat: e.latLng!.lat(), lng: e.latLng!.lng() })} />
+                  <Map 
+                    defaultCenter={center} 
+                    center={center} 
+                    defaultZoom={15} 
+                    gestureHandling={"greedy"} 
+                    disableDefaultUI={true} 
+                    mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID}
+                  >
+                    <AdvancedMarker 
+                      position={marker} 
+                      draggable={true} 
+                      onDragEnd={handleMarkerDrag}
+                    />
                   </Map>
                 </div>
               </div>
@@ -184,7 +228,13 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         </div>
 
         <DialogFooter className="p-6 pt-4 bg-slate-900/50 border-t border-border">
-          <Button type="submit" form="event-form" disabled={isLoading} className="w-full" size="lg">
+          <Button 
+            type="submit" 
+            form="event-form" 
+            disabled={isLoading || !isValidLocation || !formData.sport || !formData.date || !formData.time} 
+            className="w-full" 
+            size="lg"
+          >
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Host Game"}
           </Button>
         </DialogFooter>
