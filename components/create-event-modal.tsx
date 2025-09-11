@@ -112,10 +112,12 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           ...formData, 
-          location: locationText, 
-          latitude: marker.lat, 
-          longitude: marker.lng, 
-          isBoosted: boostEvent 
+          location: { 
+            text: locationText, 
+            lat: marker.lat, 
+            lng: marker.lng 
+          }, 
+          boostEvent: boostEvent 
         }),
       })
 
