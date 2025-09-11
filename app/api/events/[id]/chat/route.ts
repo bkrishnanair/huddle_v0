@@ -7,9 +7,9 @@ const chatSchema = z.object({
   message: z.string().trim().min(1, "Message cannot be empty").max(500, "Message too long (max 500 characters)"),
 })
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params
+    const { id } = await params
     const user = await getServerCurrentUser()
 
     if (!user) {
@@ -38,9 +38,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   }
 }
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params
+    const { id } = await params
     const user = await getServerCurrentUser()
 
     if (!user) {

@@ -2,9 +2,9 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getServerCurrentUser } from "@/lib/auth-server";
 import { getUserOrganizedEvents, getUserJoinedEvents } from "@/lib/db";
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const user = await getServerCurrentUser();
     
     const { searchParams } = new URL(request.url);

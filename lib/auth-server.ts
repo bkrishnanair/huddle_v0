@@ -11,7 +11,7 @@ import { admin } from "./firebase-admin";
  * This is the correct way to handle authentication in Next.js API Routes and Server Components.
  */
 export const getServerCurrentUser = async () => {
-  const sessionCookie = cookies().get("session")?.value;
+  const sessionCookie = (await cookies()).get("session")?.value;
   if (!sessionCookie) return null;
 
   try {

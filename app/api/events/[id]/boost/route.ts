@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { adminAuth, adminDb } from "@/lib/firebase-admin"
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authHeader = request.headers.get("authorization")
     if (!authHeader?.startsWith("Bearer ")) {
@@ -12,7 +12,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const decodedToken = await adminAuth.verifyIdToken(token)
     const userId = decodedToken.uid
 
-    const eventId = params.id
+    const { id: eventId } = await params
     const eventRef = adminDb.collection("events").doc(eventId)
     const eventDoc = await eventRef.get()
 
