@@ -1,0 +1,78 @@
+Direct answer: Yes—proceed. The plan is sound and aligns with best practices for controlled inputs, hydration handling, and Firestore index hardening; add a couple of specifics to make the outcome deterministic, then execute.
+
+What to add before building
+
+Make LocationSearchInput controlled
+
+Pass value and onChange from the modal so the input always reflects the selected place; uncontrolled→controlled flips cause bugs and mobile oddities.
+
+Keep onMouseDown on suggestion items to prevent blur race conditions; retain debouncing.
+
+Verify network and runtime
+
+After wiring the modal, submit once and confirm POST /api/events includes a Cookie header; ensure any route touched still exports runtime='nodejs' for Admin SDK.
+
+Index deploy command
+
+Deploy only indexes with firebase deploy --only firestore:indexes (or pnpm firebase deploy --only firestore:indexes if wrapped); wait until status Ready in Console before retesting /my-events.
+
+Refined build steps to implement
+
+Phase 1 — Definitive modal fix
+
+In components/create-event-modal.tsx
+
+State: const [center, setCenter] = useState<LatLngLiteral>(initial); const [marker, setMarker] = useState<LatLngLiteral|null>(null); const [locationText, setLocationText] = useState("");
+
+Render LocationSearchInput with value/locationText and onChange to update it, plus onPlaceSelect to set center/marker and update formData.address/lat/lng. Use disabled={!marker || !sport || !dateTime} for Host Game. 
+
+On submit: fetch('/api/events', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ...formData, latitude: marker.lat, longitude: marker.lng }), credentials:'include' }) and show status-specific toasts.
+
+Phase 2 — LocationSearchInput tightening
+
+Ensure props: value: string; onChange(value: string): void; onPlaceSelect(PlaceResult|null).
+
+Use: AutocompleteSuggestion.fetchAutocompleteSuggestions and new Place({ id }).fetchFields; label from s.placePrediction?.text?.text; keep onMouseDown(e.preventDefault()) on CommandItem; debounce 300ms.
+
+Phase 3 — Hydration handling for lists
+
+app/(app)/my-events/page.tsx
+
+import dynamic from 'next/dynamic'
+
+const EventList = dynamic(() => import('@/components/profile/event-list'), { ssr: false })
+
+export default () => <EventList />
+Fixes server/client mismatch for browser‑dependent list UIs.
+
+Phase 4 — Firestore index hardening
+
+firestore.indexes.json add:
+
+hostId ASC + createdAt DESC
+
+players array-contains + date ASC
+
+Deploy: firebase deploy --only firestore:indexes (or pnpm wrapper), then wait for Ready; do not retest until Ready.
+
+Verification checklist (5 minutes)
+
+Location selection
+
+Selecting a suggestion sets input value, re‑centers map, moves marker; Host Game enables. Keyboard and touch both work.
+
+Create Event request
+
+Network shows POST /api/events with Cookie header and 201 response; a Firestore doc appears. If failed‑precondition, deploy indexes and retry after Ready.
+
+My Events page
+
+No hydration warnings; lists load. If hydration persists, keep EventList as client‑only.
+
+Why this will work
+
+Controlled input pattern prevents state drift and “can’t select with touch” bugs; cmdk/shadcn require pairing value with onChange to avoid read‑only behavior.
+
+Disabling SSR on the list component eliminates initial markup mismatch in App Router when browser APIs are used.
+
+Proactive index deployment avoids latent Firestore 500s as data grows

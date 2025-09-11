@@ -16,7 +16,11 @@ const nextConfig = {
   },
   // Allow all external hosts for development in Replit proxy environment
   experimental: {
-    allowedDevOrigins: true,
+    allowedDevOrigins: [
+      "http://localhost:5000",
+      "https://*.replit.dev",
+      "https://*.repl.co"
+    ],
   },
   eslint: {
     ignoreDuringBuilds: true,

@@ -1,0 +1,43 @@
+Subject: Onboarding & Mission Brief: Stabilize Huddle's "Create Event" Feature
+
+Hello,
+
+I've imported the Huddle repository into this Replit workspace. Your primary mission is to diagnose and resolve the final bugs blocking the "Create Event" feature. A significant amount of debugging has already been completed, and the code is now in a near-stable state.
+
+Before you begin, please switch to the isolated_changes branch. This branch contains all the recent fixes and is the correct starting point for this mission.
+
+Project History & Context
+
+The "Create Event" feature was completely broken due to a cascade of failures. Here is a summary of the debugging journey so far:
+
+Initial Problem: Users were unable to create events due to a combination of 500 Internal Server Errors, 401 Authentication Failures, client-side crashes, and UI bugs in the location search.
+Why Previous Fixes Failed: My initial attempts were a series of failures because I was treating symptoms rather than the root cause. I chased UI bugs while the backend was unstable, and I addressed dependency issues without realizing the server's core configuration was broken. This resulted in a frustrating cycle of introducing new bugs while trying to fix old ones.
+The Breakthrough: We finally achieved stability by following a structured, backend-first approach. We created a diagnostic route (/api/diag/admin) that proved the server was failing to parse its FIREBASE_PRIVATE_KEY.
+Current State:
+Backend is Green: We generated and correctly formatted a new service account key, which resolved all 500 and 401 errors. The backend is now stable.
+Dependencies are Stable: We downgraded from React 19 to React 18, resolving all client-side crashes related to dependency mismatches.
+Location Search is Broken: The final blocker is the integration of the location-search.tsx component with its parent, create-event-modal.tsx. The search component itself is robust, but the parent modal is not correctly handling the state updates when a location is selected.
+Your Mission: The Final Mile
+
+Your task is to complete the final 10% of this feature and get it across the finish line. I have a high degree of confidence in the stability of the backend and the dependencies. The problem is now isolated to the React state management within the create-event-modal.tsx component.
+
+Suggested Task List (Please use your expert judgment to refine or change this plan):
+
+Definitive "Create Event" Modal Fix (Highest Priority):
+
+Analyze: components/create-event-modal.tsx.
+Problem: The component has redundant and conflicting state variables (mapCenter, markerPosition, etc.) that are not being updated correctly by the handlePlaceSelect callback.
+Suggested Solution: Refactor the modal to use a single, unified state for the selected location's coordinates. Ensure the handlePlaceSelect function is a clean, single point of update for the form's location string and the map's position. The "Host Game" button should be disabled until a valid location with coordinates is present in the state.
+Proactive Hardening (Once the primary bug is fixed):
+
+Firestore Indexes: Add the necessary composite indexes to firestore.indexes.json to prevent future failed-precondition errors on list pages.
+Hydration: Convert the EventList component to a client-side-only render using a dynamic import ({ ssr: false }) to prevent any potential hydration mismatches.
+My Request to You:
+
+Please do not make any destructive changes to the code. I would like you to first analyze the create-event-modal.tsx file and propose a clear, concise plan to fix the state management issue. Once I have reviewed and approved your plan, you can proceed with the implementation.
+
+Thank you. I look forward to working with you to get this feature shipped.
+
+
+
+

@@ -1,0 +1,66 @@
+Of course. Here is an enhanced prompt designed for a new AI agent, incorporating the project's current status and a clear set of next actions.
+
+Subject: Mission Critical: Stabilize Huddle "Create Event" Flow & Finalize UI Polish
+
+Role: You are an expert full-stack lead architect and senior developer, specializing in debugging and scaling production web applications. Your expertise is in Next.js (App Router), TypeScript, React 18, Firebase (Admin SDK, Auth, Firestore), and the modern Google Maps Places API.
+
+Mission: You are joining the Huddle project as the lead engineer to resolve a series of critical, interconnected bugs that have blocked the core "Create Event" feature. The previous agent has stabilized the backend and resolved major dependency issues, but the final integration in the UI is still failing. Your mission is to complete the fix, harden the codebase, and prepare the feature for deployment.
+
+Project Onboarding:
+
+About Huddle: Huddle helps athletes find and host reliable pickup games via a map-based interface. The product is a live MVP at huddlev0.vercel.app.
+Onboarding Docs: Get a complete understanding of the project by reading:
+/home/user/huddle_v0/README.md
+/home/user/huddle_v0/README Team.md
+The /home/user/huddle_v0/my folder directory.
+Current Status & Unfixed Problems:
+
+The application has undergone a significant debugging effort. Key issues have been resolved:
+
+✅ Backend Stabilized: The Firebase Admin SDK was re-configured with a lazy-loaded singleton and a new, valid service account key. A diagnostic route at /api/diag/admin confirms the server can successfully connect to both Firebase Auth and Firestore. The persistent 500 server errors are resolved.
+✅ Dependencies Corrected: The project was downgraded from React 19 to React 18, resolving a critical dependency conflict that was causing unpredictable client-side crashes.
+✅ Location Search Component Hardened: The location-search.tsx component was rewritten to use the modern Google Maps Places API and is now robust.
+However, the mission is NOT complete. The final integration is failing:
+
+🔴 CRITICAL BUG: Location Selection Fails: When a user selects a location from the search results in the "Create Event" modal, the selection does not register correctly. The map does not update, the form field does not populate, and the user cannot proceed. This is the final blocker.
+🔴 UI/UX Debt: The create-event-modal.tsx has become brittle due to repeated, failed attempts to fix it. It requires a clean, definitive implementation.
+🔴 Code in Limbo: All recent fixes exist as uncommitted local changes and need to be pushed to a new emergent branch to keep them isolated from master.
+Definition of Success (Acceptance Criteria):
+
+The mission is complete when all of the following are true:
+
+✅ Selecting a location from the search results correctly and instantly populates the location form field and re-centers the map on the selected coordinates.
+✅ The "Host Game" button becomes enabled and, when clicked, the POST /api/events request succeeds with a 201 Created status.
+✅ A new event document is correctly created in the Firestore events collection.
+✅ The /my-events page loads without any hydration warnings or errors.
+✅ All project code is successfully pushed to the new emergent branch on the remote repository.
+Next Steps & Implementation Plan:
+
+Execute these tasks in the precise order given. Your highest priority is to fix the final bug with a clean, robust solution.
+
+Task 1: Definitive "Create Event" Modal Fix (Highest Priority)
+
+Persona: Senior React Engineer
+Objective: Fix the broken state integration between the location-search component and the create-event-modal.
+File: components/create-event-modal.tsx
+Instructions:
+Rewrite the state management within the modal to be clean and predictable. Use a single, unified state for the selected map/marker position.
+Implement a robust handlePlaceSelect callback function that correctly updates all necessary state (form fields, map center, marker position) when a location is selected.
+Ensure the "Host Game" button is disabled until a valid location with coordinates has been selected.
+Task 2: Harden Firestore Queries & Prevent Future Errors
+
+Persona: Firestore DBA
+Objective: Proactively add the necessary composite indexes to prevent failed-precondition errors on the /my-events page as data grows.
+File: firestore.indexes.json
+Instructions:
+Add the following two indexes to the indexes array:
+hostId (Ascending) and createdAt (Descending)
+players (Array-contains) and date (Ascending)
+After updating the file, run the command pnpm firebase deploy --only firestore:indexes.
+Task 3: Eliminate Hydration Mismatches
+
+Persona: Next.js Performance Specialist
+Objective: Ensure the /my-events page is free of client-side hydration warnings.
+File: app/(app)/my-events/page.tsx
+Instructions:
+Refactor the page to dynamically import the EventList component with SSR disabled: dynamic(() => import('@/components/profile/event-list'), { ssr: false }). This will ensure the component only renders on the client, preventing mismatches.
