@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerCurrentUser } from "@/lib/auth-server"
 import { getEvents, createEvent as dbCreateEvent, getNearbyEvents } from "@/lib/db"
-import * from "geofire-common"
+import * as geofire from "geofire-common"
 import { GeoPoint } from "firebase/firestore"
 import { z } from "zod"
 
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const validation = eventSchema.safeParse(body)
+    const validation = eventSchema.safeParse(.body)
 
     if (!validation.success) {
       return NextResponse.json({ error: validation.error.format() }, { status: 400 })
