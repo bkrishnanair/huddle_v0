@@ -37,7 +37,6 @@ const SPORTS = [
 
 export default function CreateEventModal({ isOpen, onClose, onEventCreated, userLocation }: CreateEventModalProps) {
   const [isLoading, setIsLoading] = useState(false)
-  // Unified state management for location
   const [formData, setFormData] = useState({
     title: "",
     sport: "",
@@ -50,7 +49,6 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   const [suggestions, setSuggestions] = useState([])
   const [boostEvent, setBoostEvent] = useState(false)
   
-  // Unified location state
   const [center, setCenter] = useState(userLocation || { lat: 37.7749, lng: -122.4194 })
   const [marker, setMarker] = useState(userLocation || { lat: 37.7749, lng: -122.4194 })
   const [locationText, setLocationText] = useState("")
@@ -59,7 +57,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
     if (isOpen && userLocation) {
       setCenter(userLocation)
       setMarker(userLocation)
-      setLocationText("") // Reset location text when modal opens
+      setLocationText("")
     }
   }, [isOpen, userLocation])
 
@@ -68,15 +66,14 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   }
 
   const handlePlaceSelect = (place: google.maps.places.PlaceResult | null) => {
-    if (place?.geometry?.location) {
+    if (place?.geometry?.location && place.formatted_address) {
       const newPosition = {
         lat: place.geometry.location.lat(),
         lng: place.geometry.location.lng(),
       }
-      // Update unified location state
       setCenter(newPosition)
       setMarker(newPosition)
-      // locationText is already updated by the controlled input
+      setLocationText(place.formatted_address)
     }
   }
 
@@ -91,8 +88,6 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         lng: e.latLng.lng(),
       }
       setMarker(newPosition)
-      // Optionally reverse geocode to update locationText
-      // For now, keep the existing locationText when dragging
     }
   }
 
@@ -110,6 +105,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
       const response = await fetch("/api/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: 'include',
         body: JSON.stringify({ 
           ...formData, 
           location: { 

@@ -1,35 +1,37 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getServerCurrentUser } from "@/lib/auth-server";
+import { verifySession, SessionVerificationError } from "@/lib/auth-server";
 import { getUserOrganizedEvents, getUserJoinedEvents } from "@/lib/db";
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { id } = await params;
-    const user = await getServerCurrentUser();
+    const user = await verifySession(request);
+    const { id } = params;
     
     const { searchParams } = new URL(request.url);
     const eventType = searchParams.get('type');
 
-    if (!user) {
-      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
-    }
-
     if (user.uid !== id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      return NextResponse.json({ error: "Unauthorized: You can only view your own events." }, { status: 403 });
     }
 
     let events;
-    if (eventType === 'organized') {
+    if (eventType === 'hosting') {
       events = await getUserOrganizedEvents(id);
-    } else if (eventType === 'joined') {
+    } else if (eventType === 'attending') {
       events = await getUserJoinedEvents(id);
     } else {
-      return NextResponse.json({ error: "Invalid event type specified" }, { status: 400 });
+      // Return both sets of events if no type is specified, or handle as an error
+      // For now, let's treat it as a bad request.
+      return NextResponse.json({ error: "Invalid event type specified. Use 'hosting' or 'attending'." }, { status: 400 });
     }
 
     return NextResponse.json({ events });
 
   } catch (error) {
+    if (error instanceof SessionVerificationError) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+    
     console.error("Error in GET /api/users/[id]/events:", error);
     return NextResponse.json({ error: "Failed to fetch user events" }, { status: 500 });
   }

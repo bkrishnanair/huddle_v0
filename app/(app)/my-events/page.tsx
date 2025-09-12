@@ -3,7 +3,7 @@ import { useState } from "react"
 import dynamic from "next/dynamic"
 import { useAuth } from "@/lib/firebase-context"
 import { Button } from "@/components/ui/button"
-import CreateEventModal from "@/components/create-event-modal"
+import CreateEventModal from "@/components/CreateEventModal"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus } from "lucide-react"
 
@@ -23,50 +23,53 @@ export default function MyEventsPage() {
   }
 
   if (!user) {
+    // This case should ideally be handled by the layout's auth guard
+    // but as a fallback:
     return (
       <div className="flex justify-center items-center h-screen liquid-gradient">
-        <div className="text-white">Please sign in to see your events.</div>
+        <div className="text-white">Please sign in to view your events.</div>
       </div>
     )
   }
-  
+
   const handleEventCreated = () => {
-    setShowCreateModal(false);
-    setRefreshKey(prevKey => prevKey + 1); // Increment key to force re-render and re-fetch
-  };
+    setRefreshKey(prevKey => prevKey + 1) // Increment key to trigger re-fetch
+  }
 
   return (
-    <div className="min-h-screen liquid-gradient p-4 md:p-8">
-      <header className="flex flex-col md:flex-row justify-between items-center mb-8">
-        <div>
-            <h1 className="text-3xl font-bold text-white">My Events</h1>
-            <p className="text-white/80">View and manage your created and joined events.</p>
-        </div>
-        <Button onClick={() => setShowCreateModal(true)} className="glass-card mt-4 md:mt-0">
-          <Plus className="w-4 h-4 mr-2" />
-          Create Event
-        </Button>
-      </header>
+    <div className="min-h-screen liquid-gradient text-white">
+      <div className="container mx-auto p-4 md:p-8">
+        <header className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold">My Events</h1>
+            <p className="text-slate-300">The games you're hosting and joining.</p>
+          </div>
+          <Button onClick={() => setShowCreateModal(true)} size="lg">
+            <Plus className="mr-2 h-5 w-5" />
+            Create Event
+          </Button>
+        </header>
 
-      <Tabs defaultValue="organized" key={refreshKey} className="glass-card p-4 rounded-2xl">
-        <TabsList className="grid w-full grid-cols-2 bg-white/10">
-          <TabsTrigger value="organized" className="text-white data-[state=active]:bg-white/20">Organized</TabsTrigger>
-          <TabsTrigger value="joined" className="text-white data-[state=active]:bg-white/20">Joined</TabsTrigger>
-        </TabsList>
-        <TabsContent value="organized" className="mt-4">
-          <EventList userId={user.uid} eventType="organized" />
-        </TabsContent>
-        <TabsContent value="joined" className="mt-4">
-          <EventList userId={user.uid} eventType="joined" />
-        </TabsContent>
-      </Tabs>
+        <Tabs defaultValue="hosting" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 md:w-[400px] bg-slate-800/60">
+            <TabsTrigger value="hosting">Hosting</TabsTrigger>
+            <TabsTrigger value="attending">Attending</TabsTrigger>
+          </TabsList>
+          <TabsContent value="hosting">
+            <EventList key={`hosting-${refreshKey}`} userId={user.uid} type="hosting" />
+          </TabsContent>
+          <TabsContent value="attending">
+            <EventList key={`attending-${refreshKey}`} userId={user.uid} type="attending" />
+          </TabsContent>
+        </Tabs>
+      </div>
 
       {showCreateModal && (
         <CreateEventModal
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
           onEventCreated={handleEventCreated}
-          userLocation={null} 
+          userLocation={null} // You might want to pass the user's location here if available
         />
       )}
     </div>

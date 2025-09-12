@@ -1,50 +1,48 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { getFirebaseAdminAuth } from "@/lib/firebase-admin"
-import { getUser } from "@/lib/db"
+import { type NextRequest, NextResponse } from "next/server";
+import { getFirebaseAdminAuth } from "@/lib/firebase-admin";
 
 export async function POST(request: NextRequest) {
   try {
-    const { idToken } = await request.json()
+    const { idToken } = await request.json();
 
     if (!idToken) {
-      return NextResponse.json({ error: "ID token is required" }, { status: 400 })
+      return NextResponse.json({ error: "ID token is required" }, { status: 400 });
     }
 
-    // Check if Firebase is configured
-    if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
-      return NextResponse.json({ error: "Firebase is not configured" }, { status: 500 })
-    }
-
-    // Verify token with Firebase Admin SDK
-    const adminAuth = getFirebaseAdminAuth()
+    const adminAuth = getFirebaseAdminAuth();
     if (!adminAuth) {
-      throw new Error("Firebase Admin Auth is not initialized")
+      throw new Error("Firebase Admin Auth is not initialized");
     }
 
-    const decodedToken = await adminAuth.verifyIdToken(idToken)
-    console.log("🔥 Server-side token verification successful")
+    // Set session expiration. 5 days as recommended by Firebase.
+    const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days in milliseconds
 
-    // Get user profile from database
-    const userProfile = await getUser(decodedToken.uid)
+    // Create the session cookie. This will also verify the ID token.
+    const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
 
-    const user = {
-      uid: decodedToken.uid,
-      email: decodedToken.email,
-      name: userProfile?.name || decodedToken.name || "User",
-    }
+    // Set cookie policy for session cookie.
+    const options = {
+      name: "__session",
+      value: sessionCookie,
+      maxAge: expiresIn,
+      httpOnly: true,
+      secure: true,
+      path: "/",
+      sameSite: "lax" as const,
+    };
 
-    return NextResponse.json({ user })
+    const response = NextResponse.json({ status: "success" });
+    response.cookies.set(options);
+
+    return response;
+
   } catch (error: any) {
-    console.error("Login error:", error)
+    console.error("Login error:", error);
 
-    if (error.code === "auth/id-token-expired") {
-      return NextResponse.json({ error: "Session expired. Please sign in again." }, { status: 401 })
+    if (error.code === "auth/id-token-expired" || error.code === "auth/id-token-revoked") {
+        return NextResponse.json({ error: "Session expired or revoked. Please sign in again." }, { status: 401 });
     }
 
-    if (error.code === "auth/id-token-revoked") {
-      return NextResponse.json({ error: "Session revoked. Please sign in again." }, { status: 401 })
-    }
-
-    return NextResponse.json({ error: "Authentication failed. Please try again." }, { status: 500 })
+    return NextResponse.json({ error: "Authentication failed. Please try again." }, { status: 500 });
   }
 }

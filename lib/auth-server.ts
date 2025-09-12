@@ -1,25 +1,51 @@
 // lib/auth-server.ts
 // This file contains authentication logic that is ONLY safe to run on the server.
-import "server-only"; // Ensures this module is never imported into a client component.
+import "server-only";
 
-import { cookies } from "next/headers";
-import { admin } from "./firebase-admin";
+import { NextRequest } from "next/server";
+import { getFirebaseAdminAuth } from "./firebase-admin";
+
+// Custom error class for session verification failures
+export class SessionVerificationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SessionVerificationError";
+  }
+}
 
 /**
- * getServerCurrentUser (Server-Side)
- * Verifies the session cookie from the incoming request to securely identify the user.
- * This is the correct way to handle authentication in Next.js API Routes and Server Components.
+ * Verifies the session cookie from an incoming Next.js request.
+ *
+ * @param req The NextRequest object.
+ * @returns The decoded ID token from the verified session cookie.
+ * @throws {SessionVerificationError} If the cookie is missing, invalid, or expired.
  */
-export const getServerCurrentUser = async () => {
-  const sessionCookie = (await cookies()).get("session")?.value;
-  if (!sessionCookie) return null;
+export const verifySession = async (req: NextRequest) => {
+  const sessionCookie = req.cookies.get("__session")?.value;
+
+  if (!sessionCookie) {
+    throw new SessionVerificationError("Authentication required: No session cookie found.");
+  }
+
+  const adminAuth = getFirebaseAdminAuth();
+  if (!adminAuth) {
+    // This is a server configuration error, so we throw a generic Error
+    throw new Error("Firebase Admin Auth is not initialized.");
+  }
 
   try {
-    // Use the Firebase Admin SDK to verify the cookie and get user details.
-    const decodedIdToken = await admin.auth().verifySessionCookie(sessionCookie, true);
-    return decodedIdToken;
-  } catch (error) {
-    console.error("Error verifying session cookie:", error);
-    return null;
+    // Verify the session cookie. `checkRevoked` is true to ensure revoked sessions are rejected.
+    const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true);
+    return decodedToken;
+  } catch (error: any) {
+    // Handle specific Firebase auth errors
+    if (error.code === 'auth/session-cookie-expired') {
+      throw new SessionVerificationError("Session expired. Please sign in again.");
+    }
+    if (error.code === 'auth/session-cookie-revoked') {
+      throw new SessionVerificationError("Session revoked. Please sign in again.");
+    }
+    // For other errors, throw a generic verification error
+    throw new SessionVerificationError("Authentication failed: Invalid session cookie.");
   }
 };
