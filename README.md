@@ -2,7 +2,7 @@
 
 Huddle is a modern, full-stack web application designed to help users discover, create, and join local pickup sports events. Centered around an interactive map, it provides a seamless experience for finding nearby games, creating events, and engaging with other participants through real-time chat, social profiles, and automated reminders.
 
-This V2 release enhances the stable V1 foundation with social connectivity features, gamification, and a hardened, production-ready backend, creating a more engaging and resilient user experience.
+This production-ready application features a complete authentication system, real-time event management, and interactive social features, creating an engaging and reliable user experience for sports enthusiasts.
 
 ## Screenshots
 
@@ -19,15 +19,16 @@ This V2 release enhances the stable V1 foundation with social connectivity featu
 | ![alt text](Pages/old/image-7.png) | ![alt text](Pages/old/image-3.png) | ![alt text](Pages/old/image.png) |
 
 ## Key Features
-*   **Engaging User Profiles**: Users can personalize their profiles with a bio and favorite sports, turning their profile into a social hub.
-*   **Social Connectivity**: A friend/connection system allows users to send and accept friend requests, fostering a sense of community.
-*   **Gamification & Achievements**: Users are rewarded with badges for reaching milestones, such as joining their first game.
-*   **Automated Push Notifications**: All RSVP'd users automatically receive a reminder notification 30 minutes before an event is scheduled to start, powered by a scheduled Firebase Cloud Function.
-*   **Interactive Map & Event Discovery**: Users can discover events in their vicinity, powered by an interactive map with custom-styled pins.
-*   **Advanced Event Creation**: Create single or recurring events with a powerful and user-friendly modal that includes robust, server-side validation.
-*   **RSVP & Real-Time Check-in**: Users can RSVP for events with a single click. Event organizers have a dedicated "Players" tab to view the attendee list and check players in in real-time.
-*   **Real-Time Event Chat**: Each event includes a real-time chat for participants to coordinate and communicate.
-*   **Modern UI/UX**: A beautiful "glassmorphism" design system built with Tailwind CSS and Shadcn/ui, featuring a global notification system for user feedback.
+*   **🔐 Secure Authentication System**: Complete session management with Next.js 15 compatibility and Firebase Auth integration
+*   **🗺️ Interactive Map & Event Discovery**: Users can discover events in their vicinity, powered by Google Maps with custom-styled pins and real-time location services
+*   **📅 Advanced Event Creation**: Create single or recurring events with an intuitive modal featuring location search, server-side validation, and AI-powered content generation
+*   **👥 RSVP & Real-Time Management**: Users can join/leave events instantly. Organizers get a dedicated "Players" tab to view attendees and manage check-ins in real-time
+*   **💬 Real-Time Event Chat**: Each event includes live messaging for participants to coordinate and communicate
+*   **👤 Engaging User Profiles**: Personalized profiles with bio, favorite sports, achievements, and comprehensive event history
+*   **🏆 Gamification & Achievements**: Badge system rewards users for milestones like joining their first game
+*   **📱 Mobile-First Design**: Responsive "glassmorphism" UI built with Tailwind CSS and Shadcn/ui, optimized for touch interactions
+*   **🔔 Smart Notifications**: Automated push notifications remind RSVP'd users 30 minutes before events start
+*   **🤝 Social Connectivity**: Friend/connection system allows users to build their sports community
 
 ## Tech Stack
 
@@ -110,11 +111,13 @@ The application should now be running on [http://localhost:3000](http://localhos
 
 ## Core Architectural Decisions
 
-This project has been architected with a modern, secure, and scalable structure.
+This project has been architected with a modern, secure, and production-ready structure.
 
-*   **Secure by Default (Route Groups)**: The Next.js App Router's Route Groups are used to create a clear separation between public routes (the landing/login page) and private, authenticated routes (`/map`, `/events`, etc.). A secure layout file acts as a gateway, automatically redirecting unauthenticated users to the login page.
-*   **Cohesive UI/UX:** A new, consistent design system has been implemented using a "glassmorphism" aesthetic. All colors, typography, and component styles are defined as tokens in `tailwind.config.ts` and `globals.css`.
-*   **Server-Side Validation**: All critical API endpoints are secured with Zod schemas, ensuring that only valid data reaches the database.
-*   **Hybrid Data Fetching**: The app uses a hybrid model. Secure actions (like creating an event or sending a message) are handled by server-side API Routes, while real-time data (like chat messages) is streamed directly to the client using Firestore's `onSnapshot` listeners for maximum performance.
-*   **Performance (Data Denormalization)**: The Firestore schema uses denormalization for key relationships. For example, the `players` and `checkedInPlayers` arrays are stored directly on an event document. This avoids costly database joins and significantly speeds up data retrieval for common user flows.
+*   **Secure by Default (Route Groups)**: Uses Next.js App Router's Route Groups to separate public routes (landing/login) from private, authenticated routes (`/discover`, `/map`, `/profile`, etc.). A secure layout acts as an authentication gateway, automatically redirecting unauthenticated users.
+*   **Next.js 15 Compatibility**: Fully compatible with Next.js 15 async cookies() API and modern React patterns, ensuring future-proof development.
+*   **Robust Authentication**: Hybrid authentication system with Firebase Auth for client-side and Firebase Admin SDK for server-side session verification using secure HTTP-only cookies.
+*   **Server-Side Validation**: All critical API endpoints are secured with Zod schemas and proper authentication middleware, ensuring data integrity and security.
+*   **Real-Time Features**: Combines server-side API routes for secure operations with Firestore real-time listeners for live chat and event updates.
+*   **Performance Optimized**: Denormalized Firestore schema with geospatial indexing for fast location-based queries and viewport-optimized data fetching.
+*   **Modern UI Architecture**: Consistent "glassmorphism" design system with Tailwind CSS, featuring responsive components and mobile-first approach.
 ---
