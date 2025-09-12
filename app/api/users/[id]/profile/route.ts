@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerCurrentUser } from "@/lib/auth-server"
-import { admin } from "@/lib/firebase-admin"
+import { adminDb } from "@/lib/firebase-admin"
+
+export const runtime = 'nodejs'
 
 export async function GET(
   request: NextRequest,
@@ -24,8 +26,12 @@ export async function GET(
     }
 
     // Get user profile data from Firestore using Admin SDK
-    const db = admin.firestore()
-    const userRef = db.collection("users").doc(requestedUserId)
+    if (!adminDb) {
+      console.error("Firebase Admin Firestore not initialized")
+      return NextResponse.json({ error: "Database service unavailable" }, { status: 503 })
+    }
+    
+    const userRef = adminDb.collection("users").doc(requestedUserId)
     const userDoc = await userRef.get()
 
     if (!userDoc.exists) {

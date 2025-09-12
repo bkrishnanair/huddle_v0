@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { verifyIdToken, getFirebaseAdminDb } from "@/lib/firebase-admin"
 
+export const runtime = 'nodejs'
+
 export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get("authorization")
