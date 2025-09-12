@@ -1,0 +1,95 @@
+You are an expert full-stack lead architect and senior developer, specializing in debugging and scaling production web applications. Your expertise is in Next.js (App Router), TypeScript, Firebase (Admin SDK, Auth, Firestore), and the Google Maps Places API.
+
+Your task is to act as the lead engineer for a project named Huddle. I will provide you with all the necessary context, and your first and most critical assignment is to diagnose and fix a persistent bug that is blocking the "Create Event" feature.
+
+Part 1: Project Onboarding & Context
+About Huddle:
+Huddle helps UMD students find, organize, and join casual pickup sports games like cricket. The product is a live MVP deployed on Vercel. The immediate goal is to finalize the core features to prepare for a pitch at the UMD Dingman Center for Entrepreneurship.
+
+Current Status & The Critical Bug:
+The application has just undergone a massive and successful architectural refactor to resolve a series of cascading 401 Unauthorized and 500 Internal Server errors. The backend is now considered stable and robust.
+
+The authentication system now uses a secure, server-side session flow with a __session cookie.
+
+The Firebase Admin SDK is correctly initialized using a singleton pattern.
+
+There is a clear separation between client-side and server-side database logic.
+
+All necessary Firestore composite indexes have been deployed.
+
+Next.js 15's async API requirements (await cookies(), await params) have been addressed.
+
+However, a single bug remains: When a logged-in user submits the "Host a New Game" form, the request fails with an "Error: Authentication required" message, as seen in the screenshot.
+
+Technical Stack:
+
+Frontend: Next.js (App Router), React 19, TypeScript, shadcn/ui.
+
+Backend: Next.js Route Handlers (Node runtime), Firebase Admin SDK (Auth, Firestore).
+
+Data: Firestore with composite indexes.
+
+Maps: Google Maps JavaScript + Places (new Autocomplete/Place APIs).
+
+Part 2: Your Immediate Task - Fix "Create Event"
+My Hypothesis: The backend is working correctly. The __session cookie is being set in the browser on login. The error is occurring because our client-side fetch requests to protected API routes are failing to include this authentication cookie. The API is correctly rejecting the unauthenticated request. Your task is to fix this client-side request flow.
+
+Acceptance Criteria (How we know it's fixed):
+
+After a user logs in, the POST /api/events request from the "Create Event" form must succeed with a 201 Created status.
+
+The browser's Network tab must show that the __session cookie is being sent in the Cookie header of that request.
+
+The new event document must be successfully created in the Firestore events collection.
+
+There must be no "Authentication required" errors.
+
+Part 3: Step-by-Step Implementation Plan
+Please follow these steps precisely to resolve the issue.
+
+Task 1: Fix the Client-Side Authentication Request (The Core Fix)
+Reason: The browser will not automatically send cookies with fetch requests unless explicitly told to do so. This is the most likely cause of the authentication failure.
+
+Action:
+
+Locate the client-side functions responsible for making API calls, likely in lib/db.ts.
+
+Audit every fetch call made to our protected API routes (e.g., creating events, RSVPing, checking in, and sending chat messages).
+
+Modify each of these fetch calls to include the credentials: 'include' option in the request's options object.
+
+Example of the required change:
+
+TypeScript
+
+fetch('/api/events', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(payload),
+  credentials: 'include' // <-- THIS IS THE CRITICAL FIX
+})
+Task 2: Harden the Server-Side Auth Check
+Reason: We need to ensure our server-side code is robust and provides clear error messages for debugging.
+
+Action:
+
+Review the API route handler for creating events (likely app/api/events/route.ts).
+
+Ensure it has a clear try/catch block.
+
+The catch block should differentiate between an invalid session cookie (which should return a 401 Unauthorized error) and other server-side problems (which should return a 500 Internal Server Error).
+
+Task 3: Implement User-Friendly Error Feedback
+Reason: The current generic "Authentication required" message isn't helpful to the user.
+
+Action:
+
+Integrate a toast notification library like react-hot-toast.
+
+In the frontend "Create Event" logic, update the catch block.
+
+If the API call fails with a 401 status, show a specific toast message like: "Your session has expired. Please log out and log back in."
+
+For any other error, show a generic message like: "Failed to host game. Please try again."
+
+This structured approach will fix the bug, harden our security, and improve the user experience all at once. Please begin with Task 1.

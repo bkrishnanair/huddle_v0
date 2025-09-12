@@ -88,6 +88,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...formData, latitude: markerPosition.lat, longitude: markerPosition.lng, isBoosted: boostEvent }),
+        credentials: 'include' // <-- Critical fix: ensures session cookies are sent
       })
 
       if (response.ok) {
