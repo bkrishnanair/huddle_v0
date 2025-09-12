@@ -30,16 +30,16 @@ interface CreateEventModalProps {
   userLocation: { lat: number; lng: number } | null
 }
 
-const SPORTS = [
-  "Basketball", "Soccer", "Tennis", "Cricket", "Baseball", "Volleyball",
-  "Football", "Hockey", "Badminton", "Table Tennis",
+const CATEGORIES = [
+  "Sports", "Music", "Community", "Learning", "Food & Drink", "Tech", "Arts & Culture", "Outdoors"
 ]
 
 export default function CreateEventModal({ isOpen, onClose, onEventCreated, userLocation }: CreateEventModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
-    title: "",
-    sport: "",
+    name: "",
+    category: "",
+    tags: [],
     location: "",
     date: "",
     time: "",
@@ -77,7 +77,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.sport || !formData.location || !markerPosition) {
+    if (!formData.category || !formData.location || !markerPosition) {
       toast.error("Please fill in all required fields.")
       return
     }
@@ -87,8 +87,12 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
       const response = await fetch("/api/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, latitude: markerPosition.lat, longitude: markerPosition.lng, isBoosted: boostEvent }),
-        credentials: 'include' // <-- Critical fix: ensures session cookies are sent
+        body: JSON.stringify({ 
+            ...formData, 
+            geopoint: { latitude: markerPosition.lat, longitude: markerPosition.lng }, 
+            isBoosted: boostEvent 
+        }),
+        credentials: 'include'
       })
 
       if (response.ok) {
@@ -111,16 +115,16 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="glass-surface border-white/15 text-foreground p-0 gap-0 sm:max-w-md max-h-[90vh] flex flex-col">
         <DialogHeader className="p-6 pb-4">
-          <DialogTitle>Host a New Game</DialogTitle>
-          <DialogDescription>Fill in the details to get your game on the map.</DialogDescription>
+          <DialogTitle>Create a New Event</DialogTitle>
+          <DialogDescription>Fill in the details to get your event on the map.</DialogDescription>
         </DialogHeader>
         
         <div className="flex-1 overflow-y-auto no-scrollbar px-6">
           <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY as string}>
             <form id="event-form" onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="title">Event Title</Label>
-                <Input id="title" placeholder="e.g., Evening Basketball Run" value={formData.title} onChange={(e) => handleInputChange("title", e.target.value)} required />
+                <Label htmlFor="name">Event Title</Label>
+                <Input id="name" placeholder="e.g., Community Workshop" value={formData.name} onChange={(e) => handleInputChange("name", e.target.value)} required />
               </div>
 
               <AIGenerateButton onClick={() => {}} isLoading={isAiLoading} />
@@ -132,10 +136,10 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
               </div>
 
               <div>
-                <Label htmlFor="sport">Sport</Label>
-                <Select required value={formData.sport} onValueChange={(value) => handleInputChange("sport", value)}>
-                  <SelectTrigger><SelectValue placeholder="Select a sport" /></SelectTrigger>
-                  <SelectContent>{SPORTS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                <Label htmlFor="category">Category</Label>
+                <Select required value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
+                  <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
+                  <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
 
@@ -161,10 +165,10 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
               </div>
 
               <div>
-                <Label htmlFor="maxPlayers">Number of Players</Label>
+                <Label htmlFor="maxPlayers">Number of Attendees</Label>
                 <Select value={String(formData.maxPlayers)} onValueChange={(v) => handleInputChange("maxPlayers", Number(v))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{Array.from({ length: 49 }, (_, i) => i + 2).map(n => <SelectItem key={n} value={String(n)}>{n} players</SelectItem>)}</SelectContent>
+                  <SelectContent>{Array.from({ length: 49 }, (_, i) => i + 2).map(n => <SelectItem key={n} value={String(n)}>{n} attendees</SelectItem>)}</SelectContent>
                 </Select>
               </div>
 
@@ -175,7 +179,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                             <Rocket className="w-5 h-5 text-yellow-400" />
                             Boost Event
                         </Label>
-                        <p className="text-sm text-slate-400 mt-1">Get your game featured to fill your roster faster.</p>
+                        <p className="text-sm text-slate-400 mt-1">Get your event featured to attract more attendees.</p>
                     </div>
                     <Switch id="boost" checked={boostEvent} onCheckedChange={setBoostEvent} />
                 </div>
@@ -186,7 +190,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
 
         <DialogFooter className="p-6 pt-4 bg-slate-900/50 border-t border-border">
           <Button type="submit" form="event-form" disabled={isLoading} className="w-full" size="lg">
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Host Game"}
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Create Event"}
           </Button>
         </DialogFooter>
       </DialogContent>

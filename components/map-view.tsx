@@ -7,40 +7,41 @@ import { Plus, MapPin, LocateFixed, AlertCircle } from "lucide-react"
 import EventDetailsDrawer from "./event-details-drawer"
 import CreateEventModal from "./create-event-modal"
 import { APIProvider, Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps"
-import { mapStyles } from "@/lib/map-styles" 
-import { GameEvent } from "@/lib/types"
+import { HuddleEvent } from "@/lib/types"
 
 interface MapViewProps {
   user: any
 }
 
-const getSportColor = (sport: string): string => {
+const getCategoryColor = (category: string): string => {
   const colors: { [key: string]: string } = {
-    Basketball: "#f97316",
-    Soccer: "#22c55e",
-    Tennis: "#eab308",
-    Baseball: "#dc2626",
-    Football: "#8b5cf6",
-    Volleyball: "#06b6d4",
+    Sports: "#f97316",
+    Music: "#22c55e",
+    Community: "#eab308",
+    Learning: "#dc2626",
+    "Food & Drink": "#8b5cf6",
+    Tech: "#06b6d4",
+    "Arts & Culture": "#ec4899",
+    Outdoors: "#10b981",
     default: "#ef4444",
   }
-  return colors[sport] || colors.default
+  return colors[category] || colors.default
 }
 
 export default function MapView({ user }: MapViewProps) {
-  const [events, setEvents] = useState<GameEvent[]>([])
-  const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null)
+  const [events, setEvents] = useState<HuddleEvent[]>([])
+  const [selectedEvent, setSelectedEvent] = useState<HuddleEvent | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 37.7749, lng: -122.4194 })
-  const [mapsError, setMapsError] = useState<string | null>(null)
   const [map, setMap] = useState<google.maps.Map | null>(null)
 
-  const [activeSport, setActiveSport] = useState("All");
+  const [activeCategory, setActiveCategory] = useState("All");
 
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID
-
+  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID;
+  const darkMapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID;
+  
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -54,6 +55,14 @@ export default function MapView({ user }: MapViewProps) {
       }
     )
   }, [])
+  
+  useEffect(() => {
+    if (map) {
+      map.setOptions({
+        mapId: darkMapId,
+      });
+    }
+  }, [map, darkMapId]);
 
   const fetchEventsInView = useCallback(async () => {
     if (!map) return;
@@ -88,9 +97,9 @@ export default function MapView({ user }: MapViewProps) {
   }, [userLocation, map]);
 
   const filteredEvents = useMemo(() => {
-    if (activeSport === 'All') return events;
-    return events.filter(event => event.sport === activeSport);
-  }, [events, activeSport]);
+    if (activeCategory === 'All') return events;
+    return events.filter(event => event.category === activeCategory);
+  }, [events, activeCategory]);
 
   if (!mapsApiKey) {
     return (
@@ -123,29 +132,28 @@ export default function MapView({ user }: MapViewProps) {
     <div className="h-screen flex flex-col liquid-gradient" id="map-view">
       <div className="flex-1 relative">
         <APIProvider apiKey={mapsApiKey}>
-          <Map
+           <Map
             onLoad={(map) => setMap(map)}
-            mapId={mapId}
             defaultCenter={mapCenter}
             defaultZoom={17}
             className="w-full h-full"
             onIdle={fetchEventsInView}
             options={{
               disableDefaultUI: true,
-              styles: mapStyles,
               gestureHandling: "greedy",
               tilt: 45,
+              mapId: mapId,
             }}
           >
             {userLocation && <AdvancedMarker position={userLocation} />}
             {filteredEvents.map((event) => (
               <AdvancedMarker
                 key={event.id}
-                position={{ lat: event.latitude, lng: event.longitude }}
+                position={{ lat: event.geopoint.latitude, lng: event.geopoint.longitude }}
                 onClick={() => setSelectedEvent(event)}
               >
                 <Pin
-                  background={getSportColor(event.sport)}
+                  background={getCategoryColor(event.category)}
                   borderColor={event.isBoosted ? "#fbbf24" : "#ffffff"}
                   glyphColor="#ffffff"
                 />
@@ -156,9 +164,11 @@ export default function MapView({ user }: MapViewProps) {
 
         <div className="absolute top-4 left-4 right-4 z-10">
             <div className="flex items-center space-x-2 p-2 glass-surface rounded-full">
-                <Chip isActive={activeSport === 'All'} onClick={() => setActiveSport('All')}>All</Chip>
-                <Chip isActive={activeSport === 'Basketball'} onClick={() => setActiveSport('Basketball')}>Basketball</Chip>
-                <Chip isActive={activeSport === 'Soccer'} onClick={() => setActiveSport('Soccer')}>Soccer</Chip>
+                <Chip isActive={activeCategory === 'All'} onClick={() => setActiveCategory('All')}>All</Chip>
+                <Chip isActive={activeCategory === 'Sports'} onClick={() => setActiveCategory('Sports')}>Sports</Chip>
+                <Chip isActive={activeCategory === 'Music'} onClick={() => setActiveCategory('Music')}>Music</Chip>
+                <Chip isActive={activeCategory === 'Community'} onClick={() => setActiveCategory('Community')}>Community</Chip>
+
             </div>
         </div>
 
