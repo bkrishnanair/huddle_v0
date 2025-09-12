@@ -3,27 +3,34 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Clock, MapPin, Users } from "lucide-react";
-import { GameEvent } from "@/lib/types";
+import { HuddleEvent } from "@/lib/types";
+import { formatDistanceToNow } from 'date-fns';
 
 interface EventCardProps {
-  event: GameEvent;
-  onSelectEvent: (event: GameEvent) => void;
+  event: HuddleEvent;
+  onSelectEvent: (event: HuddleEvent) => void;
 }
 
 export const EventCard = React.memo(({ event, onSelectEvent }: EventCardProps) => {
   const isFull = event.currentPlayers >= event.maxPlayers;
 
   const getTimeDifference = (date: string, time: string) => {
-    return "in 45m";
+    try {
+      const eventDateTime = new Date(`${date}T${time}`);
+      return formatDistanceToNow(eventDateTime, { addSuffix: true });
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "Invalid date";
+    }
   };
 
   return (
     <Card className="glass-surface border-white/15 overflow-hidden flex flex-col">
       <CardContent className="p-4 flex-grow">
         <div className="flex justify-between items-start mb-3">
-          <h3 className="font-bold text-lg text-slate-50 pr-2">{event.title}</h3>
+          <h3 className="font-bold text-lg text-slate-50 pr-2">{event.name}</h3>
           <Badge variant="secondary" className="bg-white/10 text-slate-300 border-none whitespace-nowrap">
-            {event.sport}
+            {event.category}
           </Badge>
         </div>
         <div className="space-y-2 text-sm text-slate-300">
@@ -33,7 +40,7 @@ export const EventCard = React.memo(({ event, onSelectEvent }: EventCardProps) =
           </div>
           <div className="flex items-center">
             <MapPin className="w-4 h-4 mr-2 text-emerald-400" />
-            <span>{event.distance ? `${event.distance} miles away` : event.location}</span>
+            <span>{event.distance ? `${event.distance} miles away` : event.venue}</span>
           </div>
         </div>
       </CardContent>
