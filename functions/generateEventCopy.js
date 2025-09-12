@@ -15,24 +15,16 @@ exports.generateEventCopy = onCall(async (request) => {
   }
 
   // 2. Data Validation: Ensure all required data is present.
-  const { category, locationName, timeOfDay } = request.data;
-  if (!category || !locationName || !timeOfDay) {
+  const { sport, locationName, timeOfDay } = request.data;
+  if (!sport || !locationName || !timeOfDay) {
     throw new functions.https.HttpsError(
       "invalid-argument",
-      "Missing required fields: category, locationName, or timeOfDay."
+      "Missing required fields: sport, locationName, or timeOfDay."
     );
   }
 
   // 3. Construct the Prompt for Gemini
-  const prompt = `You are an assistant for a local event app called Huddle. Generate 3 catchy and exciting options for an event title and a short, friendly description. The event is for the category "${category}" and is happening at ${locationName} in the ${timeOfDay}. 
-  
-  Here are some examples of how to tailor the tone for different categories:
-  - For 'Music', use terms like 'jam session', 'live set', 'open mic'.
-  - For 'Community', use terms like 'meetup', 'gathering', 'workshop'.
-  - For 'Learning', use terms like 'study group', 'skill share', 'lecture'.
-  - For 'Sports', use sports-specific slang like 'pickup game', 'match', 'scrimmage'.
-
-  The tone should be fun, welcoming, and relevant to the category. Return the response as a valid JSON array of objects, where each object has a 'title' and a 'description' key. Do not include any markdown formatting.`;
+  const prompt = `You are an assistant for a sports app called Huddle. Generate 3 catchy and exciting options for a pickup game title and a short, friendly description. The game is for ${sport} and is happening at ${locationName} in the ${timeOfDay}. For cricket, use terms like 'sixes' or 'wickets'. For basketball, use terms like 'hoops' or 'showdown'. The tone should be fun and welcoming. Return the response as a valid JSON array of objects, where each object has a 'title' and a 'description' key. Do not include any markdown formatting.`;
 
   try {
     // 4. Call the Gemini API

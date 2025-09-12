@@ -4,16 +4,13 @@ export interface Player {
   photoURL?: string;
 }
 
-export interface HuddleEvent {
+export interface GameEvent {
   id: string;
-  name: string;
-  category: string;
-  tags?: string[];
-  venue: any;
-  geopoint: {
-    latitude: number;
-    longitude: number;
-  };
+  title: string;
+  sport: string;
+  location: any;
+  latitude: number;
+  longitude: number;
   date: string;
   time: string;
   maxPlayers: number;

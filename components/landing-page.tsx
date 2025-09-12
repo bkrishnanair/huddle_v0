@@ -17,10 +17,7 @@ import {
   Play,
   Calendar,
   MessageCircle,
-  Award,
-  BookOpen,
-  Mic,
-  Palette
+  Award
 } from "lucide-react";
 
 const HuddleLogo = () => (
@@ -32,36 +29,15 @@ const HuddleLogo = () => (
 // Floating background elements component
 const FloatingElements = () => (
   <div className="absolute inset-0 overflow-hidden pointer-events-none">
-    <div
-      className="floating-orb absolute top-20 left-[10%] w-4 h-4 rounded-full bg-primary/20 animate-pulse"
-      style={{ animationDelay: "0s" }}
-    />
-    <div
-      className="floating-orb absolute top-[30%] right-[15%] w-6 h-6 rounded-full bg-blue-400/20 animate-bounce"
-      style={{ animationDelay: "2s" }}
-    />
-    <div
-      className="floating-orb absolute top-[60%] left-[20%] w-3 h-3 rounded-full bg-purple-400/20 animate-pulse"
-      style={{ animationDelay: "4s" }}
-    />
-    <div
-      className="floating-orb absolute bottom-[30%] right-[25%] w-5 h-5 rounded-full bg-green-400/20 animate-bounce"
-      style={{ animationDelay: "1s" }}
-    />
-    <div
-      className="floating-orb absolute top-[80%] left-[80%] w-4 h-4 rounded-full bg-orange-400/20 animate-pulse"
-      style={{ animationDelay: "3s" }}
-    />
-
+    <div className="floating-orb absolute top-20 left-[10%] w-4 h-4 rounded-full bg-primary/20 animate-pulse" style={{ animationDelay: '0s' }} />
+    <div className="floating-orb absolute top-[30%] right-[15%] w-6 h-6 rounded-full bg-blue-400/20 animate-bounce" style={{ animationDelay: '2s' }} />
+    <div className="floating-orb absolute top-[60%] left-[20%] w-3 h-3 rounded-full bg-purple-400/20 animate-pulse" style={{ animationDelay: '4s' }} />
+    <div className="floating-orb absolute bottom-[30%] right-[25%] w-5 h-5 rounded-full bg-green-400/20 animate-bounce" style={{ animationDelay: '1s' }} />
+    <div className="floating-orb absolute top-[80%] left-[80%] w-4 h-4 rounded-full bg-orange-400/20 animate-pulse" style={{ animationDelay: '3s' }} />
+    
     {/* Geometric shapes */}
-    <div
-      className="absolute top-[15%] right-[10%] w-8 h-8 border border-primary/20 rotate-45 animate-spin"
-      style={{ animationDuration: "10s" }}
-    />
-    <div
-      className="absolute bottom-[20%] left-[10%] w-6 h-6 border border-blue-400/20 rotate-12 animate-ping"
-      style={{ animationDelay: "2s" }}
-    />
+    <div className="absolute top-[15%] right-[10%] w-8 h-8 border border-primary/20 rotate-45 animate-spin" style={{ animationDuration: '10s' }} />
+    <div className="absolute bottom-[20%] left-[10%] w-6 h-6 border border-blue-400/20 rotate-12 animate-ping" style={{ animationDelay: '2s' }} />
   </div>
 );
 
@@ -69,58 +45,58 @@ interface LandingPageProps {
   onGetStarted: () => void;
 }
 
-const useCases = [
+const features = [
     {
-      icon: <BookOpen className="w-8 h-8 text-primary" />,
-      title: "The Student",
-      description: "Find a last-minute study group for your midterm, join a club meeting on the mall, or unwind with a game of soccer after class."
+      icon: <MapPin className="w-8 h-8 text-primary" />,
+      title: "Find Games Instantly",
+      description: "See every pickup game happening around you on a real-time map. Your next game is just a tap away."
     },
     {
-      icon: <Mic className="w-8 h-8 text-primary" />,
-      title: "The Creator",
-      description: "Hosting a workshop, an open mic night, or a yoga class? Huddle gives you the tools to reach your local community and manage your event effortlessly."
+      icon: <Cpu className="w-8 h-8 text-primary" />,
+      title: "AI-Assisted Events",
+      description: "Let AI help you craft the perfect event title and description to attract players and fill your roster faster."
     },
     {
-      icon: <Palette className="w-8 h-8 text-primary" />,
-      title: "The Explorer",
-      description: "New to the area or just looking for something to do? Open the map and instantly see the vibrant, real-time pulse of your community."
+      icon: <CheckCircle className="w-8 h-8 text-primary" />,
+      title: "Verified Check-ins",
+      description: "Build your reputation with our check-in system. Organizers see you're reliable, so you get more invites."
     }
   ];
-  
+
 const howItWorks = [
   {
     step: "1",
     icon: <MapPin className="w-6 h-6" />,
-    title: "Discover Events",
-    description: "Open the map and instantly see events happening around you in real-time."
+    title: "Discover Games",
+    description: "Open the map and instantly see pickup games happening around you in real-time."
   },
   {
     step: "2", 
     icon: <Calendar className="w-6 h-6" />,
     title: "Join or Create",
-    description: "Found your event? Join with one tap. Don't see anything? Create your own in seconds."
+    description: "Found your game? Join with one tap. Don't see anything? Create your own event in seconds."
   },
   {
     step: "3",
     icon: <Users className="w-6 h-6" />,
-    title: "Connect & Belong", 
-    description: "Show up, participate, and build your local community. Rate events and earn your reputation."
+    title: "Play & Connect", 
+    description: "Show up, play, and build your local sports community. Rate players and earn your reputation."
   }
 ];
 
 const socialProof = [
-  { icon: <Users className="w-5 h-5" />, stat: "X,000+", label: "Active Members" },
-  { icon: <Calendar className="w-5 h-5" />, stat: "Y,000+", label: "Events Created" },
-  { icon: <Star className="w-5 h-5" />, stat: "#.#/#", label: "App Rating" },
-  { icon: <Award className="w-5 h-5" />, stat: "##%", label: "Satisfaction Rate" }
+  { icon: <Users className="w-5 h-5" />, stat: "5,000+", label: "Active Players" },
+  { icon: <Calendar className="w-5 h-5" />, stat: "1,200+", label: "Games Created" },
+  { icon: <Star className="w-5 h-5" />, stat: "4.9/5", label: "App Rating" },
+  { icon: <Award className="w-5 h-5" />, stat: "98%", label: "Show-up Rate" }
 ];
 
 export default function LandingPage({ onGetStarted }: LandingPageProps) {
-    const [currentUseCase, setCurrentUseCase] = useState(0);
+    const [currentFeature, setCurrentFeature] = useState(0);
 
     useEffect(() => {
         const interval = setInterval(() => {
-          setCurrentUseCase((prev) => (prev + 1) % useCases.length);
+          setCurrentFeature((prev) => (prev + 1) % features.length);
         }, 5000);
         return () => clearInterval(interval);
       }, []);
@@ -139,11 +115,9 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
             <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">Huddle</h1>
           </div>
           <div className="flex items-center space-x-4">
-            {/*
             <Button variant="ghost" className="hidden md:flex text-slate-300 hover:text-white hover:bg-white/10">
               How it works
             </Button>
-            */}
             <Button variant="secondary" onClick={onGetStarted} className="px-6 h-11 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 transition-all duration-300">
               Get Started
             </Button>
@@ -161,30 +135,28 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                   <div className="w-6 h-6 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
                   <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-400 to-purple-600"></div>
                 </div>
-                <span className="text-sm text-slate-300">Join X,000+ members already connecting</span>
+                <span className="text-sm text-slate-300">Join 5,000+ players already having fun</span>
               </div>
 
               <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-200 to-slate-400 mb-6 leading-tight">
-                Your Community is Waiting.
+                Where pickup games
                 <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-orange-400 to-yellow-400">Find it with Huddle.</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-orange-400 to-yellow-400">come to life</span>
               </h1>
               
               <p className="text-lg md:text-xl text-slate-300 max-w-3xl mx-auto mb-10 leading-relaxed">
-                From pickup games to study groups, discover and join what's happening around you in real-time.
+                Ditch the endless group chats. Find your game in seconds with our AI-powered platform that connects players, fills rosters instantly, and builds lasting sports communities.
               </p>
               
               <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-12">
                 <Button onClick={onGetStarted} size="lg" className="h-14 px-10 text-lg font-bold bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 rounded-full shadow-xl transition-all duration-300 transform hover:scale-105">
                   <Play className="mr-2 w-5 h-5" />
-                  Explore Events
+                  Start Playing Now
                 </Button>
-                {/*
                 <Button variant="outline" size="lg" className="h-14 px-8 text-lg glass-surface border-white/30 hover:bg-white/10 rounded-full transition-all duration-300">
                   <MessageCircle className="mr-2 w-5 h-5" />
                   See How It Works
                 </Button>
-                */}
               </div>
 
               {/* Social Proof Stats */}
@@ -201,16 +173,15 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
               </div>
             </div>
           </div>
-          
+
           {/* How It Works Section */}
-          
           <div className="max-w-6xl mx-auto py-20">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                From idea to event in <span className="text-primary">3 simple steps</span>
+                From idea to game in <span className="text-primary">3 simple steps</span>
               </h2>
               <p className="text-lg text-slate-300 max-w-2xl mx-auto">
-                We've made finding and organizing local events so simple, you'll wonder how you ever managed without us.
+                We've made finding and organizing pickup games so simple, you'll wonder how you ever managed without us.
               </p>
             </div>
 
@@ -234,15 +205,14 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
             </div>
           </div>
           
-
-          {/* Enhanced Use Cases Showcase */}
+          {/* Enhanced Features Showcase */}
           <div className="max-w-4xl mx-auto py-16">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                Built for <span className="text-primary">every community</span>
+                Built for <span className="text-primary">real players</span>
               </h2>
               <p className="text-lg text-slate-300">
-                Every feature is designed to get you off your phone and into your community.
+                Every feature designed to get you off your phone and onto the field.
               </p>
             </div>
 
@@ -250,25 +220,25 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
               <CardContent className="p-8">
                 <div className="flex flex-col md:flex-row items-center justify-center gap-8 text-left">
                   <div className="w-20 h-20 bg-gradient-to-br from-primary/20 to-orange-400/20 rounded-3xl flex items-center justify-center flex-shrink-0 shadow-xl">
-                    {useCases[currentUseCase].icon}
+                    {features[currentFeature].icon}
                   </div>
                   <div className="flex-1">
                     <h3 className="text-2xl md:text-3xl font-semibold text-slate-50 mb-3">
-                      {useCases[currentUseCase].title}
+                      {features[currentFeature].title}
                     </h3>
                     <p className="text-slate-300 text-lg leading-relaxed">
-                      {useCases[currentUseCase].description}
+                      {features[currentFeature].description}
                     </p>
                   </div>
                 </div>
                 
                 <div className="flex justify-center space-x-3 mt-10">
-                  {useCases.map((_, index) => (
+                  {features.map((_, index) => (
                     <button
                       key={index}
-                      onClick={() => setCurrentUseCase(index)}
+                      onClick={() => setCurrentFeature(index)}
                       className={`h-3 rounded-full transition-all duration-300 ${
-                        index === currentUseCase 
+                        index === currentFeature 
                           ? 'bg-primary w-8 shadow-lg' 
                           : 'bg-slate-600 w-3 hover:bg-slate-500'
                       }`}
@@ -284,10 +254,10 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
             <Card className="glass-surface border-white/15 bg-gradient-to-r from-white/5 to-primary/5">
               <CardContent className="p-12">
                 <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                  Ready to find your crowd?
+                  Ready to level up your game?
                 </h2>
                 <p className="text-lg text-slate-300 mb-8 max-w-2xl mx-auto">
-                  Join thousands of members who've already discovered the easiest way to find, create, and join local events.
+                  Join thousands of players who've already discovered the easiest way to find, create, and join pickup games in their neighborhood.
                 </p>
                 <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
                   <Button onClick={onGetStarted} size="lg" className="h-16 px-12 text-xl font-bold bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 rounded-full shadow-xl transition-all duration-300 transform hover:scale-105">
@@ -309,7 +279,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
           <div className="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-8 text-slate-400 text-sm">
             <div className="flex items-center space-x-2">
               <Heart className="w-4 h-4 text-red-400" />
-              <span>Made with love for local communities</span>
+              <span>Made with love for the sports community</span>
             </div>
             <div className="flex items-center space-x-6">
               <span>© 2024 Huddle. All rights reserved.</span>
