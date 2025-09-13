@@ -1,14 +1,53 @@
-\`\`\`
+# Git Commands for Huddle Project
+
+## Standard Development Workflow
+```bash
+# Add all changes
 git add .
-git commit -m ""
+
+# Commit with descriptive message
+git commit -m "fix: resolve Next.js 15 authentication compatibility issues"
+
+# Push to main branch
 git push origin main
-\`\`\`
+```
+
+## Common Git Operations
+```bash
+# Pull latest changes
 git pull origin main
-git checkout -b new-feature
-git merge new-feature
 
+# Create and switch to new feature branch
+git checkout -b feature/new-functionality
 
-git branch -m feat/ui-redesign-pages master
-git fetch origin
-git branch -u origin/master master
-git remote set-head origin -a
+# Merge feature branch (after switching to main)
+git merge feature/new-functionality
+
+# Check current status
+git status
+
+# View commit history
+git log --oneline
+
+# View differences
+git diff
+```
+
+## Recent Commits (September 12, 2025)
+- ✅ Authentication system: Next.js 15 compatibility fixes
+- ✅ Firebase Admin SDK: Modular imports and initialization
+- ✅ RSVP system: Complete implementation with UI states
+- ✅ API endpoints: Added missing user profile endpoint
+- ✅ Documentation: Updated all project docs to reflect stable state
+
+## Branch Management
+```bash
+# View all branches
+git branch -a
+
+# Switch to main branch
+git checkout main
+
+# Delete merged feature branch
+git branch -d feature/branch-name
+```

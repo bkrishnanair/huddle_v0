@@ -3,7 +3,7 @@
 import "server-only"; // Ensures this module is never imported into a client component.
 
 import { cookies } from "next/headers";
-import { admin } from "./firebase-admin";
+import { adminAuth } from "./firebase-admin";
 
 /**
  * getServerCurrentUser (Server-Side)
@@ -11,12 +11,17 @@ import { admin } from "./firebase-admin";
  * This is the correct way to handle authentication in Next.js API Routes and Server Components.
  */
 export const getServerCurrentUser = async () => {
-  const sessionCookie = cookies().get("session")?.value;
+  const sessionCookie = (await cookies()).get("session")?.value;
   if (!sessionCookie) return null;
 
   try {
+    if (!adminAuth) {
+      console.error("Firebase Admin Auth not initialized");
+      return null;
+    }
+    
     // Use the Firebase Admin SDK to verify the cookie and get user details.
-    const decodedIdToken = await admin.auth().verifySessionCookie(sessionCookie, true);
+    const decodedIdToken = await adminAuth.verifySessionCookie(sessionCookie, true);
     return decodedIdToken;
   } catch (error) {
     console.error("Error verifying session cookie:", error);

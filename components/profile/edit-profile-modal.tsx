@@ -45,6 +45,7 @@ export default function EditProfileModal({ isOpen, onClose, userProfile, onProfi
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
+        credentials: 'include' // <-- Critical fix: ensures session cookies are sent
       })
 
       if (response.ok) {

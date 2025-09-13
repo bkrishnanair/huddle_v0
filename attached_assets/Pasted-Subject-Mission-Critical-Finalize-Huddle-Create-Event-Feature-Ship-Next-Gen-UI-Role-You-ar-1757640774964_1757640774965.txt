@@ -1,0 +1,86 @@
+Subject: Mission Critical: Finalize Huddle "Create Event" Feature & Ship Next-Gen UI
+
+Role: You are an expert full-stack lead architect and senior developer. Your expertise is in Next.js (App Router), TypeScript, React 18, Firebase (Admin SDK, Auth, Firestore), and the modern Google Maps Places API.
+
+Mission: You are joining the Huddle project at a pivotal moment. The application has just been stabilized after a complex and difficult debugging phase. Your mission is to resolve the final known bug, harden the UI, and implement the next set of critical features to prepare the application for its next release.
+
+Your first steps are to get the environment running correctly.
+
+Checkout the Correct Branch: The main branch is outdated. All recent, critical fixes are on an isolated branch. Start by running:
+git checkout isolated_changes_rep
+
+
+
+Install Dependencies: This project uses pnpm. There were previous dependency conflicts with React 19, which have been resolved in the package.json on this branch. Run:
+pnpm install
+
+
+
+Verify Environment Variables: I have provided a complete .env.local file with all necessary API keys for Firebase, Google Maps, and Gemini.
+CRITICAL: Before you start the app, verify the formatting of the FIREBASE_PRIVATE_KEY. It is a multi-line key and must be enclosed in double quotes (") with \n characters representing the newlines. Incorrect formatting will cause the server to crash silently.
+Start the Application: Run the development server:
+pnpm run dev
+
+
+
+Understanding the debugging journey is crucial to avoiding past mistakes.
+
+Initial State: The application was completely broken. Users could not create events due to a cascade of 500 Internal Server Errors, 401 Authentication Failures, client-side crashes (React 19), and UI bugs.
+The Painful Journey: Initial fixes failed because they treated symptoms, not the root cause. We chased UI bugs while the server was unstable and addressed dependency issues without realizing the core server configuration was broken.
+The Breakthrough: We achieved stability with a backend-first approach. The root cause was an incorrectly formatted FIREBASE_PRIVATE_KEY in the environment variables, which prevented the Firebase Admin SDK from initializing. Fixing this resolved all 500 errors.
+The isolated_changes_rep Branch: This branch contains the results of a massive stabilization effort:
+✅ Backend Resurrected: The Firebase Admin SDK now initializes correctly.
+✅ Authentication Overhauled: The original, insecure auth logic was replaced. We now use a robust, server-side verifySession function with secure, HttpOnly __session cookies. This is the new standard for all protected API routes.
+✅ Build System Tamed: We won a war against misleading build errors caused by import typos, incorrect exports, and a case-sensitivity issue in the CreateEventModal.tsx filename. The build is now stable.
+Despite all these fixes, one critical bug remains. As shown in the provided screenshot, when a user submits the "Create Event" form, they see the error: "Error: Authentication required: No session cookie found."
+
+Root Cause Analysis: The server-side authentication is now working perfectly—it is correctly protecting the API endpoint. The bug is now purely on the client-side: the fetch request being sent from the browser is failing to include the authentication cookie.
+
+Execute these tasks in the precise order given. Do not move to the next task until the previous one is complete and verified.
+
+Task 1: Definitive "Create Event" Fix (Highest Priority)
+
+Objective: Fix the missing session cookie to make the "Create Event" feature fully functional.
+File: components/CreateEventModal.tsx
+Instructions:
+Locate the handleSubmit function and the fetch call to /api/events.
+In the fetch options object, add the property: credentials: 'include'. This is the critical one-line change that will instruct the browser to send the session cookie with the request.
+Verification: After this change, the form submission must succeed. Log in, create an event, and use the browser's Network tab to confirm the POST /api/events request includes a Cookie header and receives a 201 Created response.
+Task 2: Harden the Location Search Component
+
+Objective: The location-search.tsx component has been a recurring source of bugs. Make it production-proof and deliver a flawless user experience.
+File: components/location-search.tsx
+Instructions:
+Keyboard Accessibility: Implement full keyboard navigation (up/down arrows to select, "Enter" to confirm a selection).
+Touch Reliability: Ensure selection on mobile devices is reliable and intuitive.
+Debounce Input: Wrap the Google Places API call in a debounce function to prevent excessive API usage and improve performance.
+Add a Clear Button: Implement an "X" icon to let users easily clear their search.
+Task 3: Implement Google Sign-In
+
+Objective: Enable user-friendly Google account authentication.
+Files: lib/auth.ts, components/auth-screen.tsx
+External Services: You may need to verify in the Firebase Console that the "Google" sign-in provider is enabled.
+Instructions:
+Implement a signInWithGoogle function in lib/auth.ts using signInWithPopup from the Firebase SDK.
+Add a "Sign in with Google" button to auth-screen.tsx and connect it to your new function.
+Ensure a new user document is created in Firestore upon their first Google sign-in.
+Task 4: Enable AI-Powered Content Generation
+
+Objective: Wire up the "Generate with AI" button using the Gemini API.
+Files: components/CreateEventModal.tsx, create a new API route at app/api/ai/generate-copy/route.ts.
+Instructions:
+Create the new API route. It should accept a POST request with the event's sport and location.
+In the new route, use the Google Generative AI SDK (powered by the GEMINI_API_KEY in .env.local) to craft a prompt that generates a creative title and description.
+Connect the "Generate with AI" button in the modal to call this endpoint and populate the form fields with the response.
+After completing all coding tasks, you must document your work and prepare the branch for review.
+
+Update Documentation: Thoroughly update the following files to reflect the new features and stable state of the application:
+README.md (Do not touch the "Screenshots" section).
+README Team.md
+replit.md
+All relevant files in the /my folder directory.
+Provide a Summary of Changes: Write a detailed summary covering:
+Architectural Decisions: Why you chose specific solutions.
+Key File Changes: A list of the most important files you modified.
+Problems Solved: A clear before-and-after of the issues you fixed.
+Commit Your Work: Commit all your changes to the current branch (isolated_changes_rep). Do not push to main or master. Create a comprehensive commit message that summarizes the entire effort.
