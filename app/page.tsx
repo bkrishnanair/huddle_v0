@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/firebase-context"
 import LandingPage from "@/components/landing-page"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
@@ -12,14 +12,15 @@ export default function Home() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const router = useRouter()
 
-  if (user) {
-    router.push("/discover")
-    return null
-  }
+  useEffect(() => {
+    if (user) {
+      router.push("/map") // Changed redirect to the map page
+    }
+  }, [user, router])
 
   if (error) {
     return (
-      <div className="min-h-screen liquid-gradient flex items-center justify-center p-4 text-white">
+      <div className="min-h-screen flex items-center justify-center p-4 text-white">
         <div className="text-center max-w-md glass-card p-8 rounded-2xl">
           <h1 className="text-2xl font-bold mb-4">Firebase Error</h1>
           <p className="mb-6">{error}</p>
@@ -28,9 +29,9 @@ export default function Home() {
     )
   }
 
-  if (loading) {
+  if (loading || user) {
     return (
-      <div className="min-h-screen liquid-gradient flex items-center justify-center text-white">
+      <div className="min-h-screen flex items-center justify-center text-white">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
           <p>Connecting...</p>
