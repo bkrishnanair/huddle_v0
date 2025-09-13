@@ -1,116 +1,85 @@
 "use client"
-import React, { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Users, Loader2 } from "lucide-react";
 
-interface GameEvent {
-  id: string;
-  title: string;
-  sport: string;
-  location: string;
-  date: string;
-  time: string;
-  maxPlayers: number;
-  currentPlayers: number;
-}
+import { useEffect, useState } from "react"
+import { HuddleEvent } from "@/lib/types"
+import { EventCard } from "@/components/events/event-card"
+import { Loader2, AlertCircle } from "lucide-react"
 
 interface EventListProps {
-  userId: string;
-  eventType: 'organized' | 'joined';
+  userId: string
+  eventType: "organized" | "participated"
 }
 
 export function EventList({ userId, eventType }: EventListProps) {
-  const [events, setEvents] = useState<GameEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [events, setEvents] = useState<HuddleEvent[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchEvents = async () => {
-      setLoading(true);
-      setError(null);
+      setIsLoading(true)
+      setError(null)
       try {
-        const response = await fetch(`/api/users/${userId}/events?type=${eventType}`);
+        const response = await fetch(`/api/users/${userId}/events?type=${eventType}`, { credentials: 'include' });
+        
         if (!response.ok) {
-          throw new Error(`Failed to fetch events with status: ${response.status}`);
+          throw new Error(`Failed to fetch events with status: ${response.status}`)
         }
-        const data = await response.json();
-        setEvents(data.events || []);
-      } catch (err: any) {
-        setError(err.message);
-        console.error(`Error fetching ${eventType} events:`, err);
+
+        const data = await response.json()
+        setEvents(data.events)
+      } catch (err) {
+        console.error(`Error fetching ${eventType} events:`, err)
+        setError(err instanceof Error ? err.message : "An unknown error occurred")
       } finally {
-        setLoading(false);
+        setIsLoading(false)
       }
-    };
+    }
 
     if (userId) {
-      fetchEvents();
+      fetchEvents()
     }
-  }, [userId, eventType]);
+  }, [userId, eventType])
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center py-8">
-        <Loader2 className="w-8 h-8 text-white/50 animate-spin" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
-    );
+    )
   }
 
   if (error) {
     return (
-      <div className="text-center py-8 text-red-400">
-        <p>Error loading events: {error}</p>
+      <div className="flex flex-col items-center justify-center py-8 text-center glass-surface rounded-lg p-4">
+        <AlertCircle className="w-10 h-10 text-destructive mb-3" />
+        <p className="font-semibold text-lg mb-1">Could not load events</p>
+        <p className="text-sm text-slate-400">{error}</p>
       </div>
-    );
+    )
   }
-
-  const emptyStateMessage = eventType === 'organized'
-    ? "You haven't organized any events yet."
-    : "You haven't joined any events yet.";
 
   if (events.length === 0) {
     return (
-      <div className="text-center py-8">
-        <Calendar className="w-12 h-12 text-white/30 mx-auto mb-4" />
-        <p className="text-white/70">{emptyStateMessage}</p>
+      <div className="text-center py-8 glass-surface rounded-lg p-4">
+        <p className="text-slate-400">
+          {eventType === "organized"
+            ? "You haven't organized any events yet."
+            : "You haven't joined any events yet."}
+        </p>
       </div>
-    );
+    )
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {events.map((event) => (
-        <Card key={event.id} className="bg-white/10 rounded-lg p-4">
-          <CardContent className="p-0">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-medium text-white">{event.title}</h3>
-              <span className="text-xs bg-blue-500/30 text-blue-200 px-2 py-1 rounded">
-                {event.sport}
-              </span>
-            </div>
-            <div className="flex items-center space-x-4 text-sm text-white/70">
-              <div className="flex items-center space-x-1">
-                <Calendar className="w-3 h-3" />
-                <span>{formatDate(event.date)}</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <Users className="w-3 h-3" />
-                <span>
-                  {event.currentPlayers}/{event.maxPlayers}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <EventCard 
+          key={event.id} 
+          event={event} 
+          onSelectEvent={() => {}} // FIX: Provide the required onSelectEvent prop
+        />
       ))}
     </div>
-  );
+  )
 }

@@ -1,7 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Allow all origins for Replit proxy environment
-  allowedDevOrigins: ['*'],
+  // Explicitly allow the development workspace URL to make cross-origin requests
+  allowedDevOrigins: [
+    'https://3000-firebase-huddlev0git-1754958256415.cluster-wfwbjypkvnfkaqiqzlu3ikwjhe.cloudworkstations.dev',
+    '*' // Keep the wildcard for other environments like Replit
+  ],
   eslint: {
     ignoreDuringBuilds: true,
   },

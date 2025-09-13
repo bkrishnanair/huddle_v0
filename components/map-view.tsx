@@ -3,27 +3,31 @@
 import { useEffect, useState, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Chip } from "@/components/ui/chip"
-import { Plus, MapPin, LocateFixed, AlertCircle } from "lucide-react"
+import { Plus, MapPin, LocateFixed, AlertCircle, Loader2 } from "lucide-react"
 import EventDetailsDrawer from "./event-details-drawer"
 import CreateEventModal from "./create-event-modal"
-import { APIProvider, Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps"
+import { APIProvider, Map, AdvancedMarker, Pin, useMap } from "@vis.gl/react-google-maps"
 import { HuddleEvent } from "@/lib/types"
 
 interface MapViewProps {
   user: any
 }
 
+const MapRenderer = ({ onMapLoad, children }: { onMapLoad: (map: google.maps.Map) => void, children: React.ReactNode }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (map) {
+      onMapLoad(map);
+    }
+  }, [map, onMapLoad]);
+  return <>{children}</>;
+}
+
 const getCategoryColor = (category: string): string => {
   const colors: { [key: string]: string } = {
-    Sports: "#f97316",
-    Music: "#22c55e",
-    Community: "#eab308",
-    Learning: "#dc2626",
-    "Food & Drink": "#8b5cf6",
-    Tech: "#06b6d4",
-    "Arts & Culture": "#ec4899",
-    Outdoors: "#10b981",
-    default: "#ef4444",
+    Sports: "#f97316", Music: "#22c55e", Community: "#eab308", Learning: "#dc2626",
+    "Food & Drink": "#8b5cf6", Tech: "#06b6d4", "Arts & Culture": "#ec4899",
+    Outdoors: "#10b981", default: "#ef4444",
   }
   return colors[category] || colors.default
 }
@@ -35,13 +39,11 @@ export default function MapView({ user }: MapViewProps) {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 37.7749, lng: -122.4194 })
   const [map, setMap] = useState<google.maps.Map | null>(null)
-
   const [activeCategory, setActiveCategory] = useState("All");
 
-  const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID;
-  const darkMapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID;
-  
+  const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID;
+
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -56,14 +58,6 @@ export default function MapView({ user }: MapViewProps) {
     )
   }, [])
   
-  useEffect(() => {
-    if (map) {
-      map.setOptions({
-        mapId: darkMapId,
-      });
-    }
-  }, [map, darkMapId]);
-
   const fetchEventsInView = useCallback(async () => {
     if (!map) return;
     const bounds = map.getBounds();
@@ -73,7 +67,7 @@ export default function MapView({ user }: MapViewProps) {
     const radius = google.maps.geometry.spherical.computeDistanceBetween(center, ne);
     
     try {
-      const response = await fetch(`/api/events?lat=${center.lat()}&lon=${center.lng()}&radius=${radius}`);
+      const response = await fetch(`/api/events?lat=${center.lat()}&lon=${center.lng()}&radius=${radius}`, { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         setEvents(data.events || []);
@@ -83,16 +77,10 @@ export default function MapView({ user }: MapViewProps) {
     }
   }, [map]);
 
-  useEffect(() => {
-    if (map) {
-        fetchEventsInView();
-    }
-  }, [map, fetchEventsInView]);
-  
   const handleRecenter = useCallback(() => {
     if (userLocation && map) {
-      map.panTo(userLocation)
-      map.setZoom(17)
+      map.panTo(userLocation);
+      map.setZoom(18);
     }
   }, [userLocation, map]);
 
@@ -103,62 +91,57 @@ export default function MapView({ user }: MapViewProps) {
 
   if (!mapsApiKey) {
     return (
-        <div className="min-h-screen liquid-gradient flex items-center justify-center p-4">
-          <div className="text-center max-w-md space-y-4">
-            <div className="glass-surface rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-              <AlertCircle className="w-8 h-8 text-rose-400" />
+        <div className="min-h-screen liquid-gradient flex items-center justify-center p-4 text-center">
+            <div className="glass-surface rounded-lg p-6">
+                <AlertCircle className="w-8 h-8 text-rose-400 mx-auto mb-4" />
+                <h1 className="text-xl font-bold text-slate-50 mb-2">Maps Configuration Error</h1>
+                <p className="text-slate-300">Google Maps API key is missing. Please check your environment variables.</p>
             </div>
-            <h1 className="text-2xl font-bold text-slate-50 mb-4 drop-shadow-lg">Maps Configuration Error</h1>
-            <p className="text-slate-300 mb-6 drop-shadow">Google Maps API key is missing.</p>
-          </div>
         </div>
-    )
+    );
   }
 
   if (!userLocation) {
     return (
-      <div className="min-h-screen liquid-gradient flex items-center justify-center">
-        <div className="text-center">
-          <div className="glass-surface rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-            <MapPin className="w-8 h-8 text-slate-50" />
-          </div>
-          <p className="text-slate-300 drop-shadow">Getting your location...</p>
+      <div className="min-h-screen liquid-gradient flex items-center justify-center text-center">
+         <div className="glass-surface rounded-lg p-6">
+            <Loader2 className="w-8 h-8 text-slate-50 animate-spin mx-auto mb-4" />
+            <p className="text-slate-300">Getting Location...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="h-screen flex flex-col liquid-gradient" id="map-view">
       <div className="flex-1 relative">
-        <APIProvider apiKey={mapsApiKey}>
+        <APIProvider apiKey={mapsApiKey} libraries={['geometry']}>
            <Map
-            onLoad={(map) => setMap(map)}
-            defaultCenter={mapCenter}
-            defaultZoom={17}
-            className="w-full h-full"
             onIdle={fetchEventsInView}
-            options={{
-              disableDefaultUI: true,
-              gestureHandling: "greedy",
-              tilt: 45,
-              mapId: mapId,
-            }}
+            defaultCenter={mapCenter}
+            defaultZoom={18}
+            className="w-full h-full"
+            gestureHandling={"greedy"}
+            disableDefaultUI={true}
+            mapId={mapId}
+            tilt={40} // <-- FIX: Added the tilt property for a 3D view
           >
-            {userLocation && <AdvancedMarker position={userLocation} />}
-            {filteredEvents.map((event) => (
-              <AdvancedMarker
-                key={event.id}
-                position={{ lat: event.geopoint.latitude, lng: event.geopoint.longitude }}
-                onClick={() => setSelectedEvent(event)}
-              >
-                <Pin
-                  background={getCategoryColor(event.category)}
-                  borderColor={event.isBoosted ? "#fbbf24" : "#ffffff"}
-                  glyphColor="#ffffff"
-                />
-              </AdvancedMarker>
-            ))}
+            <MapRenderer onMapLoad={setMap}>
+              {map && (
+                <>
+                  {userLocation && <AdvancedMarker position={userLocation} />}
+                  {filteredEvents.map((event: HuddleEvent) => (
+                    <AdvancedMarker
+                      key={event.id}
+                      position={{ lat: event.geopoint.latitude, lng: event.geopoint.longitude }}
+                      onClick={() => setSelectedEvent(event)}
+                    >
+                      <Pin background={getCategoryColor(event.category)} borderColor={event.isBoosted ? "#fbbf24" : "#ffffff"} glyphColor="#ffffff" />
+                    </AdvancedMarker>
+                  ))}
+                </>
+              )}
+            </MapRenderer>
           </Map>
         </APIProvider>
 
@@ -168,46 +151,20 @@ export default function MapView({ user }: MapViewProps) {
                 <Chip isActive={activeCategory === 'Sports'} onClick={() => setActiveCategory('Sports')}>Sports</Chip>
                 <Chip isActive={activeCategory === 'Music'} onClick={() => setActiveCategory('Music')}>Music</Chip>
                 <Chip isActive={activeCategory === 'Community'} onClick={() => setActiveCategory('Community')}>Community</Chip>
-
             </div>
         </div>
 
-        <Button
-            id="create-event-button"
-            onClick={() => setShowCreateModal(true)}
-            size="lg"
-            className="absolute bottom-44 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg"
-        >
+        <Button id="create-event-button" onClick={() => setShowCreateModal(true)} size="lg" className="absolute bottom-44 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg">
             <Plus className="w-6 h-6" />
         </Button>
 
-        <Button
-            onClick={handleRecenter}
-            variant="secondary"
-            size="lg"
-            className="absolute bottom-28 right-6 h-14 w-14 rounded-full shadow-lg"
-        >
+        <Button onClick={handleRecenter} variant="secondary" size="lg" className="absolute bottom-28 right-6 h-14 w-14 rounded-full shadow-lg">
             <LocateFixed className="w-6 h-6" />
         </Button>
       </div>
 
-      {selectedEvent && (
-        <EventDetailsDrawer
-          event={selectedEvent}
-          isOpen={!!selectedEvent}
-          onClose={() => setSelectedEvent(null)}
-          onEventUpdated={() => {}}
-        />
-      )}
-
-      {showCreateModal && (
-        <CreateEventModal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onEventCreated={() => {}}
-          userLocation={userLocation}
-        />
-      )}
+      {selectedEvent && <EventDetailsDrawer event={selectedEvent} isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} onEventUpdated={() => {}} />}
+      {showCreateModal && <CreateEventModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onEventCreated={() => {}} userLocation={userLocation} />}
     </div>
   )
 }
