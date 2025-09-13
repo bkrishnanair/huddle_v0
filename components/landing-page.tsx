@@ -312,7 +312,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
               <span>Made with love for local communities</span>
             </div>
             <div className="flex items-center space-x-6">
-              <span>© 2024 Huddle. All rights reserved.</span>
+              <span>© 2025 Huddle. All rights reserved.</span>
               <span className="hidden sm:inline">•</span>
               <a href="#" className="hover:text-slate-300 transition-colors">Privacy Policy</a>
               <span className="hidden sm:inline">•</span>
