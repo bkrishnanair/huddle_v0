@@ -3,12 +3,8 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  DialogDescription, DialogFooter,
 } from "@/components/ui/dialog"
 import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps"
 import { Button } from "@/components/ui/button"
@@ -20,7 +16,6 @@ import { Rocket, Loader2 } from "lucide-react"
 import LocationSearchInput from "./location-search"
 import AIGenerateButton from "./ai-generate-button"
 import AISuggestionsList from "./ai-suggestions-list"
-import { useFirebase } from "@/lib/firebase-context"
 import { toast } from "sonner"
 
 interface CreateEventModalProps {
@@ -37,20 +32,18 @@ const CATEGORIES = [
 export default function CreateEventModal({ isOpen, onClose, onEventCreated, userLocation }: CreateEventModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
-    name: "",
-    category: "",
-    tags: [],
-    location: "",
-    date: "",
-    time: "",
-    maxPlayers: 10,
-    description: "",
+    name: "", category: "", tags: [], location: "",
+    date: "", time: "", maxPlayers: 10, description: "",
   })
   const [isAiLoading, setIsAiLoading] = useState(false)
   const [suggestions, setSuggestions] = useState([])
   const [boostEvent, setBoostEvent] = useState(false)
   const [mapCenter, setMapCenter] = useState(userLocation || { lat: 37.7749, lng: -122.4194 })
   const [markerPosition, setMarkerPosition] = useState(userLocation || { lat: 37.7749, lng: -122.4194 })
+  
+  const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  // Use the styled map ID for dark mode consistency
+  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID;
 
   useEffect(() => {
     if (isOpen && userLocation) {
@@ -120,72 +113,85 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         </DialogHeader>
         
         <div className="flex-1 overflow-y-auto no-scrollbar px-6">
-          <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY as string}>
-            <form id="event-form" onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="name">Event Title</Label>
-                <Input id="name" placeholder="e.g., Community Workshop" value={formData.name} onChange={(e) => handleInputChange("name", e.target.value)} required />
-              </div>
+          <form id="event-form" onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="name">Event Title</Label>
+              <Input id="name" placeholder="e.g., Community Workshop" value={formData.name} onChange={(e) => handleInputChange("name", e.target.value)} required />
+            </div>
 
-              <AIGenerateButton onClick={() => {}} isLoading={isAiLoading} />
-              <AISuggestionsList suggestions={suggestions} onSelect={() => {}} />
+            <AIGenerateButton onClick={() => {}} isLoading={isAiLoading} />
+            <AISuggestionsList suggestions={suggestions} onSelect={() => {}} />
 
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Input id="description" placeholder="A short and friendly description" value={formData.description} onChange={(e) => handleInputChange("description", e.target.value)} />
-              </div>
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Input id="description" placeholder="A short and friendly description" value={formData.description} onChange={(e) => handleInputChange("description", e.target.value)} />
+            </div>
 
-              <div>
-                <Label htmlFor="category">Category</Label>
-                <Select required value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
-                  <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
-                  <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label htmlFor="category">Category</Label>
+              <Select required value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
+                <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
+                <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
 
-              <div>
-                <Label htmlFor="location-search">Location</Label>
-                <LocationSearchInput onPlaceSelect={handlePlaceSelect} />
-                <div className="h-48 w-full rounded-lg overflow-hidden relative mt-2 border border-border">
-                  <Map defaultCenter={mapCenter} center={mapCenter} defaultZoom={15} gestureHandling={"greedy"} disableDefaultUI={true} mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID}>
-                    <AdvancedMarker position={markerPosition} draggable={true} onDragEnd={(e) => setMarkerPosition({ lat: e.latLng!.lat(), lng: e.latLng!.lng() })} />
-                  </Map>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                  <div>
-                      <Label htmlFor="date">Date</Label>
-                      <Input id="date" type="date" value={formData.date} onChange={(e) => handleInputChange("date", e.target.value)} required />
+            <div>
+              <Label htmlFor="location-search">Location</Label>
+              {mapsApiKey ? (
+                <APIProvider apiKey={mapsApiKey}>
+                  <LocationSearchInput onPlaceSelect={handlePlaceSelect} />
+                  <div className="h-48 w-full rounded-lg overflow-hidden relative mt-2 border border-border">
+                    <Map 
+                      defaultCenter={mapCenter} 
+                      center={mapCenter} 
+                      defaultZoom={15} 
+                      gestureHandling={"greedy"} 
+                      disableDefaultUI={true}
+                      mapId={mapId}
+                    >
+                      <AdvancedMarker position={markerPosition} draggable={true} onDragEnd={(e) => setMarkerPosition({ lat: e.latLng!.lat(), lng: e.latLng!.lng() })} />
+                    </Map>
                   </div>
-                  <div>
-                      <Label htmlFor="time">Time</Label>
-                      <Input id="time" type="time" value={formData.time} onChange={(e) => handleInputChange("time", e.target.value)} required />
-                  </div>
-              </div>
-
-              <div>
-                <Label htmlFor="maxPlayers">Number of Attendees</Label>
-                <Select value={String(formData.maxPlayers)} onValueChange={(v) => handleInputChange("maxPlayers", Number(v))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{Array.from({ length: 49 }, (_, i) => i + 2).map(n => <SelectItem key={n} value={String(n)}>{n} attendees</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-4 pt-4 border-t border-border">
-                <div className="flex items-center justify-between p-4 rounded-lg bg-white/5">
-                    <div>
-                        <Label htmlFor="boost" className="font-bold flex items-center gap-2">
-                            <Rocket className="w-5 h-5 text-yellow-400" />
-                            Boost Event
-                        </Label>
-                        <p className="text-sm text-slate-400 mt-1">Get your event featured to attract more attendees.</p>
-                    </div>
-                    <Switch id="boost" checked={boostEvent} onCheckedChange={setBoostEvent} />
+                </APIProvider>
+              ) : (
+                <div className="h-48 w-full rounded-lg mt-2 border border-border flex items-center justify-center text-center bg-slate-800/50">
+                    <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading Map...
                 </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <Label htmlFor="date">Date</Label>
+                    <Input id="date" type="date" value={formData.date} onChange={(e) => handleInputChange("date", e.target.value)} required />
+                </div>
+                <div>
+                    <Label htmlFor="time">Time</Label>
+                    <Input id="time" type="time" value={formData.time} onChange={(e) => handleInputChange("time", e.target.value)} required />
+                </div>
+            </div>
+
+            <div>
+              <Label htmlFor="maxPlayers">Number of Attendees</Label>
+              <Select value={String(formData.maxPlayers)} onValueChange={(v) => handleInputChange("maxPlayers", Number(v))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{Array.from({ length: 49 }, (_, i) => i + 2).map(n => <SelectItem key={n} value={String(n)}>{n} attendees</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-border">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-white/5">
+                  <div>
+                      <Label htmlFor="boost" className="font-bold flex items-center gap-2">
+                          <Rocket className="w-5 h-5 text-yellow-400" />
+                          Boost Event
+                      </Label>
+                      <p className="text-sm text-slate-400 mt-1">Get your event featured to attract more attendees.</p>
+                  </div>
+                  <Switch id="boost" checked={boostEvent} onCheckedChange={setBoostEvent} />
               </div>
-            </form>
-          </APIProvider>
+            </div>
+          </form>
         </div>
 
         <DialogFooter className="p-6 pt-4 bg-slate-900/50 border-t border-border">

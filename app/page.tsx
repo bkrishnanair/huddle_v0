@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/firebase-context"
 import LandingPage from "@/components/landing-page"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
@@ -12,10 +12,11 @@ export default function Home() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const router = useRouter()
 
-  if (user) {
-    router.push("/discover")
-    return null
-  }
+  useEffect(() => {
+    if (user) {
+      router.push("/map") // Changed redirect to the map page
+    }
+  }, [user, router])
 
   if (error) {
     return (
@@ -28,7 +29,7 @@ export default function Home() {
     )
   }
 
-  if (loading) {
+  if (loading || user) {
     return (
       <div className="min-h-screen flex items-center justify-center text-white">
         <div className="text-center">
