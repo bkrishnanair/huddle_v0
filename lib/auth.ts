@@ -3,7 +3,8 @@
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   signOut,
   type User,
@@ -15,11 +16,10 @@ const googleProvider = new GoogleAuthProvider();
 
 // These functions are designed to be called only in the browser.
 
-export const signUpWithEmail = async (email: string, password: string, name: string) => {
+export const signUpWithEmail = async (email: string, password:string, name: string) => {
   if (!auth) throw new Error("Firebase Auth is not initialized on the client.");
   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
   const user = userCredential.user;
-  // Use the more specific createUser function from db.ts
   await createUser(user.uid, { email: user.email!, name });
   return { uid: user.uid, email: user.email!, name };
 };
@@ -30,30 +30,30 @@ export const signInWithEmail = async (email: string, password: string) => {
     return userCredential.user;
 };
 
-// SOCIAL LOGIN: This is the new function for handling Google Sign-In.
+// SOCIAL LOGIN: This function INITIATES the redirect flow.
 export const signInWithGoogle = async () => {
   if (!auth) throw new Error("Firebase Auth is not initialized on the client.");
-  
-  // 1. Trigger the Google Sign-In popup.
-  const result = await signInWithPopup(auth, googleProvider);
-  const user = result.user;
-
-  // 2. Check if the user already exists in our Firestore 'users' collection.
-  const userProfile = await getUser(user.uid);
-
-  // 3. If the user is new (no profile exists), create a new document for them.
-  if (!userProfile) {
-    await createUser(user.uid, {
-      email: user.email!,
-      name: user.displayName || user.email?.split('@')[0] || 'New User',
-      photoURL: user.photoURL || null,
-    });
-  }
-
-  // 4. Return the user object for the application to use.
-  return user;
+  await signInWithRedirect(auth, googleProvider);
 };
 
+// This function HANDLES the result after the user is redirected back to the app.
+export const handleGoogleRedirectResult = async () => {
+    if (!auth) throw new Error("Firebase Auth is not initialized on the client.");
+    const result = await getRedirectResult(auth);
+    if (result) {
+        const user = result.user;
+        const userProfile = await getUser(user.uid);
+        if (!userProfile) {
+            await createUser(user.uid, {
+                email: user.email!,
+                name: user.displayName || user.email?.split('@')[0] || 'New User',
+                photoURL: user.photoURL || null,
+            });
+        }
+        return user;
+    }
+    return null;
+};
 
 export const logOut = async () => {
     if (!auth) throw new Error("Firebase Auth is not initialized on the client.");

@@ -9,11 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { signInWithEmail, signUpWithEmail, signInWithGoogle } from "@/lib/auth"
 
 interface AuthScreenProps {
-  onLogin: (user: any) => void
-  onBackToLanding?: () => void
+  onLogin: (user?: any) => void
 }
 
-export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps) {
+export default function AuthScreen({ onLogin }: AuthScreenProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [name, setName] = useState("")
@@ -43,11 +42,10 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
     setIsLoading(true)
     setError(null)
     try {
-      const user = await signInWithGoogle()
-      onLogin(user)
+      await signInWithGoogle()
+      // Redirect is handled by the browser and our LoginPage, so no need to call onLogin here.
     } catch (err: any) {
       setError(err.message)
-    } finally {
       setIsLoading(false)
     }
   }
@@ -61,18 +59,17 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
   }
 
   return (
-    <div className="p-6">
-      {/* Hero Section */}
+    <div className="p-6 glass-card rounded-2xl border border-white/20">
       <div className="text-center mb-8">
-        <h2 className="text-4xl md:text-5xl font-bold text-white mb-3 leading-tight">
-          Stop Searching, Start Playing. <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">Find Your Huddle.</span>
+        <h2 className="text-3xl font-bold text-white mb-2">
+          Find Your Huddle
         </h2>
-        <p className="text-lg text-white/80 max-w-2xl mx-auto leading-relaxed">
-          Discover and join local sports games in real-time. Connect with players, organize events effortlessly, and never miss a moment of the action.
+        <p className="text-md text-white/80">
+          Login or create an account to get started.
         </p>
       </div>
 
-      <Tabs defaultValue="login" className="w-full max-w-sm mx-auto">
+      <Tabs defaultValue="login" className="w-full">
         <TabsList className="grid w-full grid-cols-2 bg-white/10 border border-white/20 rounded-lg p-1 h-auto">
           <TabsTrigger
             value="login"
@@ -95,19 +92,18 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
               className="w-full bg-white/90 text-black hover:bg-white"
               disabled={isLoading}
             >
-              Continue with Google
+              {isLoading ? 'Redirecting...' : 'Continue with Google'}
             </Button>
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t border-white/30" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-transparent px-2 text-white/70">Or continue with email</span>
+                <span className="bg-slate-900/10 px-2 text-white/70 backdrop-blur-sm">Or continue with email</span>
               </div>
             </div>
 
-            {/* Login Tab */}
-            <TabsContent value="login" className="space-y-4">
+            <TabsContent value="login" className="space-y-4 m-0">
               <div className="space-y-2">
                 <Label htmlFor="email-login" className="text-white/90">
                   Email
@@ -136,14 +132,13 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
               <Button
                 onClick={() => handleAuthAction("login")}
                 disabled={isLoading}
-                className="w-full glass-card hover:glow text-white border-white/30"
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white"
               >
                 {isLoading ? "Logging in..." : "Login"}
               </Button>
             </TabsContent>
 
-            {/* Sign Up Tab */}
-            <TabsContent value="signup" className="space-y-4">
+            <TabsContent value="signup" className="space-y-4 m-0">
               <div className="space-y-2">
                 <Label htmlFor="name-signup" className="text-white/90">
                   Name
@@ -184,7 +179,7 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
               <Button
                 onClick={() => handleAuthAction("signup")}
                 disabled={isLoading}
-                className="w-full glass-card hover:glow text-white border-white/30"
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white"
               >
                 {isLoading ? "Creating account..." : "Sign Up"}
               </Button>

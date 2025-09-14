@@ -1,20 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 import { useAuth } from "@/lib/firebase-context"
 import LandingPage from "@/components/landing-page"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
-import AuthScreen from "@/components/auth-screen"
 import { useRouter } from "next/navigation"
 
 export default function Home() {
   const { user, loading, error } = useAuth()
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
     if (user) {
-      router.push("/map") // Changed redirect to the map page
+      router.push("/map")
     }
   }, [user, router])
 
@@ -40,15 +37,5 @@ export default function Home() {
     )
   }
 
-  return (
-    <>
-      <LandingPage onGetStarted={() => setIsAuthModalOpen(true)} />
-
-      <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
-        <DialogContent className="glass-surface border-white/15 bg-slate-900/80 max-w-md p-0 gap-0 rounded-2xl overflow-hidden">
-          <AuthScreen onLogin={() => setIsAuthModalOpen(false)} />
-        </DialogContent>
-      </Dialog>
-    </>
-  )
+  return <LandingPage onGetStarted={() => router.push('/login')} />
 }
