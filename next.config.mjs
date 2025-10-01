@@ -1,10 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Explicitly allow the development workspace URL to make cross-origin requests
+  // Allow Replit proxy domains for development
   allowedDevOrigins: [
-    'https://0dd4122a-03dd-4484-a1c6-e351798ef760-00-6mghnfont0qn.riker.replit.dev',
-    '*' // Keep the wildcard for other environments
+    '*.replit.dev',
+    '*.repl.co',
   ],
+  experimental: {
+    serverActions: {
+      allowedOrigins: [
+        '*.replit.dev',
+        '*.repl.co',
+      ],
+    },
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },
