@@ -2,7 +2,8 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { MapPin, Calendar, Search, User } from "lucide-react"
+import { MapPin, Calendar, Search, User, LogIn } from "lucide-react" // Import LogIn
+import { useFirebase } from "@/lib/firebase-context" // Import useFirebase
 
 const HuddleLogo = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-slate-50">
@@ -12,12 +13,22 @@ const HuddleLogo = () => (
 
 export default function BottomNavigation() {
   const pathname = usePathname()
+  const { isGuest, exitGuestMode } = useFirebase() // Get guest status
+
+  const handleLoginClick = (e: React.MouseEvent) => {
+    e.preventDefault() // Prevent the link from navigating immediately
+    exitGuestMode()
+    // The layout will handle the redirect
+  }
 
   const tabs = [
     { id: "map", label: "Map", icon: MapPin, href: "/map" },
     { id: "discover", label: "Discover", icon: Search, href: "/discover" },
     { id: "my-events", label: "My Events", icon: Calendar, href: "/my-events" },
-    { id: "profile", label: "Profile", icon: User, href: "/profile" },
+    // Conditionally render Profile or Login tab
+    ...(isGuest
+      ? [{ id: "login", label: "Login", icon: LogIn, href: "/", onClick: handleLoginClick }]
+      : [{ id: "profile", label: "Profile", icon: User, href: "/profile" }]),
   ]
 
   return (
@@ -35,6 +46,7 @@ export default function BottomNavigation() {
               key={tab.id}
               id={`${tab.id}-button`}
               href={tab.href}
+              onClick={tab.onClick}
               className={`
                 flex flex-col items-center justify-center w-16 h-16 rounded-2xl
                 transition-colors duration-200

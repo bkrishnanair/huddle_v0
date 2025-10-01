@@ -1,9 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Explicitly allow the development workspace URL to make cross-origin requests
+  // Explicitly allow the development workspace URL for the Next.js dev server
   allowedDevOrigins: [
-    'https://3000-firebase-huddlev0git-1754958256415.cluster-wfwbjypkvnfkaqiqzlu3ikwjhe.cloudworkstations.dev',
-    '*' // Keep the wildcard for other environments like Replit
+    'https://9000-firebase-huddlev0git-1754958256415.cluster-wfwbjypkvnfkaqiqzlu3ikwjhe.cloudworkstations.dev',
   ],
   eslint: {
     ignoreDuringBuilds: true,
@@ -17,4 +16,4 @@ const nextConfig = {
   output: 'standalone',
 }
 
-export default nextConfig
+export default nextConfig;

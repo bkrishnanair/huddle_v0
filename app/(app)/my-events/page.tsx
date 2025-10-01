@@ -6,11 +6,12 @@ import CreateEventModal from "@/components/create-event-modal"
 import { EventList } from "@/components/profile/event-list"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus } from "lucide-react"
+import GuestPrompt from "@/components/guest-prompt" // Import the new component
 
 export default function MyEventsPage() {
-  const { user, loading } = useAuth()
+  const { user, isGuest, loading } = useAuth() // Add isGuest
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [refreshKey, setRefreshKey] = useState(0) // State to trigger re-fetch
+  const [refreshKey, setRefreshKey] = useState(0)
 
   if (loading) {
     return (
@@ -20,7 +21,18 @@ export default function MyEventsPage() {
     )
   }
 
+  // If the user is a guest, show the prompt
+  if (isGuest) {
+    return (
+      <GuestPrompt 
+        title="Track Your Events"
+        message="All the events you organize and join will be listed here. Create an account to start building your sports calendar!"
+      />
+    )
+  }
+
   if (!user) {
+    // This case will be handled by the layout, but as a fallback:
     return (
       <div className="flex justify-center items-center h-screen liquid-gradient">
         <div className="text-white">Please sign in to see your events.</div>
@@ -30,7 +42,7 @@ export default function MyEventsPage() {
   
   const handleEventCreated = () => {
     setShowCreateModal(false);
-    setRefreshKey(prevKey => prevKey + 1); // Increment key to force re-render and re-fetch
+    setRefreshKey(prevKey => prevKey + 1);
   };
 
   return (

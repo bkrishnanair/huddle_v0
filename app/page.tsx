@@ -1,52 +1,66 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/lib/firebase-context"
 import LandingPage from "@/components/landing-page"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
 import AuthScreen from "@/components/auth-screen"
-import { useRouter } from "next/navigation"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 
-export default function Home() {
-  const { user, loading, error } = useAuth()
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+export default function HomePage() {
+  const { user, isGuest, loading } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  const isAuthModalOpen = searchParams.get("auth") === "true"
 
   useEffect(() => {
-    if (user) {
-      router.push("/map") // Changed redirect to the map page
+    // This hook redirects users who should not be on the landing page.
+    if (!loading && (user || isGuest)) {
+      router.push("/discover")
     }
-  }, [user, router])
+  }, [user, isGuest, loading, router])
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 text-white">
-        <div className="text-center max-w-md glass-card p-8 rounded-2xl">
-          <h1 className="text-2xl font-bold mb-4">Firebase Error</h1>
-          <p className="mb-6">{error}</p>
-        </div>
-      </div>
-    )
+  const handleModalOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      router.push("/")
+    }
   }
 
-  if (loading || user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-white">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p>Connecting...</p>
-        </div>
-      </div>
-    )
+  const handleLogin = (loggedInUser: any) => {
+    // The context sets the state, and the useEffect above handles the redirect.
+    // We just close the modal by clearing the URL parameter.
+    router.push("/")
   }
 
+  // THIS IS THE DEFINITIVE FIX:
+  // Show the loader if:
+  // 1. We are doing the initial check (loading is true).
+  // 2. The check is done, BUT the user is logged in or a guest (a redirect is imminent).
+  // This prevents the LandingPage from rendering for even a single frame.
+  if (loading || (!loading && (user || isGuest))) {
+    return <div className="min-h-screen liquid-gradient" />
+  }
+
+  // This code will now ONLY execute if loading is complete AND the user is not logged in and not a guest.
   return (
     <>
-      <LandingPage onGetStarted={() => setIsAuthModalOpen(true)} />
-
-      <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
-        <DialogContent className="glass-surface border-white/15 bg-slate-900/80 max-w-md p-0 gap-0 rounded-2xl overflow-hidden">
-          <AuthScreen onLogin={() => setIsAuthModalOpen(false)} />
+      <LandingPage />
+      <Dialog open={isAuthModalOpen} onOpenChange={handleModalOpenChange}>
+        <DialogContent className="liquid-gradient border-none p-0 max-w-lg">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Authentication</DialogTitle>
+            <DialogDescription>
+              Log in, sign up, or continue as a guest to access Huddle.
+            </DialogDescription>
+          </DialogHeader>
+          <AuthScreen onLogin={handleLogin} />
         </DialogContent>
       </Dialog>
     </>

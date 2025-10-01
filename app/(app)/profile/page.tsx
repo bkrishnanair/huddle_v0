@@ -14,6 +14,7 @@ import { signOut } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
+import GuestPrompt from "@/components/guest-prompt" // Import the new component
 
 function ProfileSkeleton() {
     return (
@@ -50,7 +51,7 @@ const StatCard = ({ label, value }: { label: string; value: number }) => (
     </Card>
 )
 export default function ProfilePage() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, isGuest, loading: authLoading } = useAuth() // Add isGuest
   const router = useRouter()
   const [userProfile, setUserProfile] = useState<any>(null)
   const [userStats, setUserStats] = useState({ organized: 0, joined: 0, upcoming: 0 })
@@ -76,8 +77,13 @@ export default function ProfilePage() {
     }
 
   useEffect(() => {
-    if (user) loadUserData()
-  }, [user])
+    // Only load user data if there is a user and they are not a guest
+    if (user && !isGuest) {
+        loadUserData()
+    } else {
+        setLoading(false)
+    }
+  }, [user, isGuest])
   
   const handleLogout = async () => {
     try {
@@ -96,6 +102,16 @@ export default function ProfilePage() {
 
   if (authLoading || loading) {
     return <ProfileSkeleton />
+  }
+  
+  // If the user is a guest, show the prompt
+  if (isGuest) {
+    return (
+        <GuestPrompt 
+            title="View Your Profile"
+            message="Your profile, stats, and achievements will be displayed here. Create an account to get started!"
+        />
+    )
   }
 
   return (

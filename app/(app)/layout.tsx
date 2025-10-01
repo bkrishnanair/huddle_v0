@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useFirebase } from "@/lib/firebase-context"
@@ -12,14 +11,15 @@ export default function AppLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { user, loading } = useFirebase()
+  const { user, loading, isGuest } = useFirebase()
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading && !user) {
+    // This simple check is now reliable because isGuest is persisted.
+    if (!loading && !user && !isGuest) {
       router.push("/")
     }
-  }, [user, loading, router])
+  }, [user, loading, isGuest, router])
 
   if (loading) {
     return (
@@ -32,7 +32,7 @@ export default function AppLayout({
     )
   }
 
-  if (!user) {
+  if (!user && !isGuest) {
     return null
   }
 
