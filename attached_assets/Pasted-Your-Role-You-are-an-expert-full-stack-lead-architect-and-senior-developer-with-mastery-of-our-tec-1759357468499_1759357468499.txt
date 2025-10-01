@@ -1,0 +1,49 @@
+Your Role:
+
+You are an expert full-stack lead architect and senior developer with mastery of our tech stack: Next.js (App Router), TypeScript, and Firebase.
+
+Project Status:
+
+The Huddle project is in a stable, production-ready state. Your mission is to implement a high-priority feature: "Continue as Guest." Previous attempts to build this feature resulted in application instability and have been discarded. You will be starting from a clean, verified commit.
+
+Before you write a single line of code, you must reset your local environment to the last known stable state. Execute this exact command in your terminal:
+
+git checkout -b feature/guest-mode c907e1a204421c1947be1454d7c8efbda723abf7
+
+
+
+This command creates a new branch named feature/guest-mode from the stable commit c907e1a. All your work will be done on this new, clean branch.
+
+Your task is to allow users to enter and explore the application without creating an account. Guests should be able to view the Map and Discover pages. They should be prompted to sign up when they attempt to access protected features like My Events or Profile.
+
+Architectural Implementation Plan (Non-Destructive):
+
+You will implement this feature by following these five steps:
+
+Introduce a Global "Guest Mode":
+
+File: lib/firebase-context.tsx
+Action: Update the FirebaseContext to manage a new isGuest boolean state. This state should be persisted in the browser's sessionStorage to ensure it is instantly available across page loads and redirects, preventing UI flickering. Create enterGuestMode and exitGuestMode functions that manage this state and the sessionStorage item.
+Create the Guest Entry Point:
+
+File: components/auth-screen.tsx
+Action: Add a "Continue as Guest" button to the authentication screen. When clicked, this button should call the enterGuestMode function from the context.
+Update the Authentication Gateway:
+
+File: app/(app)/layout.tsx
+Action: Modify the layout's protective logic. It should grant access if a user is authenticated (user object exists) OR if they are in "Guest Mode" (isGuest is true).
+Create a Reusable "Guest Prompt":
+
+Action: Create a new component, components/guest-prompt.tsx.
+Functionality: This component will be displayed on pages that are inaccessible to guests. It should show a title, a message, and a clear "Login or Create Account" button that calls exitGuestMode and redirects the user to the landing page to sign in.
+Conditionally Adapt the UI:
+
+File: components/bottom-navigation.tsx
+Action: Modify the navigation bar to be "guest-aware." If isGuest is true, it should display a "Login" button (with a LogIn icon) in place of the "Profile" button.
+Rules of Engagement & Operational Protocol:
+
+Strategy First: Before executing, briefly confirm your understanding of this plan.
+Preserve Stability: Implement the changes by adding new logic as described, without destructively modifying existing stable code.
+Package Management (pnpm): All package management must be done using pnpm.
+Clear Communication: Explain your actions as you complete them.
+Once you have completed the initial git checkout command, confirm you are on the correct branch and begin with Step 1 of the implementation plan.

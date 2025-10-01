@@ -1,0 +1,70 @@
+# ==============================================================================
+# CLIENT-SIDE ENVIRONMENT VARIABLES (PUBLIC)
+# These keys are safe to be exposed in the browser.
+# ==============================================================================
+
+# Firebase Client SDK Configuration
+NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyBwDzDONVIbmMf953hYLtRsuNwN_8gwVeQ
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=huddle-dca59.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=huddle-dca59
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=huddle-dca59.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=167280397242
+NEXT_PUBLIC_FIREBASE_APP_ID=1:167280397242:web:5e5aec667a726423f9ab83
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-YDBE33PXMK
+
+# Google Maps Configuration (Public Keys for Browser)
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=AIzaSyBYSZrNEyd3rLwIumFZ1HU_9QVVIy9sRuE
+NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID=e6a943280089e18670b440b5
+NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID=972e67bc6fc7f2d44a899720
+
+# reCAPTCHA Enterprise (Public Key for Browser)
+NEXT_PUBLIC_RECAPTCHA_SITE_KEY=6Le25rsrAAAAAO0Z97vhdK5fuwPILpR-70Zb7cqh
+
+# App Check Debug Token (Development Only)
+NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN=huddle-dev-debug-token
+
+
+# ==============================================================================
+# SERVER-SIDE ENVIRONMENT VARIABLES (PRIVATE)
+# These keys are secret and should NEVER be exposed to the client.
+# ==============================================================================
+
+NODE_ENV=development
+
+# Google Maps API Key (Private Key for Server-Side API Routes)
+GOOGLE_MAPS_API_KEY=AIzaSyBYSZrNEyd3rLwIumFZ1HU_9QVVIy9sRuE
+
+# Gemini API (Private)
+GEMINI_API_KEY=AIzaSyBt3OVAj-hn9Vem7KvN3xsmEa97FgfBWig
+
+# Firebase Admin SDK Credentials (Private)
+FIREBASE_PROJECT_ID="huddle-dca59"
+FIREBASE_CLIENT_EMAIL="firebase-adminsdk-fbsvc@huddle-dca59.iam.gserviceaccount.com"
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDW8Fk7GvSjEAYv\nQhfGDkCA8nZX0eDL0bg89+0gu/0ut/5F9k7t7HroK6cdiTD1iezm3p9fR3MHu1NI\ndLnn6gATEMVK95/ib2ZoAdn3D2WIg5Q5ovrbX1odsjXCqZtYSoPYBYboR5B6RTEz\n6bb/AC45VqgLt+ZdJWGf+46s0w3nQxiU+JRPSNop2emWjqHFGQwJC+CvedGbS0ul\nDgr2rCy8LZkoIoCsQ9lVUlVtz/R/D/Zi8I0I70GRPcTK8Kt7d7TiZC/XmTrCxkGu\nRhXTsmKpI7Yc5sQaLStsXPVw2+5sXJ54w28qMNqk3sOrIt+lTtd+ple30UfTOHzw\ndzAYjZktAgMBAAECggEAB8J5ljas6k4jywT50r6k+YLHXvhGw1T478qLlwjyZQNj\nfKcdxl0pOsSIrfpL+DFYiiUzX782merbYNxF8edyxT1vwfsanJQlAFBAzDiUE8+c\nRFBr+guBN109r59r6k4WYHAipLQgtSlWU2d2odIh2RQV0QZ8nJRC6AGu7vJXqCek\n9aiRKa5BEAoPHBY8N64IJeqSxXoZ+ISlVh3sf5D3zAa98s+2VN/RQjArW4XxQc9b\nKwhYDxpvpYI55gKPY8J1/9HdSdN7wm5mENmtFzuPBseEzNlvD06jmT2/YPH4Xf2G\nzWZiiNydfS+YCLJMJJkFGV+hfzKkjLpF2JZHg+l+SQKBgQD/lHQkzKjXGKftolxF\n2fnPJzq0aO07nv6wLrqy13mLgYOwuI1uCyDtljH3y4h1AGU/awzcjPfgyeqchodl\n8JpoihccReVtU8rhvtEBDphIAluXYfkcp9RGcDvzrufjQBmuF37aE9AeVBmortND\nGxnJB5Dcbfh7wOhDCXJZ9sXZ/wKBgQDXSssb9BTJeSlrmZiuzvaSzFDGITvtxsgv\n1FKg4xi7FuZJNuwobBpAJD8kwRVs6UkDUKpxI58495h4F8iNWjDatIB1oaHi3cLX\nQKKIAyNhmAHxretIlW+8GTJ31iYbMNE+ZlVAjpJAxfDnBLb1mXIdI0Iul/Oobw8+\nkfXk040U0wKBgDQD6Kdcp7gvIm4wrwrgVAEfAMma2T1bHIaK3CBtziTgVQbwaIhO\n54KzILRHzhvR2slPZiy02/X54i+9CW1rzGEeSZnNd+YKOa48AZlvePqe0Dk9DVAR\nsBgt22W64SLU9uUBjyWfBqpFf3tfKUvtBhBt48OY9gtptVt/XrCEkrvNAoGAdKsg\ndE6KMUBKlPfQiPK5JoY4Q5Zg/pLZiynZeTx3+3MGaqirw6AJfbbmzQkhjjrBiV1e\ncB9ouptaccIZuZgln29vqc9khie83Z82NNTWiJ2yeADS3yu0OE/DTLOtRNDoo5Mb\nIffhA98AlIC2kVONRoMD63IG5cEBltvMUCvgaWcCgYAmK1dkz8Fav23jtJlhRCnr\nI5o9PgtT3GcycGTmEq/SnAdank+BG1+CJ0oqBCRV3b9+/7dGr9GplqQf2DYiG1/U\nLzWUUqqT2tp3NopvOzmctLRxGynPTBOu77w9PjNBM8S4EXK2GWRuAD0W46D1MgQJ\nShq40OLk3DPB+mXIYfL05A==\n-----END PRIVATE KEY-----\n"
+
+# ==============================================================================
+# CLIENT-SIDE ENVIRONMENT VARIABLES (PUBLIC)
+# These keys are safe to be exposed in the browser.
+# CORRECTED ON [DATE] TO MATCH FIREBASE CONSOLE
+# ==============================================================================
+
+# Firebase Client SDK Configuration
+##NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyBwDzDONVIbmMf953hYLtRsuNwN_8gwVeQ
+#NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=huddle-dca59.firebaseapp.com
+#NEXT_PUBLIC_FIREBASE_PROJECT_ID=huddle-dca59
+#NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=huddle-dca59.firebasestorage.app
+#NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=167280397242
+#NEXT_PUBLIC_FIREBASE_APP_ID=1:167280397242:web:5e5aec667a726423f9ab83
+#NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-YDBE33PXMK
+
+# Google Maps Configuration (Public Keys for Browser)
+#NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=AIzaSyBYSZrNEyd3rLwIumFZ1HU_9QVVIy9sRuE
+#NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID=e6a943280089e18670b440b5
+# Note: Removed duplicated and style map IDs for clarity
+# NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID=972e67bc6fc7f2d44a899720
+
+# reCAPTCHA Enterprise (Public Key for Browser)
+#NEXT_PUBLIC_RECAPTCHA_SITE_KEY=6Le25rsrAAAAAO0Z97vhdK5fuwPILpR-70Zb7cqh
+
+# App Check Debug Token (Development Only)
+#NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN=huddle-dev-debug-token
