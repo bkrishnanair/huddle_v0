@@ -3,11 +3,20 @@
 ## Project Overview
 Huddle is a modern full-stack Next.js application for discovering, creating, and joining local pickup sports events. This document outlines the Replit-specific setup and current project state.
 
-## Recent Changes (September 12, 2025)
+## Recent Changes (October 1, 2025)
+**Fresh GitHub Import Setup:**
+- ✅ Installed all project dependencies with pnpm
+- ✅ Configured environment variables (.env.local) with Firebase and Google Maps credentials
+- ✅ Updated `next.config.mjs` with proper Replit proxy configuration using wildcard domains (*.replit.dev, *.repl.co)
+- ✅ Added experimental serverActions configuration for Next.js 15 compatibility
+- ✅ Verified Next.js dev server running on port 5000 with 0.0.0.0 host binding
+- ✅ Configured deployment for autoscale with proper build and run commands
+- ✅ Application successfully running and accessible in Replit environment
+
+**Previous Changes (September 12, 2025)**
 **Environment Setup for Replit:**
 - ✅ Migrated from npm to pnpm package manager
 - ✅ Configured Next.js dev server for Replit proxy environment
-- ✅ Updated `next.config.mjs` with `allowedDevOrigins: ['*']` for Replit's dynamic subdomains
 - ✅ Set up development workflow on port 5000 with proper host binding (0.0.0.0)
 - ✅ Configured deployment settings for Replit autoscale deployment
 
@@ -40,7 +49,12 @@ Huddle is a modern full-stack Next.js application for discovering, creating, and
 ```javascript
 // next.config.mjs
 const nextConfig = {
-  allowedDevOrigins: ['*'], // Required for Replit proxy environment
+  allowedDevOrigins: ['*.replit.dev', '*.repl.co'],
+  experimental: {
+    serverActions: {
+      allowedOrigins: ['*.replit.dev', '*.repl.co'],
+    },
+  },
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
   images: { unoptimized: true },
@@ -59,7 +73,7 @@ const nextConfig = {
 - **Build**: `corepack enable && pnpm install --frozen-lockfile && pnpm build`
 - **Run**: `pnpm start -- -p $PORT -H 0.0.0.0`
 
-## Current Status (September 12, 2025)
+## Current Status (October 1, 2025)
 
 ### ✅ **FULLY FUNCTIONAL FEATURES**
 - **Authentication System**: Complete session management with Next.js 15 compatibility
