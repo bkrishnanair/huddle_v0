@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/firebase-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,7 +20,8 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
   const [name, setName] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const { user } = useAuth()
+  const { user, enterGuestMode } = useAuth()
+  const router = useRouter()
 
   const handleAuthAction = async (action: "login" | "signup") => {
     setIsLoading(true)
@@ -50,6 +52,11 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleGuestMode = () => {
+    enterGuestMode()
+    router.push('/discover')
   }
 
   if (user) {
@@ -194,6 +201,29 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
           </div>
         </div>
       </Tabs>
+
+      {/* Guest Mode Option */}
+      <div className="w-full max-w-sm mx-auto mt-6">
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-white/30" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-transparent px-2 text-white/70">Or</span>
+          </div>
+        </div>
+        <Button
+          onClick={handleGuestMode}
+          variant="outline"
+          className="w-full mt-4 bg-transparent border-white/40 text-white hover:bg-white/10 hover:border-white/60"
+          disabled={isLoading}
+        >
+          Continue as Guest
+        </Button>
+        <p className="text-xs text-white/60 text-center mt-2">
+          Explore events without creating an account
+        </p>
+      </div>
     </div>
   )
 }

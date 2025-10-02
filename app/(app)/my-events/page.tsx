@@ -6,9 +6,10 @@ import CreateEventModal from "@/components/create-event-modal"
 import { EventList } from "@/components/profile/event-list"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus } from "lucide-react"
+import GuestPrompt from "@/components/guest-prompt"
 
 export default function MyEventsPage() {
-  const { user, loading } = useAuth()
+  const { user, loading, isGuest } = useAuth()
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0) // State to trigger re-fetch
 
@@ -20,11 +21,12 @@ export default function MyEventsPage() {
     )
   }
 
-  if (!user) {
+  if (isGuest || !user) {
     return (
-      <div className="flex justify-center items-center h-screen liquid-gradient">
-        <div className="text-white">Please sign in to see your events.</div>
-      </div>
+      <GuestPrompt 
+        title="My Events Requires Sign In"
+        message="View and manage your organized and joined events by creating an account or signing in."
+      />
     )
   }
   

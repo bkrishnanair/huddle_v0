@@ -90,83 +90,141 @@ experimental: {
 
 ---
 
-## Changes NOT Yet Made
+## Guest Mode Feature - ✅ **IMPLEMENTED**
 
-### ❌ **Guest Mode Feature - NOT IMPLEMENTED**
+### Implementation Complete (October 2, 2025)
 
-The following feature was planned but **has not been implemented yet**:
+All 5 steps of the guest mode feature have been successfully implemented:
 
-#### Planned Implementation (from requirements):
+#### 1. ✅ Global "Guest Mode" State - `lib/firebase-context.tsx`
+**Changes Made:**
+- Added `isGuest` boolean state to FirebaseContext interface
+- Added `enterGuestMode()` and `exitGuestMode()` functions to context
+- Implemented sessionStorage persistence with key `huddle_guest_mode`
+- **CRITICAL FIX:** Changed initialization from useEffect to synchronous lazy useState initializer
+- Exit guest mode is automatically called on logout
 
-1. **Global "Guest Mode" State**
-   - File: `lib/firebase-context.tsx`
-   - Add `isGuest` boolean state
-   - Persist in sessionStorage
-   - Create `enterGuestMode()` and `exitGuestMode()` functions
+**Code Additions:**
+```typescript
+const GUEST_MODE_KEY = "huddle_guest_mode"
+// Synchronous initialization prevents race condition with redirect logic
+const [isGuest, setIsGuest] = useState<boolean>(() => {
+  if (typeof window !== 'undefined') {
+    return sessionStorage.getItem(GUEST_MODE_KEY) === 'true'
+  }
+  return false
+})
+```
 
-2. **Guest Entry Point**
-   - File: `components/auth-screen.tsx`
-   - Add "Continue as Guest" button
-   - Call `enterGuestMode()` on click
+**Bug Fix Details:**
+- **Issue:** Initial async useEffect initialization caused race condition where app/(app)/layout.tsx redirect fired before isGuest was restored from sessionStorage
+- **Impact:** Guests were redirected to "/" on page reload, breaking persistence
+- **Solution:** Lazy useState initializer reads sessionStorage synchronously during first render, ensuring isGuest is set before redirect logic evaluates
 
-3. **Authentication Gateway Update**
-   - File: `app/(app)/layout.tsx`
-   - Grant access if user is authenticated OR in guest mode
+#### 2. ✅ Guest Entry Point - `components/auth-screen.tsx`
+**Changes Made:**
+- Added "Continue as Guest" button below login/signup tabs
+- Button styled with outline variant, transparent background
+- Calls `enterGuestMode()` and navigates to `/discover`
+- Added explanatory text: "Explore events without creating an account"
+- Imported `useRouter` from next/navigation
 
-4. **Guest Prompt Component**
-   - File: `components/guest-prompt.tsx` (NEW FILE TO CREATE)
-   - Show on protected pages for guests
-   - Provide "Login or Create Account" button
+**UI Changes:**
+- New section with divider separator ("Or")
+- Guest button positioned after auth tabs
+- Maintains design consistency with glassmorphism theme
 
-5. **UI Adaptation**
-   - File: `components/bottom-navigation.tsx`
-   - Show "Login" button instead of "Profile" for guests
+#### 3. ✅ Authentication Gateway - `app/(app)/layout.tsx`
+**Changes Made:**
+- Updated authentication check: `!user && !isGuest` → redirects to home
+- Modified loading states to account for guest mode
+- Grants access to app routes if user OR isGuest is true
+- No breaking changes to existing auth flow
+
+**Logic:**
+```typescript
+if (!loading && !user && !isGuest) {
+  router.push("/")
+}
+```
+
+#### 4. ✅ Guest Prompt Component - `components/guest-prompt.tsx` (NEW FILE)
+**File Created:**
+- Reusable component for showing sign-in prompts to guests
+- Props: `title` and `message` (customizable)
+- Features:
+  - Lock icon visual indicator
+  - Glassmorphism card design
+  - "Login or Create Account" primary button (calls exitGuestMode and redirects to /)
+  - "Go Back" secondary button for navigation
+- Integrated into protected pages: My Events and Profile
+
+#### 5. ✅ UI Adaptation - `components/bottom-navigation.tsx`
+**Changes Made:**
+- Conditionally renders "Login" button instead of "Profile" for guests
+- Login button uses `LogIn` icon from lucide-react
+- Clicking login button calls `exitGuestMode()` and redirects to landing page
+- Maintains same styling and positioning as Profile button
+- Added button element handling (not just Link) for onClick functionality
+
+**Protected Pages Updated:**
+- `app/(app)/my-events/page.tsx` - Shows GuestPrompt if isGuest
+- `app/(app)/profile/page.tsx` - Shows GuestPrompt if isGuest
+- Map and Discover pages remain accessible to guests
 
 ---
 
-## Next Steps (Planned)
+## Implementation Summary
 
-### To Complete Guest Mode Feature:
+### Guest Mode Implementation Checklist:
 
-1. ✅ Checkout to `transform` branch (or create it from stable commit)
-   ```bash
-   git checkout -b transform c907e1a204421c1947be1454d7c8efbda723abf7
-   ```
+1. ✅ On `transform` branch
+2. ✅ All 5 steps implemented:
+   - ✅ Step 1: Updated `lib/firebase-context.tsx` with guest state and sessionStorage
+   - ✅ Step 2: Added "Continue as Guest" button to `components/auth-screen.tsx`
+   - ✅ Step 3: Modified `app/(app)/layout.tsx` authentication gateway
+   - ✅ Step 4: Created `components/guest-prompt.tsx` component
+   - ✅ Step 5: Updated `components/bottom-navigation.tsx` for guest UI
+   - ✅ Step 6: Added GuestPrompt to protected pages (My Events, Profile)
 
-2. ⏳ Implement Guest Mode in 5 steps:
-   - [ ] Step 1: Update `lib/firebase-context.tsx` with guest state
-   - [ ] Step 2: Add "Continue as Guest" button to `components/auth-screen.tsx`
-   - [ ] Step 3: Modify `app/(app)/layout.tsx` authentication gateway
-   - [ ] Step 4: Create `components/guest-prompt.tsx` component
-   - [ ] Step 5: Update `components/bottom-navigation.tsx` for guest UI
+3. ✅ Testing Status:
+   - ✅ No LSP errors detected
+   - ✅ Server running successfully
+   - ✅ All components compile without errors
+   - ✅ Critical bug fixed (sessionStorage persistence race condition)
+   - ✅ Architect review passed
+   - ⏳ Manual end-to-end user testing recommended:
+     - Guest → reload /map and /discover pages (should stay as guest)
+     - Guest → logout → verify guest mode cleared
+     - Guest → login → verify conversion to authenticated user
 
-3. ⏳ Test guest mode functionality:
-   - [ ] Verify guest can access Map and Discover pages
-   - [ ] Verify guest is prompted on My Events and Profile pages
-   - [ ] Verify guest can exit guest mode and sign in
-
-4. ⏳ Push changes to `transform` branch:
+4. ⏳ Next: Push changes to `transform` branch:
    ```bash
    git add .
-   git commit -m "feat: implement guest mode feature"
+   git commit -m "feat: implement complete guest mode with sessionStorage persistence"
    git push origin transform
    ```
 
 ---
 
-## Files Modified (So Far)
+## Files Modified - Guest Mode Implementation
 
+### Files Modified:
+1. ✅ `lib/firebase-context.tsx` - Added guest mode state, sessionStorage, enter/exit functions
+2. ✅ `components/auth-screen.tsx` - Added "Continue as Guest" button with navigation
+3. ✅ `app/(app)/layout.tsx` - Updated authentication gateway for guest access
+4. ✅ `components/bottom-navigation.tsx` - Conditional Login/Profile button based on guest status
+5. ✅ `app/(app)/my-events/page.tsx` - Added GuestPrompt for unauthorized access
+6. ✅ `app/(app)/profile/page.tsx` - Added GuestPrompt for unauthorized access
+
+### Files Created:
+7. ✅ `components/guest-prompt.tsx` - NEW reusable guest sign-in prompt component
+
+### Files Modified - Replit Environment Setup:
 1. `next.config.mjs` - Updated Replit proxy configuration
 2. `replit.md` - Updated documentation
 3. `.env.local` - Created with environment variables (not committed to git)
-
-## Files To Be Modified (Pending)
-
-1. `lib/firebase-context.tsx` - Add guest mode state
-2. `components/auth-screen.tsx` - Add guest button
-3. `app/(app)/layout.tsx` - Update auth gateway
-4. `components/bottom-navigation.tsx` - Guest-aware UI
-5. `components/guest-prompt.tsx` - NEW FILE
+4. `replit_changes.md` - THIS FILE - Complete implementation documentation
 
 ---
 
