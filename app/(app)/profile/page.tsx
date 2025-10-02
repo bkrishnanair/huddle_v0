@@ -14,6 +14,7 @@ import { signOut } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
+import GuestPrompt from "@/components/guest-prompt"
 
 function ProfileSkeleton() {
     return (
@@ -50,7 +51,7 @@ const StatCard = ({ label, value }: { label: string; value: number }) => (
     </Card>
 )
 export default function ProfilePage() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, isGuest } = useAuth()
   const router = useRouter()
   const [userProfile, setUserProfile] = useState<any>(null)
   const [userStats, setUserStats] = useState({ organized: 0, joined: 0, upcoming: 0 })
@@ -96,6 +97,15 @@ export default function ProfilePage() {
 
   if (authLoading || loading) {
     return <ProfileSkeleton />
+  }
+
+  if (isGuest || !user) {
+    return (
+      <GuestPrompt 
+        title="Profile Requires Sign In"
+        message="Create your personalized profile and track your events by creating an account or signing in."
+      />
+    )
   }
 
   return (

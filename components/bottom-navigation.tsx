@@ -1,8 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { MapPin, Calendar, Search, User } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
+import { MapPin, Calendar, Search, User, LogIn } from "lucide-react"
+import { useFirebase } from "@/lib/firebase-context"
 
 const HuddleLogo = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-slate-50">
@@ -12,12 +13,21 @@ const HuddleLogo = () => (
 
 export default function BottomNavigation() {
   const pathname = usePathname()
+  const router = useRouter()
+  const { isGuest, exitGuestMode } = useFirebase()
+
+  const handleLoginClick = () => {
+    exitGuestMode()
+    router.push("/")
+  }
 
   const tabs = [
     { id: "map", label: "Map", icon: MapPin, href: "/map" },
     { id: "discover", label: "Discover", icon: Search, href: "/discover" },
     { id: "my-events", label: "My Events", icon: Calendar, href: "/my-events" },
-    { id: "profile", label: "Profile", icon: User, href: "/profile" },
+    isGuest
+      ? { id: "login", label: "Login", icon: LogIn, href: null, onClick: handleLoginClick }
+      : { id: "profile", label: "Profile", icon: User, href: "/profile" },
   ]
 
   return (
@@ -30,11 +40,29 @@ export default function BottomNavigation() {
           const Icon = tab.icon
           const isActive = pathname === tab.href
 
+          if (tab.href === null && tab.onClick) {
+            return (
+              <button
+                key={tab.id}
+                id={`${tab.id}-button`}
+                onClick={tab.onClick}
+                className={`
+                  flex flex-col items-center justify-center w-16 h-16 rounded-2xl
+                  transition-colors duration-200
+                  ${isActive ? "bg-white/10" : "text-slate-400 hover:bg-white/5"}
+                `}
+              >
+                <Icon className={`w-6 h-6 mb-1 ${isActive ? "text-primary" : "text-slate-400"}`} />
+                <span className={`text-xs font-light ${isActive ? "text-slate-50" : "text-slate-400"}`}>{tab.label}</span>
+              </button>
+            )
+          }
+
           return (
             <Link
               key={tab.id}
               id={`${tab.id}-button`}
-              href={tab.href}
+              href={tab.href!}
               className={`
                 flex flex-col items-center justify-center w-16 h-16 rounded-2xl
                 transition-colors duration-200

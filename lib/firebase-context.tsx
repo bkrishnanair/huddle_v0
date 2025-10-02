@@ -6,12 +6,17 @@ import { type User, onAuthStateChanged, signOut } from "firebase/auth"
 import { auth, app } from "./firebase"
 import { FirebaseApp } from "firebase/app"
 
+const GUEST_MODE_KEY = "huddle_guest_mode"
+
 interface FirebaseContextType {
   user: User | null
   loading: boolean
   error: string | null
   logout: () => Promise<void>;
   app: FirebaseApp | null;
+  isGuest: boolean;
+  enterGuestMode: () => void;
+  exitGuestMode: () => void;
 }
 
 const FirebaseContext = createContext<FirebaseContextType>({
@@ -19,7 +24,10 @@ const FirebaseContext = createContext<FirebaseContextType>({
   loading: true,
   error: null,
   logout: async () => {},
-  app: null
+  app: null,
+  isGuest: false,
+  enterGuestMode: () => {},
+  exitGuestMode: () => {},
 })
 
 export const useFirebase = () => {
@@ -37,6 +45,29 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Initialize guest mode synchronously from sessionStorage to prevent redirect race condition
+  const [isGuest, setIsGuest] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem(GUEST_MODE_KEY) === 'true'
+    }
+    return false
+  })
+
+  // Enter guest mode
+  const enterGuestMode = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(GUEST_MODE_KEY, 'true')
+      setIsGuest(true)
+    }
+  }, [])
+
+  // Exit guest mode
+  const exitGuestMode = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(GUEST_MODE_KEY)
+      setIsGuest(false)
+    }
+  }, [])
 
   // Define the logout function
   const logout = useCallback(async () => {
@@ -45,11 +76,12 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       try {
         await signOut(auth);
         setUser(null);
+        exitGuestMode();
       } catch (error) {
         console.error("Error signing out:", error);
       }
     }
-  }, []);
+  }, [exitGuestMode]);
 
   useEffect(() => {
     // FIX: Ensure auth object is not null before setting up the listener.
@@ -75,5 +107,5 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  return <FirebaseContext.Provider value={{ user, loading, error, logout, app }}>{children}</FirebaseContext.Provider>
+  return <FirebaseContext.Provider value={{ user, loading, error, logout, app, isGuest, enterGuestMode, exitGuestMode }}>{children}</FirebaseContext.Provider>
 }
