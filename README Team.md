@@ -60,6 +60,10 @@ The app uses a robust hybrid authentication model that is fully compatible with 
 *   **Firebase Admin (`lib/firebase-admin.ts`)**: Modular Firebase Admin SDK initialization with proper error handling, health checks, and secure credential management.
 *   **Session State (`lib/firebase-context.tsx`)**: A central React Context provider (`FirebaseProvider`) uses the `onAuthStateChanged` listener to manage the user's session state, making it available to all components via the `useAuth` hook.
 *   **Security**: All protected routes include `export const runtime = 'nodejs'` and use secure HTTP-only session cookies for authentication.
+*   **Guest Mode**: A "Continue as Guest" feature allows users to explore the app without an account.
+    *   The `isGuest` state is managed in the `FirebaseProvider` and persisted in `sessionStorage` to prevent UI flickering and race conditions.
+    *   The secure layout (`app/(app)/layout.tsx`) is configured to allow access if `user` exists OR `isGuest` is true.
+    *   Protected pages like Profile and My Events display a `GuestPrompt` component to encourage sign-ups.
 
 ## 5. API Endpoints (Next.js API Routes)
 

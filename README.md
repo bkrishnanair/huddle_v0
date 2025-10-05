@@ -19,6 +19,7 @@ This production-ready application features a complete authentication system, rea
 | ![alt text](Pages/old/image-7.png) | ![alt text](Pages/old/image-3.png) | ![alt text](Pages/old/image.png) |
 
 ## Key Features
+*   **✅ Frictionless Onboarding**: Users can instantly explore the app with a "Continue as Guest" option, removing the need for immediate account creation.
 *   **🔐 Secure Authentication System**: Complete session management with Next.js 15 compatibility and Firebase Auth integration
 *   **🗺️ Interactive Map & Event Discovery**: Users can discover events in their vicinity, powered by Google Maps with custom-styled pins and real-time location services
 *   **📅 Advanced Event Creation**: Create single or recurring events with an intuitive modal featuring location search, server-side validation, and AI-powered content generation

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { signInWithEmail, signUpWithEmail, signInWithGoogle } from "@/lib/auth"
+import { ScrollArea } from "@/components/ui/scroll-area" // Import ScrollArea
 
 interface AuthScreenProps {
   onLogin: (user: any) => void
@@ -68,149 +69,84 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
   }
 
   return (
-    <div className="p-6">
-      {/* Hero Section */}
-      <div className="text-center mb-8">
-        <h2 className="text-4xl md:text-5xl font-bold text-white mb-3 leading-tight">
-          Stop Searching, Start Playing. <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">Find Your Huddle.</span>
+    <div className="flex flex-col p-6 max-h-[90vh]">
+      {/* Header Section (Not scrollable) */}
+      <div className="text-center mb-6">
+        <h2 className="text-3xl md:text-4xl font-bold text-white mb-2 leading-tight">
+          Stop Searching, Start Playing
         </h2>
-        <p className="text-lg text-white/80 max-w-2xl mx-auto leading-relaxed">
-          Discover and join local sports games in real-time. Connect with players, organize events effortlessly, and never miss a moment of the action.
+        <p className="text-md text-white/80 max-w-2xl mx-auto">
+          Discover and join local sports games in real-time.
         </p>
       </div>
 
-      <Tabs defaultValue="login" className="w-full max-w-sm mx-auto">
-        <TabsList className="grid w-full grid-cols-2 bg-white/10 border border-white/20 rounded-lg p-1 h-auto">
-          <TabsTrigger
-            value="login"
-            className="data-[state=active]:bg-white/20 data-[state=active]:shadow-md text-white"
-          >
-            Login
-          </TabsTrigger>
-          <TabsTrigger
-            value="signup"
-            className="data-[state=active]:bg-white/20 data-[state=active]:shadow-md text-white"
-          >
-            Sign Up
-          </TabsTrigger>
-        </TabsList>
+      {/* Scrollable Main Content */}
+      <ScrollArea className="flex-grow">
+        <div className="px-2">
+            <Tabs defaultValue="login" className="w-full max-w-sm mx-auto">
+                <TabsList className="grid w-full grid-cols-2 bg-white/10 border border-white/20 rounded-lg p-1 h-auto">
+                <TabsTrigger value="login" className="data-[state=active]:bg-white/20 data-[state=active]:shadow-md text-white">Login</TabsTrigger>
+                <TabsTrigger value="signup" className="data-[state=active]:bg-white/20 data-[state=active]:shadow-md text-white">Sign Up</TabsTrigger>
+                </TabsList>
 
-        <div className="pt-6">
-          <div className="space-y-4">
-            <Button
-              onClick={handleGoogleSignIn}
-              className="w-full bg-white/90 text-black hover:bg-white"
-              disabled={isLoading}
-            >
-              Continue with Google
-            </Button>
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-white/30" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-transparent px-2 text-white/70">Or continue with email</span>
-              </div>
-            </div>
+                <div className="pt-6">
+                <div className="space-y-4">
+                    <Button
+                        onClick={handleGoogleSignIn}
+                        className="w-full bg-white/90 text-black hover:bg-white"
+                        disabled={isLoading}
+                    >
+                        Continue with Google
+                    </Button>
+                    <div className="relative">
+                        <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/30" /></div>
+                        <div className="relative flex justify-center text-xs uppercase"><span className="bg-transparent px-2 text-white/70">Or continue with email</span></div>
+                    </div>
 
-            {/* Login Tab */}
-            <TabsContent value="login" className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email-login" className="text-white/90">
-                  Email
-                </Label>
-                <Input
-                  id="email-login"
-                  type="email"
-                  placeholder="m@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="glass border-white/30 text-white placeholder:text-white/60"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password-login" className="text-white/90">
-                  Password
-                </Label>
-                <Input
-                  id="password-login"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="glass border-white/30 text-white"
-                />
-              </div>
-              <Button
-                onClick={() => handleAuthAction("login")}
-                disabled={isLoading}
-                className="w-full glass-card hover:glow text-white border-white/30"
-              >
-                {isLoading ? "Logging in..." : "Login"}
-              </Button>
-            </TabsContent>
+                    <TabsContent value="login" className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="email-login" className="text-white/90">Email</Label>
+                            <Input id="email-login" type="email" placeholder="m@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="glass border-white/30 text-white placeholder:text-white/60" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="password-login" className="text-white/90">Password</Label>
+                            <Input id="password-login" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="glass border-white/30 text-white" />
+                        </div>
+                        <Button onClick={() => handleAuthAction("login")} disabled={isLoading} className="w-full glass-card hover:glow text-white border-white/30">
+                            {isLoading ? "Logging in..." : "Login"}
+                        </Button>
+                    </TabsContent>
 
-            {/* Sign Up Tab */}
-            <TabsContent value="signup" className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name-signup" className="text-white/90">
-                  Name
-                </Label>
-                <Input
-                  id="name-signup"
-                  placeholder="Your Name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="glass border-white/30 text-white placeholder:text-white/60"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email-signup" className="text-white/90">
-                  Email
-                </Label>
-                <Input
-                  id="email-signup"
-                  type="email"
-                  placeholder="m@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="glass border-white/30 text-white placeholder:text-white/60"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password-signup" className="text-white/90">
-                  Password
-                </Label>
-                <Input
-                  id="password-signup"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="glass border-white/30 text-white"
-                />
-              </div>
-              <Button
-                onClick={() => handleAuthAction("signup")}
-                disabled={isLoading}
-                className="w-full glass-card hover:glow text-white border-white/30"
-              >
-                {isLoading ? "Creating account..." : "Sign Up"}
-              </Button>
-            </TabsContent>
+                    <TabsContent value="signup" className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="name-signup" className="text-white/90">Name</Label>
+                            <Input id="name-signup" placeholder="Your Name" value={name} onChange={(e) => setName(e.target.value)} className="glass border-white/30 text-white placeholder:text-white/60" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="email-signup" className="text-white/90">Email</Label>
+                            <Input id="email-signup" type="email" placeholder="m@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="glass border-white/30 text-white placeholder:text-white/60" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="password-signup" className="text-white/90">Password</Label>
+                            <Input id="password-signup" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="glass border-white/30 text-white" />
+                        </div>
+                        <Button onClick={() => handleAuthAction("signup")} disabled={isLoading} className="w-full glass-card hover:glow text-white border-white/30">
+                            {isLoading ? "Creating account..." : "Sign Up"}
+                        </Button>
+                    </TabsContent>
 
-            {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-          </div>
+                    {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+                </div>
+                </div>
+            </Tabs>
         </div>
-      </Tabs>
-
-      {/* Guest Mode Option */}
-      <div className="w-full max-w-sm mx-auto mt-6">
+      </ScrollArea>
+      
+      {/* Footer Section (Not scrollable) */}
+      <div className="w-full max-w-sm mx-auto pt-4 mt-auto">
         <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-white/30" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-transparent px-2 text-white/70">Or</span>
-          </div>
+          <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/30" /></div>
+          <div className="relative flex justify-center text-xs uppercase"><span className="bg-transparent px-2 text-white/70">Or</span></div>
         </div>
         <Button
           onClick={handleGuestMode}
