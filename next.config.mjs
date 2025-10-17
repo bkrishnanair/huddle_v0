@@ -1,3 +1,11 @@
+import withPWAInit from "@ducanh2912/next-pwa";
+
+const withPWA = withPWAInit({
+  dest: "public",
+  register: true,
+  skipWaiting: true,
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Explicitly allow the development workspace URL to make cross-origin requests
@@ -17,4 +25,4 @@ const nextConfig = {
   output: 'standalone',
 }
 
-export default nextConfig
+export default withPWA(nextConfig)

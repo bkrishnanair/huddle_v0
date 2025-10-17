@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerCurrentUser } from "@/lib/auth-server"
-import { db } from "@/lib/firebase-admin"
+import { adminDb as db } from "@/lib/firebase-admin"
 import { getEvent, joinEvent, leaveEvent } from "@/lib/db"
 import { z } from "zod"
 import { firestore } from "firebase-admin"

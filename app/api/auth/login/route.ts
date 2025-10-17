@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getFirebaseAdminAuth } from "@/lib/firebase-admin"
+import { adminAuth } from "@/lib/firebase-admin"
 import { getUser } from "@/lib/db"
 
 export async function POST(request: NextRequest) {
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify token with Firebase Admin SDK
-    const adminAuth = getFirebaseAdminAuth()
+
     if (!adminAuth) {
       throw new Error("Firebase Admin Auth is not initialized")
     }

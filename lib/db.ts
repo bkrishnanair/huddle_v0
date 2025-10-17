@@ -14,9 +14,10 @@ import {
   arrayUnion,
   arrayRemove,
   getCountFromServer,
-} from "firebase/firestore"
-import { db } from "./firebase"
-import * as geofire from "geofire-common"
+  increment,
+} from "firebase/firestore";
+import { db } from "./firebase";
+import * as geofire from "geofire-common";
 
 export { db };
 
@@ -33,33 +34,33 @@ export const createUser = async (userId: string, data: any) => {
 
 export const createEvent = async (eventData: any) => {
   try {
-    const eventsCol = collection(db, "events")
+    const eventsCol = collection(db, "events");
     const newEventRef = await addDoc(eventsCol, {
       ...eventData,
       createdAt: Timestamp.now(),
-    })
-    return { id: newEventRef.id, ...eventData }
+    });
+    return { id: newEventRef.id, ...eventData };
   } catch (error) {
-    console.error("Error creating event in Firestore:", error)
-    throw new Error("Failed to save event to the database.")
+    console.error("Error creating event in Firestore:", error);
+    throw new Error("Failed to save event to the database.");
   }
-}
+};
 
 export const getEvents = async () => {
   try {
-    const eventsCol = collection(db, "events")
-    const eventSnapshot = await getDocs(eventsCol)
-    return eventSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+    const eventsCol = collection(db, "events");
+    const eventSnapshot = await getDocs(eventsCol);
+    return eventSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
-    console.error("Error fetching events from Firestore:", error)
-    throw new Error("Failed to retrieve events from the database.")
+    console.error("Error fetching events from Firestore:", error);
+    throw new Error("Failed to retrieve events from the database.");
   }
-}
+};
 
 export const getNearbyEvents = async (center: [number, number], radiusInM: number) => {
   try {
-    const bounds = geofire.geohashQueryBounds(center, radiusInM)
-    const promises = []
+    const bounds = geofire.geohashQueryBounds(center, radiusInM);
+    const promises = [];
 
     for (const b of bounds) {
       const q = query(
@@ -67,79 +68,77 @@ export const getNearbyEvents = async (center: [number, number], radiusInM: numbe
         orderBy("geohash"),
         where("geohash", ">=", b[0]),
         where("geohash", "<=", b[1]),
-      )
-      promises.push(getDocs(q))
+      );
+      promises.push(getDocs(q));
     }
 
-    const snapshots = await Promise.all(promises)
-    const matchingDocs = []
+    const snapshots = await Promise.all(promises);
+    const matchingDocs = [];
 
     for (const snap of snapshots) {
       for (const doc of snap.docs) {
-        const lat = doc.get("geopoint").latitude
-        const lng = doc.get("geopoint").longitude
+        const lat = doc.get("geopoint").latitude;
+        const lng = doc.get("geopoint").longitude;
 
-        const distanceInKm = geofire.distanceBetween([lat, lng], center)
-        const distanceInM = distanceInKm * 1000
+        const distanceInKm = geofire.distanceBetween([lat, lng], center);
+        const distanceInM = distanceInKm * 1000;
         if (distanceInM <= radiusInM) {
-          matchingDocs.push({ id: doc.id, ...doc.data() })
+          matchingDocs.push({ id: doc.id, ...doc.data() });
         }
       }
     }
-    return matchingDocs
+    return matchingDocs;
   } catch (error) {
-    console.error("Error fetching nearby events:", error)
-    throw new Error("Failed to query nearby events.")
+    console.error("Error fetching nearby events:", error);
+    throw new Error("Failed to query nearby events.");
   }
-}
+};
 
 export const saveFcmToken = async (userId: string, token: string) => {
-  if (!userId || !token) return
+  if (!userId || !token) return;
 
   try {
-    const userRef = doc(db, "users", userId)
+    const userRef = doc(db, "users", userId);
     await updateDoc(userRef, {
       fcmTokens: arrayUnion(token),
-    })
-    console.log(`FCM token saved for user: ${userId}`)
+    });
+    console.log(`FCM token saved for user: ${userId}`);
   } catch (error) {
     // Check if the document exists, if not create it
     if ((error as any).code === 'not-found') {
         await setDoc(doc(db, "users", userId), { fcmTokens: [token] }, { merge: true });
-        console.log(`FCM token saved for new user: ${userId}`)
+        console.log(`FCM token saved for new user: ${userId}`);
     } else {
-        console.error("Error saving FCM token:", error)
+        console.error("Error saving FCM token:", error);
     }
   }
-}
-
-// ... (existing functions)
+};
 
 export const getUserOrganizedEvents = async (userId: string) => {
-  if (!userId) return []
+  if (!userId) return [];
   try {
-    const eventsRef = collection(db, "events")
-    const q = query(eventsRef, where("createdBy", "==", userId))
-    const querySnapshot = await getDocs(q)
-    return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+    const eventsRef = collection(db, "events");
+    const q = query(eventsRef, where("createdBy", "==", userId));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
-    console.error("Error fetching organized events:", error)
-    throw new Error("Failed to fetch organized events.")
+    console.error("Error fetching organized events:", error);
+    throw new Error("Failed to fetch organized events.");
   }
-}
+};
 
 export const getUserJoinedEvents = async (userId: string) => {
-  if (!userId) return []
+  if (!userId) return [];
   try {
-    const eventsRef = collection(db, "events")
-    const q = query(eventsRef, where("players", "array-contains", userId))
-    const querySnapshot = await getDocs(q)
-    return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+    const eventsRef = collection(db, "events");
+    const q = query(eventsRef, where("players", "array-contains", userId));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
-    console.error("Error fetching joined events:", error)
-    throw new Error("Failed to fetch joined events.")
+    console.error("Error fetching joined events:", error);
+    throw new Error("Failed to fetch joined events.");
   }
-}
+};
 
 export const getEventCountsForUser = async (userId: string) => {
     if (!userId) return { organized: 0, joined: 0, upcoming: 0 };
@@ -171,4 +170,90 @@ export const getEventCountsForUser = async (userId: string) => {
     }
 };
 
-// ... (rest of the file)
+export const getEvent = async (eventId: string) => {
+  const eventRef = doc(db, "events", eventId);
+  const eventSnap = await getDoc(eventRef);
+  return eventSnap.exists() ? { id: eventSnap.id, ...eventSnap.data() } : null;
+};
+
+export const joinEvent = async (eventId: string, userId: string) => {
+  const eventRef = doc(db, "events", eventId);
+  await updateDoc(eventRef, {
+    players: arrayUnion(userId),
+    currentPlayers: increment(1),
+  });
+  const updatedEventSnap = await getDoc(eventRef);
+  return { id: updatedEventSnap.id, ...updatedEventSnap.data() };
+};
+
+export const leaveEvent = async (eventId: string, userId:string) => {
+  const eventRef = doc(db, "events", eventId);
+  await updateDoc(eventRef, {
+    players: arrayRemove(userId),
+    currentPlayers: increment(-1),
+  });
+  const updatedEventSnap = await getDoc(eventRef);
+  return { id: updatedEventSnap.id, ...updatedEventSnap.data() };
+};
+
+export const sendMessage = async (eventId: string, userId: string, displayName: string, message: string) => {
+  const chatCol = collection(db, "events", eventId, "chat");
+  await addDoc(chatCol, {
+    userId,
+    displayName,
+    message,
+    timestamp: Timestamp.now(),
+  });
+};
+
+export const getChatMessages = async (eventId: string) => {
+  const chatCol = collection(db, "events", eventId, "chat");
+  const q = query(chatCol, orderBy("timestamp", "asc"));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+};
+
+export const checkInPlayer = async (eventId: string, playerId: string, organizerId: string) => {
+  const eventRef = doc(db, "events", eventId);
+  const eventSnap = await getDoc(eventRef);
+  const event = eventSnap.data();
+
+  if (!event) {
+    throw new Error("Event not found");
+  }
+
+  if (event.createdBy !== organizerId) {
+    throw new Error("Only the event organizer can check in players.");
+  }
+
+  if (!event.players?.includes(playerId)) {
+    throw new Error("Player has not joined this event.");
+  }
+
+  const playerRef = doc(db, "events", eventId);
+  await updateDoc(playerRef, {
+    checkedInPlayers: arrayUnion(playerId),
+  });
+
+  const updatedEventSnap = await getDoc(eventRef);
+  return { id: updatedEventSnap.id, ...updatedEventSnap.data() };
+};
+
+export const getEventWithPlayerDetails = async (eventId: string) => {
+  const eventRef = doc(db, "events", eventId);
+  const eventSnap = await getDoc(eventRef);
+
+  if (!eventSnap.exists()) {
+    return null;
+  }
+
+  const event = { id: eventSnap.id, ...eventSnap.data() };
+  const playerIds = event.players || [];
+  
+  const playerPromises = playerIds.map((playerId: string) => getDoc(doc(db, "users", playerId)));
+  const playerSnaps = await Promise.all(playerPromises);
+  
+  const players = playerSnaps.map(snap => snap.exists() ? { id: snap.id, ...snap.data() } : null).filter(p => p);
+
+  return { ...event, players };
+};
