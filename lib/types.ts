@@ -4,16 +4,20 @@ export interface Player {
   photoURL?: string;
 }
 
-export interface HuddleEvent {
+export interface GameEvent {
   id: string;
   name: string;
+  title?: string; // Alias for name
   category: string;
+  sport?: string; // Alias for category
   tags?: string[];
   venue: any;
+  location?: any; // Alias for venue
   geopoint: {
     latitude: number;
     longitude: number;
   };
+  description?: string;
   date: string;
   time: string;
   maxPlayers: number;

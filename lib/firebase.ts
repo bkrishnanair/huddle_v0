@@ -3,6 +3,7 @@ import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore, doc, getDoc } from "firebase/firestore";
 
+console.log("FIREBASE KEY CHECK:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
 // Your Firebase config object, pulled from environment variables.
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,

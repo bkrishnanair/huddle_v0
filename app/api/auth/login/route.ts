@@ -1,8 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { type NextRequest, NextResponse } from "next/server"
-import { getFirebaseAdminAuth } from "@/lib/firebase-admin"
-import { getUser } from "@/lib/db"
+import { getFirebaseAdminAuth, getFirebaseAdminDb } from "@/lib/firebase-admin"
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,21 +18,36 @@ export async function POST(request: NextRequest) {
 
     // Verify token with Firebase Admin SDK
     const adminAuth = getFirebaseAdminAuth()
-    if (!adminAuth) {
+    const adminDb = getFirebaseAdminDb()
+    if (!adminAuth || !adminDb) {
       throw new Error("Firebase Admin Auth is not initialized")
     }
 
     const decodedToken = await adminAuth.verifyIdToken(idToken)
     console.log("🔥 Server-side token verification successful")
 
-    // Get user profile from database
-    const userProfile = await getUser(decodedToken.uid)
+    // Get user profile from database using Admin SDK
+    const userDoc = await adminDb.collection("users").doc(decodedToken.uid).get()
+    const userProfile = userDoc.exists ? userDoc.data() : null
 
     const user = {
       uid: decodedToken.uid,
       email: decodedToken.email,
       name: userProfile?.name || decodedToken.name || "User",
     }
+
+    // Create session cookie for server-side auth persistence
+    const expiresIn = 60 * 60 * 24 * 5 * 1000 // 5 days
+    const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn })
+
+    const cookieStore = await import("next/headers").then(mod => mod.cookies())
+    cookieStore.set("session", sessionCookie, {
+      maxAge: expiresIn,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      sameSite: "lax",
+    })
 
     return NextResponse.json({ user })
   } catch (error: any) {

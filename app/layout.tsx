@@ -13,7 +13,7 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Huddle - Find Pickup Sports Games",
   description: "Find and join pickup sports games in your local community",
-    generator: 'v.dev'
+  generator: 'v.dev'
 }
 
 export default function RootLayout({
@@ -23,7 +23,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${inter.className} tracking-tight`}>
         <FirebaseProvider>
           <NotificationPermissionHandler />
           {children}

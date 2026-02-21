@@ -10,7 +10,7 @@ import CreateEventModal from "@/components/create-event-modal"
 import { Chip } from "@/components/ui/chip"
 import { Search, SlidersHorizontal, PlusCircle, Star, Settings, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { HuddleEvent } from "@/lib/types"
+import { GameEvent } from "@/lib/types"
 import { signOut } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { toast } from "sonner"
@@ -32,33 +32,54 @@ const ActionableEmptyState = ({ onOpenCreateModal }: { onOpenCreateModal: () => 
 export default function DiscoverPage() {
     const { user } = useAuth();
     const router = useRouter();
-    const [allNearbyEvents, setAllNearbyEvents] = useState<HuddleEvent[]>([]);
+    const [allNearbyEvents, setAllNearbyEvents] = useState<GameEvent[]>([]);
     const [userProfile, setUserProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [initialLoadComplete, setInitialLoadComplete] = useState(false);
-    const [selectedEvent, setSelectedEvent] = useState<HuddleEvent | null>(null);
+    const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-    
+
     const [searchQuery, setSearchQuery] = useState("");
     const [activeCategory, setActiveCategory] = useState("All");
     const [sortBy, setSortBy] = useState("soonest");
 
     useEffect(() => {
-        navigator.geolocation.getCurrentPosition(position => {
-            setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
-        });
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const newLat = position.coords.latitude;
+                const newLng = position.coords.longitude;
+                setUserLocation(prev =>
+                    prev?.lat === newLat && prev?.lng === newLng ? prev : { lat: newLat, lng: newLng }
+                );
+            },
+            () => {
+                const defaultLat = 37.7749;
+                const defaultLng = -122.4194;
+                setUserLocation(prev =>
+                    prev?.lat === defaultLat && prev?.lng === defaultLng ? prev : { lat: defaultLat, lng: defaultLng }
+                );
+            }
+        );
+    }, []);
 
+    useEffect(() => {
         const fetchInitialData = async () => {
-            if (!user || !userLocation) return;
+            if (!user?.uid || !userLocation) return;
             setLoading(true);
             try {
                 const radius = 50000;
+
+                // Use token for authenticated profile fetch to avoid 401s if locked down
+                const token = await user.getIdToken();
+
                 const [profileRes, eventsRes] = await Promise.all([
-                    fetch(`/api/users/${user.uid}/profile`),
+                    fetch(`/api/users/${user.uid}/profile`, {
+                        headers: { "Authorization": `Bearer ${token}` }
+                    }),
                     fetch(`/api/events?lat=${userLocation.lat}&lon=${userLocation.lng}&radius=${radius}`)
                 ]);
-                
+
                 if (profileRes.ok) setUserProfile((await profileRes.json()).profile);
                 if (eventsRes.ok) setAllNearbyEvents((await eventsRes.json()).events || []);
             } catch (error) {
@@ -68,17 +89,17 @@ export default function DiscoverPage() {
                 setInitialLoadComplete(true);
             }
         };
-        
+
         fetchInitialData();
-    }, [user, userLocation]);
-    
+    }, [user?.uid, userLocation]);
+
     const handleLogout = async () => {
         try {
-          await signOut(auth)
-          toast.success("Logged out successfully")
-          router.push("/")
+            await signOut(auth)
+            toast.success("Logged out successfully")
+            router.push("/")
         } catch (error) {
-          toast.error("Failed to log out")
+            toast.error("Failed to log out")
         }
     }
 
@@ -90,8 +111,8 @@ export default function DiscoverPage() {
         });
 
         const favoriteCategories = userProfile?.favoriteCategories || [];
-        const recommended: HuddleEvent[] = [];
-        const others: HuddleEvent[] = [];
+        const recommended: GameEvent[] = [];
+        const others: GameEvent[] = [];
 
         if (favoriteCategories.length > 0 && activeCategory === 'All' && searchQuery === '') {
             filtered.forEach(event => {
@@ -121,7 +142,7 @@ export default function DiscoverPage() {
                 </div>
             )
         }
-        
+
         const hasRecommended = recommendedEvents.length > 0;
         const hasOther = otherEvents.length > 0;
 
@@ -135,16 +156,16 @@ export default function DiscoverPage() {
                     <section className="mb-8">
                         <h2 className="text-2xl font-bold text-slate-50 mb-4 flex items-center gap-2"><Star className="w-6 h-6 text-yellow-400" /> Recommended For You</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {recommendedEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} />)}
+                            {recommendedEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} showMapButton={true} />)}
                         </div>
                     </section>
                 )}
-                 <section>
-                        {hasRecommended && <h2 className="text-2xl font-bold text-slate-50 mb-4">All Other Events</h2>}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {otherEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} />)}
-                        </div>
-                 </section>
+                <section>
+                    {hasRecommended && <h2 className="text-2xl font-bold text-slate-50 mb-4">All Other Events</h2>}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {otherEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} showMapButton={true} />)}
+                    </div>
+                </section>
             </>
         )
     }
@@ -167,31 +188,31 @@ export default function DiscoverPage() {
             </header>
 
             <div className="space-y-4 mb-8">
-                 <div className="relative">
+                <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <Input placeholder="Search by name or category..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 glass-surface border-white/15 h-12" />
                 </div>
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                     <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2">
                         {CATEGORY_FILTERS.map(category => <Chip key={category} isActive={activeCategory === category} onClick={() => setActiveCategory(category)}>{category}</Chip>)}
-                     </div>
-                     <Select value={sortBy} onValueChange={setSortBy}>
+                    </div>
+                    <Select value={sortBy} onValueChange={setSortBy}>
                         <SelectTrigger className="w-full md:w-[180px] glass-surface border-white/15 h-11">
-                             <SlidersHorizontal className="w-4 h-4 mr-2" />
-                             <SelectValue />
+                            <SlidersHorizontal className="w-4 h-4 mr-2" />
+                            <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                             <SelectItem value="soonest">Sort: Soonest</SelectItem>
-                             <SelectItem value="closest">Sort: Closest</SelectItem>
+                            <SelectItem value="soonest">Sort: Soonest</SelectItem>
+                            <SelectItem value="closest">Sort: Closest</SelectItem>
                         </SelectContent>
-                     </Select>
+                    </Select>
                 </div>
             </div>
 
             {renderContent()}
 
-             {selectedEvent && <EventDetailsDrawer event={selectedEvent} isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} onEventUpdated={() => {}} />}
-             {showCreateModal && <CreateEventModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onEventCreated={() => {}} userLocation={userLocation} />}
+            {selectedEvent && <EventDetailsDrawer event={selectedEvent} isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} onEventUpdated={() => { }} />}
+            {showCreateModal && <CreateEventModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onEventCreated={() => { }} userLocation={userLocation} />}
         </div>
     )
 }

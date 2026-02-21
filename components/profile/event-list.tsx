@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { HuddleEvent } from "@/lib/types"
+import { GameEvent } from "@/lib/types"
 import { EventCard } from "@/components/events/event-card"
 import { Loader2, AlertCircle } from "lucide-react"
 
@@ -11,7 +11,7 @@ interface EventListProps {
 }
 
 export function EventList({ userId, eventType }: EventListProps) {
-  const [events, setEvents] = useState<HuddleEvent[]>([])
+  const [events, setEvents] = useState<GameEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -20,8 +20,17 @@ export function EventList({ userId, eventType }: EventListProps) {
       setIsLoading(true)
       setError(null)
       try {
-        const response = await fetch(`/api/users/${userId}/events?type=${eventType}`, { credentials: 'include' });
-        
+        const { getAuth } = await import("firebase/auth");
+        const currentUser = getAuth().currentUser;
+        const idToken = currentUser ? await currentUser.getIdToken() : "";
+
+        const response = await fetch(`/api/users/${userId}/events?type=${eventType}`, {
+          headers: {
+            "Authorization": `Bearer ${idToken}`
+          },
+          credentials: 'include'
+        });
+
         if (!response.ok) {
           throw new Error(`Failed to fetch events with status: ${response.status}`)
         }
@@ -74,10 +83,10 @@ export function EventList({ userId, eventType }: EventListProps) {
   return (
     <div className="space-y-4">
       {events.map((event) => (
-        <EventCard 
-          key={event.id} 
-          event={event} 
-          onSelectEvent={() => {}} // FIX: Provide the required onSelectEvent prop
+        <EventCard
+          key={event.id}
+          event={event}
+          onSelectEvent={() => { }} // FIX: Provide the required onSelectEvent prop
         />
       ))}
     </div>

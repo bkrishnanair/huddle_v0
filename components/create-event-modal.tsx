@@ -40,7 +40,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   const [boostEvent, setBoostEvent] = useState(false)
   const [mapCenter, setMapCenter] = useState(userLocation || { lat: 37.7749, lng: -122.4194 })
   const [markerPosition, setMarkerPosition] = useState(userLocation || { lat: 37.7749, lng: -122.4194 })
-  
+
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   // Use the styled map ID for dark mode consistency
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID;
@@ -77,13 +77,20 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
     setIsLoading(true)
 
     try {
+      const { getAuth } = await import("firebase/auth")
+      const currentUser = getAuth().currentUser
+      const idToken = currentUser ? await currentUser.getIdToken() : ""
+
       const response = await fetch("/api/events", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-            ...formData, 
-            geopoint: { latitude: markerPosition.lat, longitude: markerPosition.lng }, 
-            isBoosted: boostEvent 
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
+          ...formData,
+          geopoint: { latitude: markerPosition.lat, longitude: markerPosition.lng },
+          isBoosted: boostEvent
         }),
         credentials: 'include'
       })
@@ -111,7 +118,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
           <DialogTitle>Create a New Event</DialogTitle>
           <DialogDescription>Fill in the details to get your event on the map.</DialogDescription>
         </DialogHeader>
-        
+
         <div className="flex-1 overflow-y-auto no-scrollbar px-6">
           <form id="event-form" onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -119,8 +126,8 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
               <Input id="name" placeholder="e.g., Community Workshop" value={formData.name} onChange={(e) => handleInputChange("name", e.target.value)} required />
             </div>
 
-            <AIGenerateButton onClick={() => {}} isLoading={isAiLoading} />
-            <AISuggestionsList suggestions={suggestions} onSelect={() => {}} />
+            <AIGenerateButton onClick={() => { }} isLoading={isAiLoading} />
+            <AISuggestionsList suggestions={suggestions} onSelect={() => { }} />
 
             <div>
               <Label htmlFor="description">Description</Label>
@@ -141,11 +148,11 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                 <APIProvider apiKey={mapsApiKey}>
                   <LocationSearchInput onPlaceSelect={handlePlaceSelect} />
                   <div className="h-48 w-full rounded-lg overflow-hidden relative mt-2 border border-border">
-                    <Map 
-                      defaultCenter={mapCenter} 
-                      center={mapCenter} 
-                      defaultZoom={15} 
-                      gestureHandling={"greedy"} 
+                    <Map
+                      defaultCenter={mapCenter}
+                      center={mapCenter}
+                      defaultZoom={15}
+                      gestureHandling={"greedy"}
                       disableDefaultUI={true}
                       mapId={mapId}
                     >
@@ -155,20 +162,20 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                 </APIProvider>
               ) : (
                 <div className="h-48 w-full rounded-lg mt-2 border border-border flex items-center justify-center text-center bg-slate-800/50">
-                    <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading Map...
+                  <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading Map...
                 </div>
               )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <Label htmlFor="date">Date</Label>
-                    <Input id="date" type="date" value={formData.date} onChange={(e) => handleInputChange("date", e.target.value)} required />
-                </div>
-                <div>
-                    <Label htmlFor="time">Time</Label>
-                    <Input id="time" type="time" value={formData.time} onChange={(e) => handleInputChange("time", e.target.value)} required />
-                </div>
+              <div>
+                <Label htmlFor="date">Date</Label>
+                <Input id="date" type="date" value={formData.date} onChange={(e) => handleInputChange("date", e.target.value)} required />
+              </div>
+              <div>
+                <Label htmlFor="time">Time</Label>
+                <Input id="time" type="time" value={formData.time} onChange={(e) => handleInputChange("time", e.target.value)} required />
+              </div>
             </div>
 
             <div>
@@ -181,14 +188,14 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
 
             <div className="space-y-4 pt-4 border-t border-border">
               <div className="flex items-center justify-between p-4 rounded-lg bg-white/5">
-                  <div>
-                      <Label htmlFor="boost" className="font-bold flex items-center gap-2">
-                          <Rocket className="w-5 h-5 text-yellow-400" />
-                          Boost Event
-                      </Label>
-                      <p className="text-sm text-slate-400 mt-1">Get your event featured to attract more attendees.</p>
-                  </div>
-                  <Switch id="boost" checked={boostEvent} onCheckedChange={setBoostEvent} />
+                <div>
+                  <Label htmlFor="boost" className="font-bold flex items-center gap-2">
+                    <Rocket className="w-5 h-5 text-yellow-400" />
+                    Boost Event
+                  </Label>
+                  <p className="text-sm text-slate-400 mt-1">Get your event featured to attract more attendees.</p>
+                </div>
+                <Switch id="boost" checked={boostEvent} onCheckedChange={setBoostEvent} />
               </div>
             </div>
           </form>

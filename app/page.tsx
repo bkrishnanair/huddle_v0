@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/firebase-context"
 import LandingPage from "@/components/landing-page"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
 import AuthScreen from "@/components/auth-screen"
 import { useRouter } from "next/navigation"
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 
 export default function Home() {
   const { user, loading, error } = useAuth()
@@ -46,6 +47,9 @@ export default function Home() {
 
       <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
         <DialogContent className="glass-surface border-white/15 bg-slate-900/80 max-w-md p-0 gap-0 rounded-2xl overflow-hidden">
+          <VisuallyHidden>
+            <DialogTitle>Authentication</DialogTitle>
+          </VisuallyHidden>
           <AuthScreen onLogin={() => setIsAuthModalOpen(false)} />
         </DialogContent>
       </Dialog>

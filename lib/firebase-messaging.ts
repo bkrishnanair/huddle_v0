@@ -1,26 +1,33 @@
-// lib/firebase-messaging.ts
-import { getMessaging, getToken } from "firebase/messaging";
-import { app } from "./firebase"; // Assuming 'app' is your initialized Firebase app instance
+import { getMessaging, getToken, isSupported } from "firebase/messaging";
+import { app } from "./firebase";
 
-/**
- * Requests permission from the user to send push notifications.
- * @returns {Promise<string | null>} The FCM token if permission is granted, otherwise null.
- */
 export const requestNotificationPermission = async (): Promise<string | null> => {
-  // Ensure we are in a browser environment before proceeding.
+  // 1. Ensure we are in a browser environment
   if (typeof window === "undefined") {
     return null;
   }
 
   try {
+    // 2. Safely check if the browser supports FCM (prevents the HTTP/IP crash)
+    const supported = await isSupported();
+    if (!supported) {
+      console.warn("Firebase Messaging is not supported in this browser context (likely HTTP local IP). Skipping notifications.");
+      return null;
+    }
+
+    // 3. Ensure the Notification API exists on the window object
+    if (!("Notification" in window)) {
+      console.warn("This browser does not support desktop notifications.");
+      return null;
+    }
+
     const messaging = getMessaging(app);
     const permission = await Notification.requestPermission();
 
     if (permission === "granted") {
       console.log("Notification permission granted.");
-      // Retrieve the FCM token. The VAPID key is automatically sourced from your Firebase config.
       const fcmToken = await getToken(messaging, {
-        vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY, // Add your VAPID key to .env.local
+        vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
       });
       return fcmToken;
     } else {
@@ -28,7 +35,7 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
       return null;
     }
   } catch (error) {
-    console.error("An error occurred while retrieving the token.", error);
+    console.error("An error occurred while retrieving the FCM token.", error);
     return null;
   }
 };

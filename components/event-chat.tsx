@@ -63,9 +63,13 @@ export default function EventChat({ eventId }: EventChatProps) {
 
     setSending(true)
     try {
+      const idToken = await user.getIdToken()
       const response = await fetch(`/api/events/${eventId}/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`
+        },
         body: JSON.stringify({ message: newMessage, userId: user.uid, userName: user.displayName }),
         credentials: 'include' // <-- Ensures session cookies are sent for authentication
       })
@@ -118,9 +122,8 @@ export default function EventChat({ eventId }: EventChatProps) {
             {messages.map((message) => (
               <div key={message.id} className={`flex ${message.userId === user?.uid ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-xs lg:max-w-md px-3 py-2 rounded-lg ${
-                    message.userId === user?.uid ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-900"
-                  }`}
+                  className={`max-w-xs lg:max-w-md px-3 py-2 rounded-lg ${message.userId === user?.uid ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-900"
+                    }`}
                 >
                   {message.userId !== user?.uid && (
                     <p className="text-xs font-semibold mb-1 opacity-75">{message.userName}</p>

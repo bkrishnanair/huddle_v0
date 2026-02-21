@@ -3,14 +3,16 @@
 import { useEffect, useState, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Chip } from "@/components/ui/chip"
-import { Plus, MapPin, LocateFixed, AlertCircle, Loader2 } from "lucide-react"
+import { Plus, MapPin, LocateFixed, AlertCircle, Loader2, Star, Calendar, Clock } from "lucide-react"
 import EventDetailsDrawer from "./event-details-drawer"
 import CreateEventModal from "./create-event-modal"
-import { APIProvider, Map, AdvancedMarker, Pin, useMap } from "@vis.gl/react-google-maps"
-import { HuddleEvent } from "@/lib/types"
+import { APIProvider, Map, AdvancedMarker, Pin, useMap, InfoWindow } from "@vis.gl/react-google-maps"
+import { GameEvent } from "@/lib/types"
+import LocationSearchInput from "./location-search"
 
 interface MapViewProps {
   user: any
+  eventId?: string
 }
 
 const MapRenderer = ({ onMapLoad, children }: { onMapLoad: (map: google.maps.Map) => void, children: React.ReactNode }) => {
@@ -32,14 +34,25 @@ const getCategoryColor = (category: string): string => {
   return colors[category] || colors.default
 }
 
-export default function MapView({ user }: MapViewProps) {
-  const [events, setEvents] = useState<HuddleEvent[]>([])
-  const [selectedEvent, setSelectedEvent] = useState<HuddleEvent | null>(null)
+const getCategoryIcon = (category: string): string => {
+  const icons: { [key: string]: string } = {
+    Sports: "⚽", Music: "🎵", Community: "🤝", Learning: "📚",
+    "Food & Drink": "🍕", Tech: "💻", "Arts & Culture": "🎨",
+    Outdoors: "🌲", default: "📍"
+  }
+  return icons[category] || icons.default
+}
+
+export default function MapView({ user, eventId }: MapViewProps) {
+  const [events, setEvents] = useState<GameEvent[]>([])
+  const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null)
+  const [hoveredEvent, setHoveredEvent] = useState<GameEvent | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 37.7749, lng: -122.4194 })
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [activeCategory, setActiveCategory] = useState("All");
+  const [currentZoom, setCurrentZoom] = useState(18);
 
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID;
@@ -47,35 +60,115 @@ export default function MapView({ user }: MapViewProps) {
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const location = { lat: position.coords.latitude, lng: position.coords.longitude }
-        setUserLocation(location)
-        setMapCenter(location)
+        const newLat = position.coords.latitude;
+        const newLng = position.coords.longitude;
+        setUserLocation(prev =>
+          prev?.lat === newLat && prev?.lng === newLng ? prev : { lat: newLat, lng: newLng }
+        );
+        setMapCenter(prev =>
+          prev?.lat === newLat && prev?.lng === newLng ? prev : { lat: newLat, lng: newLng }
+        );
       },
       () => {
-        setUserLocation({ lat: 37.7749, lng: -122.4194 })
-        setMapCenter({ lat: 37.7749, lng: -122.4194 })
+        const defaultLat = 37.7749;
+        const defaultLng = -122.4194;
+        setUserLocation(prev =>
+          prev?.lat === defaultLat && prev?.lng === defaultLng ? prev : { lat: defaultLat, lng: defaultLng }
+        );
+        setMapCenter(prev =>
+          prev?.lat === defaultLat && prev?.lng === defaultLng ? prev : { lat: defaultLat, lng: defaultLng }
+        );
       }
     )
   }, [])
-  
+
   const fetchEventsInView = useCallback(async () => {
     if (!map) return;
     const bounds = map.getBounds();
     if (!bounds) return;
+
+    // Fallback radius if geometry library is not loaded yet
+    let radius = 50000;
+
+    if (window.google?.maps?.geometry?.spherical) {
+      const center = bounds.getCenter();
+      const ne = bounds.getNorthEast();
+      radius = window.google.maps.geometry.spherical.computeDistanceBetween(center, ne);
+    }
+
     const center = bounds.getCenter();
-    const ne = bounds.getNorthEast();
-    const radius = google.maps.geometry.spherical.computeDistanceBetween(center, ne);
-    
     try {
-      const response = await fetch(`/api/events?lat=${center.lat()}&lon=${center.lng()}&radius=${radius}`, { credentials: 'include' });
+      const fetchOptions: RequestInit = user ? { credentials: 'include' } : {};
+      const response = await fetch(`/api/events?lat=${center.lat()}&lon=${center.lng()}&radius=${radius}`, fetchOptions);
       if (response.ok) {
         const data = await response.json();
-        setEvents(data.events || []);
+
+        // Only update state if the events actually changed to prevent re-render loops
+        setEvents(prev => {
+          const newEventsIds = new Set(data.events.map((e: GameEvent) => e.id));
+          const oldEventsIds = new Set(prev.map(e => e.id as string));
+          if (newEventsIds.size !== oldEventsIds.size) return data.events || [];
+          let changed = false;
+          for (const id of newEventsIds as Set<string>) {
+            if (!oldEventsIds.has(id)) { changed = true; break; }
+          }
+          return changed ? data.events || [] : prev;
+        });
       }
     } catch (error) {
       console.error("Failed to load events:", error);
     }
   }, [map]);
+
+  // Deep Link handler: Pans map and opens drawer when eventId is supplied via URL
+  useEffect(() => {
+    if (user?.uid && eventId && map && !selectedEvent) {
+      const fetchAndFocusEvent = async () => {
+        try {
+          const token = await user.getIdToken();
+          const response = await fetch(`/api/events/${eventId}/details`, {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const event: GameEvent = await response.json();
+            if (event.geopoint) {
+              map.panTo({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
+              map.setZoom(18);
+              setSelectedEvent(event);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch deep linked event:", error);
+        }
+      };
+      fetchAndFocusEvent();
+    }
+  }, [user, eventId, map, selectedEvent]);
+
+  // Debounce the map idle event to prevent spamming the API when dragging/zooming rapidly
+  const debouncedFetchEventsInView = useMemo(() => {
+    let timeout: ReturnType<typeof setTimeout>;
+    return () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        if (map) setCurrentZoom(map.getZoom() || 18);
+        fetchEventsInView();
+      }, 500); // Wait 500ms after the map stops moving before fetching
+    };
+  }, [fetchEventsInView, map]);
+
+  const handleGlobalSearchSelect = useCallback(
+    (place: google.maps.places.PlaceResult | null) => {
+      if (place?.geometry?.location && map) {
+        map.panTo({
+          lat: place.geometry.location.lat(),
+          lng: place.geometry.location.lng(),
+        });
+        map.setZoom(15);
+      }
+    },
+    [map]
+  );
 
   const handleRecenter = useCallback(() => {
     if (userLocation && map) {
@@ -91,22 +184,22 @@ export default function MapView({ user }: MapViewProps) {
 
   if (!mapsApiKey) {
     return (
-        <div className="min-h-screen liquid-gradient flex items-center justify-center p-4 text-center">
-            <div className="glass-surface rounded-lg p-6">
-                <AlertCircle className="w-8 h-8 text-rose-400 mx-auto mb-4" />
-                <h1 className="text-xl font-bold text-slate-50 mb-2">Maps Configuration Error</h1>
-                <p className="text-slate-300">Google Maps API key is missing. Please check your environment variables.</p>
-            </div>
+      <div className="min-h-screen liquid-gradient flex items-center justify-center p-4 text-center">
+        <div className="glass-surface rounded-lg p-6">
+          <AlertCircle className="w-8 h-8 text-rose-400 mx-auto mb-4" />
+          <h1 className="text-xl font-bold text-slate-50 mb-2">Maps Configuration Error</h1>
+          <p className="text-slate-300">Google Maps API key is missing. Please check your environment variables.</p>
         </div>
+      </div>
     );
   }
 
   if (!userLocation) {
     return (
       <div className="min-h-screen liquid-gradient flex items-center justify-center text-center">
-         <div className="glass-surface rounded-lg p-6">
-            <Loader2 className="w-8 h-8 text-slate-50 animate-spin mx-auto mb-4" />
-            <p className="text-slate-300">Getting Location...</p>
+        <div className="glass-surface rounded-lg p-6">
+          <Loader2 className="w-8 h-8 text-slate-50 animate-spin mx-auto mb-4" />
+          <p className="text-slate-300">Getting Location...</p>
         </div>
       </div>
     );
@@ -116,8 +209,8 @@ export default function MapView({ user }: MapViewProps) {
     <div className="h-screen flex flex-col liquid-gradient" id="map-view">
       <div className="flex-1 relative">
         <APIProvider apiKey={mapsApiKey} libraries={['geometry']}>
-           <Map
-            onIdle={fetchEventsInView}
+          <Map
+            onIdle={debouncedFetchEventsInView}
             defaultCenter={mapCenter}
             defaultZoom={18}
             className="w-full h-full"
@@ -130,41 +223,78 @@ export default function MapView({ user }: MapViewProps) {
               {map && (
                 <>
                   {userLocation && <AdvancedMarker position={userLocation} />}
-                  {filteredEvents.map((event: HuddleEvent) => (
-                    <AdvancedMarker
-                      key={event.id}
-                      position={{ lat: event.geopoint.latitude, lng: event.geopoint.longitude }}
-                      onClick={() => setSelectedEvent(event)}
-                    >
-                      <Pin background={getCategoryColor(event.category)} borderColor={event.isBoosted ? "#fbbf24" : "#ffffff"} glyphColor="#ffffff" />
-                    </AdvancedMarker>
-                  ))}
+                  {filteredEvents.map((event: GameEvent) => {
+                    const isHovered = hoveredEvent?.id === event.id;
+                    const showDetails = isHovered || currentZoom >= 16;
+
+                    return (
+                      <AdvancedMarker
+                        key={event.id}
+                        position={{ lat: event.geopoint.latitude, lng: event.geopoint.longitude }}
+                        onClick={() => setSelectedEvent(event)}
+                        onMouseEnter={() => setHoveredEvent(event)}
+                        onMouseLeave={() => setHoveredEvent(null)}
+                        style={{ zIndex: isHovered ? 50 : (showDetails ? 10 : 0) }}
+                      >
+                        <div className={`transition-all duration-300 transform origin-bottom ${isHovered ? 'scale-110' : ''}`}>
+                          <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-full shadow-lg border border-white/20 text-white backdrop-blur-md transition-colors ${isHovered ? 'bg-slate-900 border-primary drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]' : 'bg-slate-900/80'}`}>
+                            {/* Inner Emoji Circle */}
+                            <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/10 shrink-0">
+                              <span className="text-sm leading-none">{getCategoryIcon(event.category)}</span>
+                            </div>
+
+                            {/* Expanded Details Wrapper */}
+                            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${showDetails ? 'max-w-[200px] opacity-100 mr-2' : 'max-w-0 opacity-0 mr-0'}`}>
+                              <div className="flex flex-col whitespace-nowrap min-w-[100px]">
+                                <span className="font-bold text-xs max-w-[150px] truncate">{event.name}</span>
+                                <div className="flex items-center justify-between mt-0.5">
+                                  <span className="text-[10px] text-slate-300 font-medium">{event.time}</span>
+                                  {isHovered && currentZoom < 16 && (
+                                    <span className="text-[9px] text-primary font-bold">Open</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Anchor Triange */}
+                          <div className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 border-r border-b border-white/20 ${isHovered ? 'bg-slate-900' : 'bg-slate-900/80'} backdrop-blur-md z-[-1]`}></div>
+                        </div>
+                      </AdvancedMarker>
+                    );
+                  })}
                 </>
               )}
             </MapRenderer>
           </Map>
         </APIProvider>
 
-        <div className="absolute top-4 left-4 right-4 z-10">
-            <div className="flex items-center space-x-2 p-2 glass-surface rounded-full">
-                <Chip isActive={activeCategory === 'All'} onClick={() => setActiveCategory('All')}>All</Chip>
-                <Chip isActive={activeCategory === 'Sports'} onClick={() => setActiveCategory('Sports')}>Sports</Chip>
-                <Chip isActive={activeCategory === 'Music'} onClick={() => setActiveCategory('Music')}>Music</Chip>
-                <Chip isActive={activeCategory === 'Community'} onClick={() => setActiveCategory('Community')}>Community</Chip>
-            </div>
+        <div className="absolute top-4 left-4 right-4 z-10 flex flex-col gap-2">
+          <div className="glass-surface border border-white/10 rounded-xl overflow-hidden shadow-lg p-1">
+            <LocationSearchInput onPlaceSelect={handleGlobalSearchSelect} />
+          </div>
+
+          <div className="flex items-center space-x-2 p-2 glass-surface rounded-full overflow-x-auto no-scrollbar">
+            <Chip isActive={activeCategory === 'All'} onClick={() => setActiveCategory('All')}>All</Chip>
+            <Chip isActive={activeCategory === 'Sports'} onClick={() => setActiveCategory('Sports')}>Sports</Chip>
+            <Chip isActive={activeCategory === 'Music'} onClick={() => setActiveCategory('Music')}>Music</Chip>
+            <Chip isActive={activeCategory === 'Community'} onClick={() => setActiveCategory('Community')}>Community</Chip>
+          </div>
         </div>
 
-        <Button id="create-event-button" onClick={() => setShowCreateModal(true)} size="lg" className="absolute bottom-44 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg">
+        {user && (
+          <Button id="create-event-button" onClick={() => setShowCreateModal(true)} size="lg" className="absolute bottom-44 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-105 transition-transform">
             <Plus className="w-6 h-6" />
-        </Button>
+          </Button>
+        )}
 
         <Button onClick={handleRecenter} variant="secondary" size="lg" className="absolute bottom-28 right-6 h-14 w-14 rounded-full shadow-lg">
-            <LocateFixed className="w-6 h-6" />
+          <LocateFixed className="w-6 h-6" />
         </Button>
       </div>
 
-      {selectedEvent && <EventDetailsDrawer event={selectedEvent} isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} onEventUpdated={() => {}} />}
-      {showCreateModal && <CreateEventModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onEventCreated={() => {}} userLocation={userLocation} />}
+      {selectedEvent && <EventDetailsDrawer event={selectedEvent} isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} onEventUpdated={() => { }} />}
+      {showCreateModal && <CreateEventModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onEventCreated={() => { }} userLocation={userLocation} />}
     </div>
   )
 }
