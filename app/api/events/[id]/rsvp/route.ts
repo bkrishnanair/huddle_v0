@@ -11,9 +11,9 @@ const rsvpSchema = z.object({
   action: z.enum(["join", "leave"]),
 })
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params
+    const { id } = await params
     const user = await getServerCurrentUser()
 
     if (!user) {
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     const { action } = validationResult.data
-    const event = await getEvent(id)
+    const event = await getEvent(id) as any
 
     if (!event) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 })
@@ -41,19 +41,24 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         return NextResponse.json({ error: "You have already joined this event" }, { status: 400 })
       }
 
-      if (event.currentPlayers >= event.maxPlayers) {
+      const currentPlayers = event.currentPlayers || 0
+      const maxPlayers = event.maxPlayers || 0
+
+      if (currentPlayers >= maxPlayers) {
         return NextResponse.json({ error: "This event is already full" }, { status: 400 })
       }
 
       updatedEvent = await joinEvent(id, user.uid)
 
       // Gamification: Check for first game achievement
-      const userEventsQuery = await db.collection("events").where("players", "array-contains", user.uid).get()
-      if (userEventsQuery.size === 1) {
-        const userRef = db.collection("users").doc(user.uid)
-        await userRef.update({
-          badges: firestore.FieldValue.arrayUnion("first_game"),
-        })
+      if (db) {
+        const userEventsQuery = await db.collection("events").where("players", "array-contains", user.uid).get()
+        if (userEventsQuery.size === 1) {
+          const userRef = db.collection("users").doc(user.uid)
+          await userRef.update({
+            badges: firestore.FieldValue.arrayUnion("first_game"),
+          })
+        }
       }
     } else {
       // action === "leave"

@@ -3,18 +3,22 @@ export const dynamic = "force-dynamic";
 import { type NextRequest, NextResponse } from "next/server"
 import { adminAuth, adminDb } from "@/lib/firebase-admin"
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id: eventId } = await params
     const authHeader = request.headers.get("authorization")
     if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    if (!adminAuth || !adminDb) {
+      throw new Error("Firebase Admin not initialized")
     }
 
     const token = authHeader.split("Bearer ")[1]
     const decodedToken = await adminAuth.verifyIdToken(token)
     const userId = decodedToken.uid
 
-    const eventId = params.id
     const eventRef = adminDb.collection("events").doc(eventId)
     const eventDoc = await eventRef.get()
 
