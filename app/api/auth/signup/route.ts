@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { signUpWithEmail } from "@/lib/auth"
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const { email, password, name } = await request.json()
@@ -33,4 +35,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: "Failed to create account. Please try again." }, { status: 500 })
   }
+}
+
+export async function GET() {
+  return NextResponse.json({ ok: true });
 }

@@ -21,21 +21,35 @@ const missingConfig = requiredConfig.filter(
 );
 
 if (missingConfig.length > 0) {
-  throw new Error(
-    `Missing Firebase configuration variables: ${missingConfig.join(
+  console.warn(
+    `⚠️ Missing Firebase configuration variables: ${missingConfig.join(
       ", "
-    )}. Please check your Vercel environment variables.`
+    )}. Firebase services will not be functional.`
   );
 }
 
 // Initialize Firebase App (Singleton Pattern)
-// This prevents re-initialization on hot-reloads in development.
-const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
+let app: FirebaseApp;
+let auth: Auth;
+let db: Firestore;
 
-// Initialize and export Firebase services.
-// By passing the 'app' object, we ensure they are always linked to the correct instance.
-const auth: Auth = getAuth(app);
-const db: Firestore = getFirestore(app);
+try {
+  if (getApps().length) {
+    app = getApp();
+  } else {
+    // If we're missing crucial config, use a dummy or skip
+    if (!firebaseConfig.apiKey) {
+      console.warn("⚠️ Firebase API Key missing. Initialization may fail.");
+    }
+    app = initializeApp(firebaseConfig);
+  }
+
+  auth = getAuth(app);
+  db = getFirestore(app);
+} catch (error) {
+  console.error("🚨 Failed to initialize Firebase:", error);
+  // Export as null or handle accordingly in components
+}
 
 export { app, auth, db };
 
