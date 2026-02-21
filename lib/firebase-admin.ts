@@ -44,17 +44,17 @@ try {
       privateKey: privateKey.replace(/\\n/g, '\n'), // Handle escaped newlines
     };
 
-    adminApp = getApps().length 
-      ? getApp() 
+    adminApp = getApps().length
+      ? getApp()
       : initializeApp({
-          credential: cert(serviceAccount),
-        });
+        credential: cert(serviceAccount),
+      });
   }
 
   // Initialize Auth and Firestore services
   adminAuth = getAuth(adminApp);
   adminDb = getFirestore(adminApp);
-  
+
   console.log("✅ Firebase Admin SDK initialized successfully");
 } catch (error: any) {
   console.error("🚨 Firebase Admin initialization error:", {
@@ -68,7 +68,8 @@ try {
 }
 
 // Export services
-export { adminApp as admin, adminAuth, adminDb };
+// Export services
+export { adminApp as admin, adminAuth, adminDb, adminDb as db };
 
 // Legacy admin export for backward compatibility
 export const admin_legacy = {
@@ -82,7 +83,7 @@ export const verifyIdToken = async (idToken: string) => {
   if (!adminAuth) {
     throw new Error("Firebase Admin Auth not initialized");
   }
-  
+
   try {
     const decodedToken = await adminAuth.verifyIdToken(idToken);
     return decodedToken;
@@ -98,6 +99,14 @@ export const getFirebaseAdminDb = () => {
     return null;
   }
   return adminDb;
+};
+
+export const getFirebaseAdminAuth = () => {
+  if (!adminAuth) {
+    console.error("🚨 Firebase Admin Auth not initialized");
+    return null;
+  }
+  return adminAuth;
 };
 
 // Health check function
