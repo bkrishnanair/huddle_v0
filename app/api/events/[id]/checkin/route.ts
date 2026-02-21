@@ -1,19 +1,20 @@
 export const dynamic = "force-dynamic";
 
 import { type NextRequest, NextResponse } from "next/server"
-import { getCurrentUser } from "@/lib/auth"
+import { getServerCurrentUser } from "@/lib/auth-server"
 import { checkInPlayer } from "@/lib/db"
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const user = await getCurrentUser()
+    const user = await getServerCurrentUser()
 
     if (!user) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 })
     }
 
-    const { playerId } = await request.json()
+    const body = await request.json()
+    const { playerId } = body
 
     if (!playerId) {
       return NextResponse.json({ error: "Player ID is required" }, { status: 400 })
