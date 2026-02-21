@@ -3,21 +3,22 @@ export const dynamic = "force-dynamic";
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerCurrentUser } from "@/lib/auth-server"
 import { adminDb } from "@/lib/firebase-admin"
+import { getEventCountsForUser } from "@/lib/db"
 
 export const runtime = 'nodejs'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: requestedUserId } = await params;
     // Authenticate the user
     const currentUser = await getServerCurrentUser()
     if (!currentUser) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 })
     }
 
-    const requestedUserId = params.id
     if (!requestedUserId) {
       return NextResponse.json({ error: "User ID is required" }, { status: 400 })
     }
@@ -32,7 +33,7 @@ export async function GET(
       console.error("Firebase Admin Firestore not initialized")
       return NextResponse.json({ error: "Database service unavailable" }, { status: 503 })
     }
-    
+
     const userRef = adminDb.collection("users").doc(requestedUserId)
     const userDoc = await userRef.get()
 
@@ -41,7 +42,7 @@ export async function GET(
     }
 
     const userData = userDoc.data()
-    
+
     // Return user's complete profile data (private data included since it's their own profile)
     const profile = {
       uid: requestedUserId,
@@ -54,9 +55,11 @@ export async function GET(
       fcmTokens: userData?.fcmTokens || [],
     }
 
-    return NextResponse.json({ profile })
+    const stats = await getEventCountsForUser(requestedUserId);
+
+    return NextResponse.json({ profile, stats })
   } catch (error) {
-    console.error(`Error fetching profile for user ${params.id}:`, error)
+    console.error(`Error fetching profile for user:`, error)
     return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 })
   }
 }

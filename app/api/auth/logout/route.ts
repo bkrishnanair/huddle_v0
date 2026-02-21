@@ -6,6 +6,11 @@ import { logOut } from "@/lib/auth"
 export async function POST(request: NextRequest) {
   try {
     await logOut()
+
+    // Clear the server-side session cookie
+    const cookieStore = await import("next/headers").then(mod => mod.cookies())
+    cookieStore.delete("session")
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Logout error:", error)

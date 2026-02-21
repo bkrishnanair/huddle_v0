@@ -2,9 +2,9 @@ export const dynamic = "force-dynamic";
 
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerCurrentUser } from "@/lib/auth-server"
-import { getEvents, createEvent as dbCreateEvent, getNearbyEvents } from "@/lib/db"
+import { getEvents, getNearbyEvents } from "@/lib/db"
+import { getFirebaseAdminDb, GeoPoint, Timestamp } from "@/lib/firebase-admin"
 import * as geofire from "geofire-common"
-import { GeoPoint } from "firebase/firestore"
 import { z } from "zod"
 
 const eventSchema = z.object({
@@ -13,15 +13,18 @@ const eventSchema = z.object({
   tags: z.array(z.string()).optional(),
   date: z.string().min(1, "Date is required"),
   time: z.string().min(1, "Time is required"),
-  venue: z.string().min(1, "Venue is required"),
+  location: z.string().min(1, "Location is required"),
   maxPlayers: z.number().min(1, "At least one player is required"),
   minPlayers: z.number().optional(),
   description: z.string().optional(),
+  isBoosted: z.boolean().optional(),
   geopoint: z.object({
     latitude: z.number(),
     longitude: z.number(),
   }),
 })
+
+import { MOCK_EVENTS } from "@/lib/mock-data"
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,11 +38,16 @@ export async function GET(request: NextRequest) {
         [parseFloat(lat), parseFloat(lon)],
         parseFloat(radius)
       )
-      return NextResponse.json({ events })
+
+      // Combine Firebase events with static Mock Events for frictionless discovery
+      const combinedEvents = [...MOCK_EVENTS, ...events]
+
+      return NextResponse.json({ events: combinedEvents })
     }
 
     const events = await getEvents()
-    return NextResponse.json({ events })
+    const combinedEvents = [...MOCK_EVENTS, ...events]
+    return NextResponse.json({ events: combinedEvents })
   } catch (error) {
     console.error("Error fetching events:", error)
     return NextResponse.json({ error: "Failed to fetch events" }, { status: 500 })
@@ -54,24 +62,44 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
+    console.log("Incoming Payload for POST /api/events:", body)
+
     const validation = eventSchema.safeParse(body)
 
     if (!validation.success) {
+      console.error("Validation Error:", validation.error.format())
       return NextResponse.json({ error: validation.error.format() }, { status: 400 })
     }
 
     const { geopoint, ...rest } = validation.data
     const geohash = geofire.geohashForLocation([geopoint.latitude, geopoint.longitude])
-    
+
+    const adminDb = getFirebaseAdminDb()
+    if (!adminDb) {
+      throw new Error("Database service unavailable")
+    }
+
+    // Get user's name for organizerName field
+    const userDoc = await adminDb.collection("users").doc(user.uid).get()
+    const userData = userDoc.data()
+    const organizerName = userData?.name || user.name || user.email?.split("@")[0] || "User"
+
     const newEvent = {
       ...rest,
+      title: rest.name, // Ensure title is set for component compatibility
+      sport: rest.category, // Ensure sport is set for component compatibility
+      location: rest.location, // Ensure location is set for component compatibility
       geopoint: new GeoPoint(geopoint.latitude, geopoint.longitude),
       geohash,
       createdBy: user.uid,
+      organizerName,
       players: [user.uid],
+      currentPlayers: 1,
+      createdAt: Timestamp.now(),
     }
 
-    const createdEvent = await dbCreateEvent(newEvent)
+    const docRef = await adminDb.collection("events").add(newEvent)
+    const createdEvent = { id: docRef.id, ...newEvent }
 
     return NextResponse.json({
       message: "Event created successfully",

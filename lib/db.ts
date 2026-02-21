@@ -17,19 +17,10 @@ import {
 } from "firebase/firestore"
 import { db } from "./firebase"
 import * as geofire from "geofire-common"
-
 export { db };
+import { getUser } from "./db-client";
 
-export const getUser = async (userId: string) => {
-  const userRef = doc(db, "users", userId);
-  const userSnap = await getDoc(userRef);
-  return userSnap.exists() ? userSnap.data() : null;
-};
 
-export const createUser = async (userId: string, data: any) => {
-  const userRef = doc(db, "users", userId);
-  await setDoc(userRef, { ...data, createdAt: Timestamp.now() });
-};
 
 export const createEvent = async (eventData: any) => {
   try {
@@ -93,25 +84,7 @@ export const getNearbyEvents = async (center: [number, number], radiusInM: numbe
   }
 }
 
-export const saveFcmToken = async (userId: string, token: string) => {
-  if (!userId || !token) return
 
-  try {
-    const userRef = doc(db, "users", userId)
-    await updateDoc(userRef, {
-      fcmTokens: arrayUnion(token),
-    })
-    console.log(`FCM token saved for user: ${userId}`)
-  } catch (error) {
-    // Check if the document exists, if not create it
-    if ((error as any).code === 'not-found') {
-      await setDoc(doc(db, "users", userId), { fcmTokens: [token] }, { merge: true });
-      console.log(`FCM token saved for new user: ${userId}`)
-    } else {
-      console.error("Error saving FCM token:", error)
-    }
-  }
-}
 
 export const getEvent = async (eventId: string) => {
   try {
@@ -126,31 +99,68 @@ export const getEvent = async (eventId: string) => {
 
 export const joinEvent = async (eventId: string, userId: string) => {
   try {
-    const eventRef = doc(db, "events", eventId)
-    await updateDoc(eventRef, {
-      players: arrayUnion(userId),
-      currentPlayers: (await getDoc(eventRef)).get("currentPlayers") + 1
-    })
-    const updatedSnap = await getDoc(eventRef)
-    return { id: updatedSnap.id, ...updatedSnap.data() }
+    const { getFirebaseAdminDb } = await import("@/lib/firebase-admin");
+    const { FieldValue } = await import("firebase-admin/firestore");
+    const adminDb = getFirebaseAdminDb();
+
+    if (!adminDb) throw new Error("Firebase Admin not initialized");
+
+    const eventRef = adminDb.collection("events").doc(eventId);
+
+    // Run in a transaction to safely increment players and add to array
+    await adminDb.runTransaction(async (transaction) => {
+      const eventDoc = await transaction.get(eventRef);
+      if (!eventDoc.exists) {
+        throw new Error("Event does not exist!");
+      }
+
+      const currentPlayers = eventDoc.data()?.currentPlayers || 0;
+
+      transaction.update(eventRef, {
+        players: FieldValue.arrayUnion(userId),
+        currentPlayers: currentPlayers + 1
+      });
+    });
+
+    const updatedSnap = await eventRef.get();
+    return { id: updatedSnap.id, ...updatedSnap.data() };
   } catch (error) {
-    console.error("Error joining event:", error)
-    throw new Error("Failed to join event.")
+    console.error("Error joining event:", error);
+    throw new Error("Failed to join event.");
   }
 }
 
 export const leaveEvent = async (eventId: string, userId: string) => {
   try {
-    const eventRef = doc(db, "events", eventId)
-    await updateDoc(eventRef, {
-      players: arrayRemove(userId),
-      currentPlayers: Math.max(0, (await getDoc(eventRef)).get("currentPlayers") - 1)
-    })
-    const updatedSnap = await getDoc(eventRef)
-    return { id: updatedSnap.id, ...updatedSnap.data() }
+    const { getFirebaseAdminDb } = await import("@/lib/firebase-admin");
+    const { FieldValue } = await import("firebase-admin/firestore");
+    const adminDb = getFirebaseAdminDb();
+
+    if (!adminDb) throw new Error("Firebase Admin not initialized");
+
+    const eventRef = adminDb.collection("events").doc(eventId);
+
+    // Run in a transaction to safely decrement players and remove from array
+    await adminDb.runTransaction(async (transaction) => {
+      const eventDoc = await transaction.get(eventRef);
+      if (!eventDoc.exists) {
+        throw new Error("Event does not exist!");
+      }
+
+      const currentPlayers = eventDoc.data()?.currentPlayers || 0;
+      const newPlayerCount = Math.max(0, currentPlayers - 1);
+
+      transaction.update(eventRef, {
+        players: FieldValue.arrayRemove(userId),
+        currentPlayers: newPlayerCount
+      });
+    });
+
+    const updatedSnap = await eventRef.get();
+    return { id: updatedSnap.id, ...updatedSnap.data() };
   } catch (error) {
-    console.error("Error leaving event:", error)
-    throw new Error("Failed to leave event.")
+    console.error("Error leaving event:", error);
+    throw new Error("Failed to leave event.");
   }
 }
 
@@ -226,9 +236,13 @@ export const getEventWithPlayerDetails = async (eventId: string) => {
 export const getUserOrganizedEvents = async (userId: string) => {
   if (!userId) return []
   try {
-    const eventsRef = collection(db, "events")
-    const q = query(eventsRef, where("createdBy", "==", userId))
-    const querySnapshot = await getDocs(q)
+    const { getFirebaseAdminDb } = await import("@/lib/firebase-admin");
+    const adminDb = getFirebaseAdminDb();
+    if (!adminDb) throw new Error("Firebase Admin not initialized");
+
+    const eventsRef = adminDb.collection("events")
+    const q = eventsRef.where("createdBy", "==", userId)
+    const querySnapshot = await q.get()
     return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
   } catch (error) {
     console.error("Error fetching organized events:", error)
@@ -239,9 +253,13 @@ export const getUserOrganizedEvents = async (userId: string) => {
 export const getUserJoinedEvents = async (userId: string) => {
   if (!userId) return []
   try {
-    const eventsRef = collection(db, "events")
-    const q = query(eventsRef, where("players", "array-contains", userId))
-    const querySnapshot = await getDocs(q)
+    const { getFirebaseAdminDb } = await import("@/lib/firebase-admin");
+    const adminDb = getFirebaseAdminDb();
+    if (!adminDb) throw new Error("Firebase Admin not initialized");
+
+    const eventsRef = adminDb.collection("events")
+    const q = eventsRef.where("players", "array-contains", userId)
+    const querySnapshot = await q.get()
     return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
   } catch (error) {
     console.error("Error fetching joined events:", error)
@@ -252,20 +270,23 @@ export const getUserJoinedEvents = async (userId: string) => {
 export const getEventCountsForUser = async (userId: string) => {
   if (!userId) return { organized: 0, joined: 0, upcoming: 0 };
   try {
-    const eventsRef = collection(db, "events");
+    const { getFirebaseAdminDb } = await import("@/lib/firebase-admin");
+    const adminDb = getFirebaseAdminDb();
+    if (!adminDb) throw new Error("Firebase Admin not initialized");
+
+    const eventsRef = adminDb.collection("events");
     const today = new Date().toISOString().split('T')[0];
 
-    const organizedQuery = query(eventsRef, where("createdBy", "==", userId));
-    const joinedQuery = query(eventsRef, where("players", "array-contains", userId));
-    const upcomingQuery = query(eventsRef,
-      where("players", "array-contains", userId),
-      where("date", ">=", today)
-    );
+    const organizedQuery = eventsRef.where("createdBy", "==", userId);
+    const joinedQuery = eventsRef.where("players", "array-contains", userId);
+    const upcomingQuery = eventsRef
+      .where("players", "array-contains", userId)
+      .where("date", ">=", today)
 
     const [organizedSnap, joinedSnap, upcomingSnap] = await Promise.all([
-      getCountFromServer(organizedQuery),
-      getCountFromServer(joinedQuery),
-      getCountFromServer(upcomingQuery)
+      organizedQuery.count().get(),
+      joinedQuery.count().get(),
+      upcomingQuery.count().get()
     ]);
 
     return {

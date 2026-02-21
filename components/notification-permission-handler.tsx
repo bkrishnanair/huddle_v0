@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useAuth } from "@/lib/firebase-context";
 import { requestNotificationPermission } from "@/lib/firebase-messaging";
-import { saveFcmToken } from "@/lib/db";
+import { saveFcmToken } from "@/lib/db-client";
 
 export function NotificationPermissionHandler() {
   const { user } = useAuth();

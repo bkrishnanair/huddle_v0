@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { useFirebase } from "@/lib/firebase-context"
 import BottomNavigation from "@/components/bottom-navigation"
 
@@ -14,12 +14,14 @@ export default function AppLayout({
 }) {
   const { user, loading } = useFirebase()
   const router = useRouter()
+  const pathname = usePathname()
+  const isPublicRoute = pathname === "/map"
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && !isPublicRoute) {
       router.push("/")
     }
-  }, [user, loading, router])
+  }, [user, loading, router, isPublicRoute])
 
   if (loading) {
     return (
@@ -33,6 +35,9 @@ export default function AppLayout({
   }
 
   if (!user) {
+    if (isPublicRoute) {
+      return <div className="relative">{children}</div>
+    }
     return null
   }
 

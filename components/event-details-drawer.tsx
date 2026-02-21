@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { GameEvent } from "@/lib/types"
 import { Users, Calendar, Clock, MapPin, Loader2 } from "lucide-react"
 import { useFirebase } from "@/lib/firebase-context"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
 interface EventDetailsDrawerProps {
@@ -25,6 +26,7 @@ interface EventDetailsDrawerProps {
 
 export default function EventDetailsDrawer({ event, isOpen, onClose, onEventUpdated }: EventDetailsDrawerProps) {
   const { user } = useFirebase()
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
   if (!event) return null;
@@ -36,7 +38,7 @@ export default function EventDetailsDrawer({ event, isOpen, onClose, onEventUpda
 
   const handleRSVP = async () => {
     if (!user) {
-      toast.error("Please sign in to join events")
+      router.push(`/login?return_to=/map?eventId=${event.id}`)
       return
     }
 
@@ -44,9 +46,13 @@ export default function EventDetailsDrawer({ event, isOpen, onClose, onEventUpda
     setIsLoading(true)
 
     try {
+      const idToken = await user.getIdToken()
       const response = await fetch(`/api/events/${event.id}/rsvp`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`
+        },
         body: JSON.stringify({ action }),
         credentials: "include"
       })
@@ -108,10 +114,10 @@ export default function EventDetailsDrawer({ event, isOpen, onClose, onEventUpda
           </div>
         </div>
         <DrawerFooter>
-          <Button 
-            size="lg" 
+          <Button
+            size="lg"
             onClick={handleRSVP}
-            disabled={isLoading || (!user && true) || (isFull && !hasJoined)}
+            disabled={isLoading || (isFull && !hasJoined && !!user)}
             variant={getButtonVariant()}
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

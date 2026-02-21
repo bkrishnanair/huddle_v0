@@ -6,7 +6,7 @@ import { MapPin, Calendar, Search, User } from "lucide-react"
 
 const HuddleLogo = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-slate-50">
-    <path d="M4 4V20M20 4V20M4 12H20M12 4V12C12 14.2091 10.2091 16 8 16C5.79086 16 4 14.2091 4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M4 4V20M20 4V20M4 12H20M12 4V12C12 14.2091 10.2091 16 8 16C5.79086 16 4 14.2091 4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 )
 
@@ -23,9 +23,9 @@ export default function BottomNavigation() {
   return (
     <div className="fixed bottom-4 inset-x-0 z-50 flex justify-center px-4">
       <div className="flex items-center justify-around gap-2 rounded-full p-2 glass-surface border-white/15 w-full max-w-md">
-        <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center">
+        <Link href="/" className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
           <HuddleLogo />
-        </div>
+        </Link>
         {tabs.map((tab) => {
           const Icon = tab.icon
           const isActive = pathname === tab.href

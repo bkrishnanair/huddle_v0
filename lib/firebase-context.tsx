@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useEffect, useState, useCallback } from "react"
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react"
 import { type User, onAuthStateChanged, signOut } from "firebase/auth"
 import { auth, app } from "./firebase"
 import { FirebaseApp } from "firebase/app"
@@ -18,7 +18,7 @@ const FirebaseContext = createContext<FirebaseContextType>({
   user: null,
   loading: true,
   error: null,
-  logout: async () => {},
+  logout: async () => { },
   app: null
 })
 
@@ -43,6 +43,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     // FIX: Ensure auth object is not null before using it.
     if (auth) {
       try {
+        await fetch("/api/auth/logout", { method: "POST" });
         await signOut(auth);
         setUser(null);
       } catch (error) {
@@ -56,7 +57,19 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     if (auth) {
       const unsubscribe = onAuthStateChanged(
         auth,
-        (user) => {
+        async (user) => {
+          if (user) {
+            try {
+              const idToken = await user.getIdToken()
+              await fetch("/api/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ idToken }),
+              })
+            } catch (err) {
+              console.error("Error setting session cookie:", err)
+            }
+          }
           setUser(user)
           setLoading(false)
           setError(null)
@@ -75,5 +88,10 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  return <FirebaseContext.Provider value={{ user, loading, error, logout, app }}>{children}</FirebaseContext.Provider>
+  const contextValue = useMemo(
+    () => ({ user, loading, error, logout, app }),
+    [user, loading, error, logout, app]
+  );
+
+  return <FirebaseContext.Provider value={contextValue}>{children}</FirebaseContext.Provider>
 }

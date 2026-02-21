@@ -9,7 +9,7 @@ import {
   type User,
 } from "firebase/auth";
 import { auth } from "./firebase";
-import { createUser, getUser } from "./db";
+import { createUser, getUser } from "./db-client";
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -25,15 +25,15 @@ export const signUpWithEmail = async (email: string, password: string, name: str
 };
 
 export const signInWithEmail = async (email: string, password: string) => {
-    if (!auth) throw new Error("Firebase Auth is not initialized on the client.");
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    return userCredential.user;
+  if (!auth) throw new Error("Firebase Auth is not initialized on the client.");
+  const userCredential = await signInWithEmailAndPassword(auth, email, password);
+  return userCredential.user;
 };
 
 // SOCIAL LOGIN: This is the new function for handling Google Sign-In.
 export const signInWithGoogle = async () => {
   if (!auth) throw new Error("Firebase Auth is not initialized on the client.");
-  
+
   // 1. Trigger the Google Sign-In popup.
   const result = await signInWithPopup(auth, googleProvider);
   const user = result.user;
@@ -56,6 +56,6 @@ export const signInWithGoogle = async () => {
 
 
 export const logOut = async () => {
-    if (!auth) throw new Error("Firebase Auth is not initialized on the client.");
-    await signOut(auth);
+  if (!auth) throw new Error("Firebase Auth is not initialized on the client.");
+  await signOut(auth);
 };

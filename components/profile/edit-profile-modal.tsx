@@ -9,17 +9,15 @@ import { X } from "lucide-react"
 import { toast } from "sonner"
 import { MultiSelect } from "@/components/ui/multi-select"
 
-const SPORTS = [
-  "Basketball",
-  "Soccer",
-  "Tennis",
-  "Cricket",
-  "Baseball",
-  "Volleyball",
-  "Football",
-  "Hockey",
-  "Badminton",
-  "Table Tennis",
+const CATEGORIES = [
+  "Sports",
+  "Music",
+  "Community",
+  "Learning",
+  "Food & Drink",
+  "Tech",
+  "Arts & Culture",
+  "Outdoors",
 ]
 
 interface EditProfileModalProps {
@@ -34,16 +32,23 @@ export default function EditProfileModal({ isOpen, onClose, userProfile, onProfi
   const [formData, setFormData] = useState({
     displayName: userProfile?.displayName || "",
     bio: userProfile?.bio || "",
-    favoriteSports: userProfile?.favoriteSports || [],
+    interests: userProfile?.interests || userProfile?.favoriteSports || [],
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     try {
+      const { getAuth } = await import("firebase/auth")
+      const currentUser = getAuth().currentUser
+      const idToken = currentUser ? await currentUser.getIdToken() : ""
+
       const response = await fetch("/api/users/profile", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`
+        },
         body: JSON.stringify(formData),
         credentials: 'include' // <-- Critical fix: ensures session cookies are sent
       })
@@ -106,14 +111,14 @@ export default function EditProfileModal({ isOpen, onClose, userProfile, onProfi
               />
             </div>
             <div>
-              <Label htmlFor="favoriteSports" className="text-white/90">
-                Favorite Sports
+              <Label htmlFor="interests" className="text-white/90">
+                Interests
               </Label>
               <MultiSelect
-                options={SPORTS.map((s) => ({ value: s, label: s }))}
-                value={formData.favoriteSports}
-                onChange={(value) => setFormData({ ...formData, favoriteSports: value })}
-                placeholder="Select your favorite sports"
+                options={CATEGORIES.map((s) => ({ value: s, label: s }))}
+                value={formData.interests}
+                onChange={(value) => setFormData({ ...formData, interests: value })}
+                placeholder="Select your interests"
               />
             </div>
             <div className="pt-4">

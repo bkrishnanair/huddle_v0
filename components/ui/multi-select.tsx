@@ -28,8 +28,8 @@ const multiSelectVariants = cva(
 )
 
 interface MultiSelectProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof multiSelectVariants> {
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, "onChange">,
+  VariantProps<typeof multiSelectVariants> {
   options: {
     value: string
     label: string
@@ -89,6 +89,7 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
+                  value={option.value}
                   onSelect={() => handleSelect(option.value)}
                   className={cn(
                     "cursor-pointer",

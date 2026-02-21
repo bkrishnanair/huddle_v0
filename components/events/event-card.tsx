@@ -3,24 +3,32 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Clock, MapPin, Users } from "lucide-react";
-import { HuddleEvent } from "@/lib/types";
+import { GameEvent } from "@/lib/types";
 import { formatDistanceToNow } from 'date-fns';
 
+import Link from "next/link";
+
 interface EventCardProps {
-  event: HuddleEvent;
-  onSelectEvent: (event: HuddleEvent) => void;
+  event: GameEvent;
+  onSelectEvent: (event: GameEvent) => void;
+  showMapButton?: boolean;
 }
 
-export const EventCard = React.memo(({ event, onSelectEvent }: EventCardProps) => {
+export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = false }: EventCardProps) => {
   const isFull = event.currentPlayers >= event.maxPlayers;
 
   const getTimeDifference = (date: string, time: string) => {
+    if (!date || date === "Today" || date === "Tomorrow" || date.includes("/")) {
+      return date || "TBD";
+    }
+
     try {
-      const eventDateTime = new Date(`${date}T${time}`);
+      const eventDateTime = new Date(`${date}T${time || '00:00'}`);
+      if (isNaN(eventDateTime.getTime())) return "Upcoming";
       return formatDistanceToNow(eventDateTime, { addSuffix: true });
     } catch (error) {
       console.error("Error formatting date:", error);
-      return "Invalid date";
+      return "Upcoming";
     }
   };
 
@@ -44,21 +52,36 @@ export const EventCard = React.memo(({ event, onSelectEvent }: EventCardProps) =
           </div>
         </div>
       </CardContent>
-      <div className="bg-white/5 px-4 py-3 flex justify-between items-center">
+      <div className="bg-white/5 px-4 py-3 flex justify-between items-center gap-3">
         <div className="flex items-center">
           <Users className="w-4 h-4 mr-2 text-slate-400" />
           <span className="text-slate-300 font-medium">
             {event.currentPlayers} / {event.maxPlayers}
           </span>
         </div>
-        <Button 
-            size="sm" 
-            onClick={() => onSelectEvent(event)} 
+        <div className="flex gap-2">
+          {showMapButton && (
+            <Button
+              size="sm"
+              variant="outline"
+              asChild
+              className="bg-white/5 border-white/20 text-white hover:bg-white/10 h-9 px-3"
+            >
+              <Link href={`/map?eventId=${event.id}`}>
+                <MapPin className="w-4 h-4 mr-1.5 text-primary" />
+                Map
+              </Link>
+            </Button>
+          )}
+          <Button
+            size="sm"
+            onClick={() => onSelectEvent(event)}
             className="bg-primary text-primary-foreground h-9 px-4"
             disabled={isFull}
-        >
-          {isFull ? "Full" : "View Details"}
-        </Button>
+          >
+            {isFull ? "Full" : "View Details"}
+          </Button>
+        </div>
       </div>
     </Card>
   );
@@ -67,22 +90,22 @@ export const EventCard = React.memo(({ event, onSelectEvent }: EventCardProps) =
 EventCard.displayName = 'EventCard';
 
 export function EventCardSkeleton() {
-    return (
-      <Card className="glass-surface border-white/15 overflow-hidden flex flex-col animate-pulse">
-        <CardContent className="p-4 flex-grow">
-          <div className="flex justify-between items-start mb-3">
-            <div className="h-6 w-3/4 bg-slate-700 rounded-md"></div>
-            <div className="h-6 w-1/4 bg-slate-700 rounded-md"></div>
-          </div>
-          <div className="space-y-2">
-            <div className="h-4 w-5/6 bg-slate-700 rounded-md"></div>
-            <div className="h-4 w-4/6 bg-slate-700 rounded-md"></div>
-          </div>
-        </CardContent>
-        <div className="bg-white/5 px-4 py-3 flex justify-between items-center">
-          <div className="h-5 w-1/3 bg-slate-700 rounded-md"></div>
-          <div className="h-9 w-1/4 bg-primary rounded-md"></div>
+  return (
+    <Card className="glass-surface border-white/15 overflow-hidden flex flex-col animate-pulse">
+      <CardContent className="p-4 flex-grow">
+        <div className="flex justify-between items-start mb-3">
+          <div className="h-6 w-3/4 bg-slate-700 rounded-md"></div>
+          <div className="h-6 w-1/4 bg-slate-700 rounded-md"></div>
         </div>
-      </Card>
-    );
-  }
+        <div className="space-y-2">
+          <div className="h-4 w-5/6 bg-slate-700 rounded-md"></div>
+          <div className="h-4 w-4/6 bg-slate-700 rounded-md"></div>
+        </div>
+      </CardContent>
+      <div className="bg-white/5 px-4 py-3 flex justify-between items-center">
+        <div className="h-5 w-1/3 bg-slate-700 rounded-md"></div>
+        <div className="h-9 w-1/4 bg-primary rounded-md"></div>
+      </div>
+    </Card>
+  );
+}
