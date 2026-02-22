@@ -27,7 +27,7 @@ export default function MyEventsPage() {
       </div>
     )
   }
-  
+
   const handleEventCreated = () => {
     setShowCreateModal(false);
     setRefreshKey(prevKey => prevKey + 1); // Increment key to force re-render and re-fetch
@@ -35,26 +35,39 @@ export default function MyEventsPage() {
 
   return (
     <div className="min-h-screen liquid-gradient p-4 md:p-8">
-      <header className="flex flex-col md:flex-row justify-between items-center mb-8">
-        <div>
-            <h1 className="text-3xl font-bold text-white">My Events</h1>
-            <p className="text-white/80">View and manage your created and joined events.</p>
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-extrabold text-slate-50 tracking-tight">My Events</h1>
+          <p className="text-slate-400 font-medium text-lg">Manage your organized and joined games.</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)} className="glass-card mt-4 md:mt-0">
-          <Plus className="w-4 h-4 mr-2" />
+        <Button onClick={() => setShowCreateModal(true)} size="lg" className="h-12 px-6 rounded-2xl bg-primary text-primary-foreground shadow-2xl hover:scale-105 transition-all font-bold">
+          <Plus className="w-5 h-5 mr-2" />
           Create Event
         </Button>
       </header>
 
-      <Tabs defaultValue="organized" key={refreshKey} className="glass-card p-4 rounded-2xl">
-        <TabsList className="grid w-full grid-cols-2 bg-white/10">
-          <TabsTrigger value="organized" className="text-white data-[state=active]:bg-white/20">Organized</TabsTrigger>
-          <TabsTrigger value="joined" className="text-white data-[state=active]:bg-white/20">Joined</TabsTrigger>
-        </TabsList>
-        <TabsContent value="organized" className="mt-4">
+      <Tabs defaultValue="organized" key={refreshKey} className="space-y-8">
+        <div className="max-w-max">
+          <TabsList className="h-12 p-1 glass-surface border border-white/10 rounded-2xl shadow-2xl flex items-center bg-transparent">
+            <TabsTrigger
+              value="organized"
+              className="px-8 h-10 rounded-xl font-bold text-slate-400 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all"
+            >
+              Organized
+            </TabsTrigger>
+            <TabsTrigger
+              value="joined"
+              className="px-8 h-10 rounded-xl font-bold text-slate-400 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all"
+            >
+              Joined
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent value="organized" className="mt-0 outline-none">
           <EventList userId={user.uid} eventType="organized" />
         </TabsContent>
-        <TabsContent value="joined" className="mt-4">
+        <TabsContent value="joined" className="mt-0 outline-none">
           <EventList userId={user.uid} eventType="joined" />
         </TabsContent>
       </Tabs>
@@ -64,7 +77,7 @@ export default function MyEventsPage() {
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
           onEventCreated={handleEventCreated}
-          userLocation={null} 
+          userLocation={null}
         />
       )}
     </div>

@@ -6,6 +6,8 @@ import { EventCard } from "@/components/events/event-card"
 import { Loader2, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import { useAuth } from "@/lib/firebase-context"
+import { useRouter } from "next/navigation"
+import EventDetailsDrawer from "@/components/event-details-drawer"
 
 interface EventListProps {
   userId: string
@@ -14,9 +16,27 @@ interface EventListProps {
 
 export function EventList({ userId, eventType }: EventListProps) {
   const { user } = useAuth()
+  const router = useRouter()
   const [events, setEvents] = useState<GameEvent[]>([])
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        })
+      },
+      () => {
+        // Default to SF if location denied
+        setUserLocation({ lat: 37.7749, lng: -122.4194 })
+      }
+    )
+  }, [])
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -39,7 +59,26 @@ export function EventList({ userId, eventType }: EventListProps) {
         }
 
         const data = await response.json()
-        setEvents(data.events)
+        let fetchedEvents = data.events || []
+
+        // Calculate distances if location is available
+        if (userLocation) {
+          fetchedEvents = fetchedEvents.map((event: GameEvent) => {
+            if (event.geopoint) {
+              const R = 3958.8; // Radius in miles
+              const dLat = (event.geopoint.latitude - userLocation.lat) * Math.PI / 180;
+              const dLon = (event.geopoint.longitude - userLocation.lng) * Math.PI / 180;
+              const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(event.geopoint.latitude * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+              return { ...event, distance: Math.round(R * c * 10) / 10 };
+            }
+            return event;
+          });
+        }
+
+        setEvents(fetchedEvents)
       } catch (err) {
         console.error(`Error fetching ${eventType} events:`, err)
         setError(err instanceof Error ? err.message : "An unknown error occurred")
@@ -51,7 +90,7 @@ export function EventList({ userId, eventType }: EventListProps) {
     if (userId) {
       fetchEvents()
     }
-  }, [userId, eventType])
+  }, [userId, eventType, userLocation])
 
   const handleUnjoin = async (eventId: string) => {
     if (!user) return;
@@ -116,15 +155,29 @@ export function EventList({ userId, eventType }: EventListProps) {
   }
 
   return (
-    <div className="space-y-4">
-      {events.map((event) => (
-        <EventCard
-          key={event.id}
-          event={event}
-          onSelectEvent={() => { }} // Required prop; can implement navigation later
-          onUnjoin={eventType === "joined" ? () => handleUnjoin(event.id) : undefined}
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {events.map((event) => (
+          <EventCard
+            key={event.id}
+            event={event}
+            onSelectEvent={setSelectedEvent}
+            onUnjoin={eventType === "joined" ? () => handleUnjoin(event.id) : undefined}
+            showMapButton={true}
+          />
+        ))}
+      </div>
+
+      {selectedEvent && (
+        <EventDetailsDrawer
+          event={selectedEvent}
+          isOpen={!!selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          onEventUpdated={(updatedEvent) => {
+            setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
+          }}
         />
-      ))}
-    </div>
+      )}
+    </>
   )
 }

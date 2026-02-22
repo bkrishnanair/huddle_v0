@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { signInWithEmail, signUpWithEmail, signInWithGoogle } from "@/lib/auth"
 
+import { useRouter } from "next/navigation"
+
 interface AuthScreenProps {
   onLogin: (user: any) => void
   onBackToLanding?: () => void
@@ -20,6 +22,7 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const { user } = useAuth()
+  const router = useRouter()
 
   const handleAuthAction = async (action: "login" | "signup") => {
     setIsLoading(true)
@@ -63,11 +66,12 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
   return (
     <div className="p-6">
       {/* Hero Section */}
-      <div className="text-center mb-8">
-        <h2 className="text-4xl md:text-5xl font-bold text-white mb-3 leading-tight">
-          Stop Searching, Start Playing. <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">Find Your Huddle.</span>
+      <div className="text-center mb-10">
+        <h2 className="text-4xl md:text-5xl font-black text-white mb-4 leading-tight tracking-tight">
+          Stop Searching, Start Playing.<br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-orange-400 to-amber-500 drop-shadow-sm">Find Your Huddle.</span>
         </h2>
-        <p className="text-lg text-white/80 max-w-2xl mx-auto leading-relaxed">
+        <p className="text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed font-medium">
           Discover and join local sports games in real-time. Connect with players, organize events effortlessly, and never miss a moment of the action.
         </p>
       </div>
@@ -92,17 +96,29 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
           <div className="space-y-4">
             <Button
               onClick={handleGoogleSignIn}
-              className="w-full bg-white/90 text-black hover:bg-white"
+              className="w-full bg-white/90 text-black hover:bg-white h-11 rounded-xl shadow-lg font-medium"
               disabled={isLoading}
             >
               Continue with Google
             </Button>
-            <div className="relative">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (onLogin) onLogin(null); // Close modal
+                router.push('/discover');
+              }}
+              className="w-full h-11 rounded-xl glass-surface border-white/10 hover:bg-white/10 text-white shadow-lg font-medium"
+              disabled={isLoading}
+            >
+              Continue as Guest
+            </Button>
+
+            <div className="relative py-2">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-white/30" />
+                <span className="w-full border-t border-white/10" />
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-transparent px-2 text-white/70">Or continue with email</span>
+              <div className="relative flex justify-center text-xs uppercase font-bold tracking-widest">
+                <span className="px-3 bg-slate-900 text-slate-500">Or continue with email</span>
               </div>
             </div>
 
@@ -136,7 +152,7 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
               <Button
                 onClick={() => handleAuthAction("login")}
                 disabled={isLoading}
-                className="w-full glass-card hover:glow text-white border-white/30"
+                className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(234,88,12,0.3)] font-bold transition-all"
               >
                 {isLoading ? "Logging in..." : "Login"}
               </Button>
@@ -184,7 +200,7 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
               <Button
                 onClick={() => handleAuthAction("signup")}
                 disabled={isLoading}
-                className="w-full glass-card hover:glow text-white border-white/30"
+                className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(234,88,12,0.3)] font-bold transition-all"
               >
                 {isLoading ? "Creating account..." : "Sign Up"}
               </Button>

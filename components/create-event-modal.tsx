@@ -75,6 +75,12 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
       toast.error("Please fill in all required fields.")
       return
     }
+    const eventDateTime = new Date(`${formData.date}T${formData.time}`);
+    if (eventDateTime < new Date()) {
+      toast.error("You cannot create an event in the past.");
+      return;
+    }
+
     setIsLoading(true)
 
     try {
