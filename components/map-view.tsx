@@ -180,6 +180,7 @@ export default function MapView({ user, eventId }: MapViewProps) {
   const [activeTime, setActiveTime] = useState("All");
   const [currentZoom, setCurrentZoom] = useState(13);
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
+  const [showLocationPrompt, setShowLocationPrompt] = useState(true);
 
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID;
@@ -474,43 +475,81 @@ export default function MapView({ user, eventId }: MapViewProps) {
                 <Chip isActive={activeTime === 'All'} onClick={() => setActiveTime('All')}>All</Chip>
                 <Chip isActive={activeTime === 'Next 2 Hrs'} onClick={() => setActiveTime('Next 2 Hrs')}>Next 2 Hrs</Chip>
                 <Chip isActive={activeTime === 'Today'} onClick={() => setActiveTime('Today')}>Today</Chip>
-                <Chip isActive={activeTime === 'This Weekend'} onClick={() => setActiveTime('This Weekend')}>This Weekend</Chip>
               </div>
             </div>
+
+            {/* Location Permission Toast/Prompt */}
+            {showLocationPrompt && !userLocation && (
+              <div className="absolute top-48 left-1/2 -translate-x-1/2 z-20 w-[90%] max-w-sm">
+                <div className="glass-surface border border-primary/30 p-4 rounded-3xl shadow-[0_0_30px_rgba(245,158,11,0.2)] animate-in fade-in slide-in-from-top-4 duration-500">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                      <MapPin className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-white font-bold text-sm">Find events near you</h4>
+                      <p className="text-slate-300 text-xs mt-1 leading-relaxed">
+                        Enable location to instantly discover what's happening in your neighborhood.
+                      </p>
+                      <div className="flex items-center gap-3 mt-3">
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() => {
+                            setShowLocationPrompt(false);
+                            handleRecenter();
+                          }}
+                          className="bg-primary hover:bg-orange-600 text-white text-xs font-bold rounded-full px-4"
+                        >
+                          Share Location
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setShowLocationPrompt(false)}
+                          className="text-slate-400 hover:text-white text-xs px-2"
+                        >
+                          Not now
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {viewMode === 'list' && (
+              <div className="absolute inset-0 z-0 pt-[190px] px-4 pb-24 overflow-y-auto no-scrollbar pointer-events-auto">
+                {filteredEvents.length === 0 ? (
+                  <div className="text-center text-slate-400 mt-10">
+                    <p>No events found in this area.</p>
+                    <p className="text-sm mt-2 opacity-70">Try zooming out on the map or searching a new location.</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    {filteredEvents.map(event => (
+                      <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} showMapButton={true} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {viewMode === 'map' && user && (
+              <Button id="create-event-button" onClick={() => setShowCreateModal(true)} size="lg" className="absolute bottom-44 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-105 transition-transform">
+                <Plus className="w-6 h-6" />
+              </Button>
+            )}
+
+            {viewMode === 'map' && (
+              <Button onClick={handleRecenter} variant="default" size="lg" className="absolute bottom-28 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-orange-600 hover:scale-105 transition-all">
+                <LocateFixed className="w-6 h-6" />
+              </Button>
+            )}
           </div>
 
-          {viewMode === 'list' && (
-            <div className="absolute inset-0 z-0 pt-[190px] px-4 pb-24 overflow-y-auto no-scrollbar pointer-events-auto">
-              {filteredEvents.length === 0 ? (
-                <div className="text-center text-slate-400 mt-10">
-                  <p>No events found in this area.</p>
-                  <p className="text-sm mt-2 opacity-70">Try zooming out on the map or searching a new location.</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  {filteredEvents.map(event => (
-                    <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} showMapButton={true} />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {viewMode === 'map' && user && (
-            <Button id="create-event-button" onClick={() => setShowCreateModal(true)} size="lg" className="absolute bottom-44 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-105 transition-transform">
-              <Plus className="w-6 h-6" />
-            </Button>
-          )}
-
-          {viewMode === 'map' && (
-            <Button onClick={handleRecenter} variant="secondary" size="lg" className="absolute bottom-28 right-6 h-14 w-14 rounded-full shadow-lg">
-              <LocateFixed className="w-6 h-6" />
-            </Button>
-          )}
-        </div>
-
-        {selectedEvent && <EventDetailsDrawer event={selectedEvent} isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} onEventUpdated={() => { }} />}
-        {showCreateModal && <CreateEventModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onEventCreated={() => { }} userLocation={userLocation || mapCenter} />}
+          {selectedEvent && <EventDetailsDrawer event={selectedEvent} isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} onEventUpdated={() => { }} />}
+          {showCreateModal && <CreateEventModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onEventCreated={() => { }} userLocation={userLocation || mapCenter} />}
       </APIProvider>
     </div>
   )
