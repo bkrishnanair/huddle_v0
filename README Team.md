@@ -85,6 +85,9 @@ All API routes are located in the `app/api/` directory and are secured with Zod 
 *   **Greedy Gesture Handling:** To solve trackpad/touch scrolling issues in embedded Google Maps, `gestureHandling: 'greedy'` is enforced. This ensures the map captures all scroll/pan inputs without requiring modifier keys (Cmd/Ctrl).
 *   **Karma Gamification:** Profile pages include a `Karma Score` tracking system. This uses an experimental "Organizing vs. Participating" weighted logic, displayed with hoverable Radix tooltips for transparency.
 *   **Dropdown Focus Locking:** Next.js Radix Dialog modals aggressively steal focus, breaking Google Places autocomplete dropdowns on mobile. We defeated this by capturing `mousedown`/`touchstart` events and invoking `e.preventDefault()` locally inside our search bar.
+*   **Session State Persistence:** Implemented a session-persistence layer for the map view using `sessionStorage`. This caches the user's viewport (center/zoom) and UI states (like prompt dismissals), ensuring a continuous UX when navigating between different app sections.
+*   **POI-Free Map Styling:** Leveraged the `styles` property of the Google Map component to inject absolute POI visibility overrides. This programmatic "decluttering" removes commercial noise (restaurants/shops) without requiring separate Map styles in the Google Cloud Console.
+*   **Mobile-Optimized Layouts:** Standardized `pb-28` padding across all scrollable views and implemented `overflow-x-auto` on filter groups. This ensures a 100% collision-free experience with the floating bottom navigation bar on small devices.
 
 ## 7. Local Development Setup
 

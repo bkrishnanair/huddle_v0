@@ -21,7 +21,7 @@ import { GameEvent } from "@/lib/types"
 
 function ProfileSkeleton() {
   return (
-    <div className="min-h-screen liquid-gradient p-4 md:p-6 pb-24 animate-pulse">
+    <div className="min-h-screen liquid-gradient p-4 md:p-6 pb-28 animate-pulse">
       <header className="flex justify-end items-center gap-2 mb-6">
         <Skeleton className="h-10 w-10 rounded-lg bg-slate-700" />
         <Skeleton className="h-10 w-10 rounded-lg bg-slate-700" />
@@ -154,7 +154,7 @@ export default function ProfilePage() {
 
   return (
     <>
-      <div className="min-h-screen liquid-gradient pb-24">
+      <div className="min-h-screen liquid-gradient pb-28">
         <header className="p-4 flex justify-end items-center gap-3">
           <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl glass-surface border border-white/10 shadow-xl hover:bg-white/5" onClick={() => { /* Open Settings */ }}>
             <Settings className="w-5 h-5 text-slate-400" />

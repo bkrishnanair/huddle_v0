@@ -395,16 +395,21 @@ export default function MapView({ user, eventId }: MapViewProps) {
       });
     }
 
-    return result.filter(event => {
+    const sorted = result.filter(event => {
       if (!event.date || event.date.includes('/')) return true;
       try {
         const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
         if (!isNaN(eventDateTime.getTime())) {
-          // Hide events 1 hour after they start
           return isFuture(addHours(eventDateTime, 1));
         }
       } catch (e) { }
       return true;
+    });
+
+    return sorted.sort((a, b) => {
+      const dateA = new Date(`${a.date}T${a.time || '00:00'}`).getTime();
+      const dateB = new Date(`${b.date}T${b.time || '00:00'}`).getTime();
+      return dateA - dateB;
     });
   }, [events, activeCategory, activeTime]);
 
@@ -515,7 +520,7 @@ export default function MapView({ user, eventId }: MapViewProps) {
             </Map>
           </div>
 
-          <div className="absolute top-4 left-4 right-4 z-10 flex flex-col gap-3 pointer-events-none">
+          <div className="absolute top-4 left-4 right-4 z-20 flex flex-col gap-3 pointer-events-none">
             {/* Header: Search Bar & Toggle */}
             <div className="flex items-center gap-3 w-full pointer-events-auto">
               {/* Search Bar */}
@@ -525,7 +530,7 @@ export default function MapView({ user, eventId }: MapViewProps) {
 
               {/* View Toggle */}
               <div className="flex items-center p-1 glass-surface border border-white/10 rounded-2xl shadow-2xl shrink-0">
-                <Button variant="ghost" size="icon" className={`rounded-xl h-10 w-10 ${viewMode === 'map' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-slate-300 hover:text-white'}`} onClick={() => setViewMode('map')}>
+                <Button variant="ghost" size="icon" className={`rounded-xl h-10 w-10 ${viewMode === 'map' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-slate-300 hover:text-white'} ${viewMode === 'list' ? 'animate-pulse' : ''}`} onClick={() => setViewMode('map')}>
                   <MapIcon className="w-5 h-5" />
                 </Button>
                 <Button variant="ghost" size="icon" className={`rounded-xl h-10 w-10 ${viewMode === 'list' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-slate-300 hover:text-white'}`} onClick={() => setViewMode('list')}>
@@ -549,6 +554,7 @@ export default function MapView({ user, eventId }: MapViewProps) {
                 <Chip isActive={activeTime === 'All'} onClick={() => setActiveTime('All')}>All</Chip>
                 <Chip isActive={activeTime === 'Next 2 Hrs'} onClick={() => setActiveTime('Next 2 Hrs')}>Next 2 Hrs</Chip>
                 <Chip isActive={activeTime === 'Today'} onClick={() => setActiveTime('Today')}>Today</Chip>
+                <Chip isActive={activeTime === 'This Weekend'} onClick={() => setActiveTime('This Weekend')}>This Weekend</Chip>
               </div>
             </div>
 
@@ -591,8 +597,11 @@ export default function MapView({ user, eventId }: MapViewProps) {
           </div>
 
           {viewMode === 'list' && (
-            <div className="absolute inset-0 z-10 pt-[190px] px-4 pb-24 overflow-y-auto no-scrollbar pointer-events-auto bg-slate-950/50 backdrop-blur-sm">
-              <div className="max-w-4xl mx-auto">
+            <div
+              className="absolute inset-0 z-10 pt-[190px] px-4 pb-28 overflow-y-auto no-scrollbar pointer-events-auto bg-slate-950/60 backdrop-blur-md cursor-pointer"
+              onClick={() => setViewMode('map')}
+            >
+              <div className="max-w-4xl mx-auto cursor-default" onClick={(e) => e.stopPropagation()}>
                 {filteredEvents.length === 0 ? (
                   <div className="text-center text-slate-400 mt-10">
                     <p>No events found in this area.</p>
