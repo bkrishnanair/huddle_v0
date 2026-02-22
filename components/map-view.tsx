@@ -532,9 +532,11 @@ export default function MapView({ user, eventId }: MapViewProps) {
                 </div>
               </div>
             )}
+          </div>
 
-            {viewMode === 'list' && (
-              <div className="absolute inset-0 z-0 pt-[190px] px-4 pb-24 overflow-y-auto no-scrollbar pointer-events-auto">
+          {viewMode === 'list' && (
+            <div className="absolute inset-0 z-10 pt-[190px] px-4 pb-24 overflow-y-auto no-scrollbar pointer-events-auto bg-slate-950/50 backdrop-blur-sm">
+              <div className="max-w-4xl mx-auto">
                 {filteredEvents.length === 0 ? (
                   <div className="text-center text-slate-400 mt-10">
                     <p>No events found in this area.</p>
@@ -548,20 +550,20 @@ export default function MapView({ user, eventId }: MapViewProps) {
                   </div>
                 )}
               </div>
-            )}
+            </div>
+          )}
 
-            {viewMode === 'map' && user && (
-              <Button id="create-event-button" onClick={() => setShowCreateModal(true)} size="lg" className="absolute bottom-44 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-105 transition-transform pointer-events-auto">
-                <Plus className="w-6 h-6" />
-              </Button>
-            )}
+          {viewMode === 'map' && user && (
+            <Button id="create-event-button" onClick={() => setShowCreateModal(true)} size="lg" className="absolute bottom-44 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-110 transition-transform z-10">
+              <Plus className="w-6 h-6" />
+            </Button>
+          )}
 
-            {viewMode === 'map' && (
-              <Button onClick={handleRecenter} variant="default" size="lg" className="absolute bottom-28 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-orange-600 hover:scale-105 transition-all pointer-events-auto">
-                <LocateFixed className="w-6 h-6" />
-              </Button>
-            )}
-          </div>
+          {viewMode === 'map' && (
+            <Button onClick={handleRecenter} variant="default" size="lg" className="absolute bottom-28 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-orange-600 hover:scale-110 transition-all z-10">
+              <LocateFixed className="w-6 h-6" />
+            </Button>
+          )}
         </div>
 
         {selectedEvent && <EventDetailsDrawer event={selectedEvent} isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} onEventUpdated={() => { }} />}
