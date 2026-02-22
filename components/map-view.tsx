@@ -33,34 +33,6 @@ const MapRenderer = ({ onMapLoad, children, styles }: { onMapLoad: (map: google.
     }
   }, [map, onMapLoad, styles]);
 
-  useEffect(() => {
-    if (!map) return;
-
-    const mapDiv = map.getDiv();
-
-    const handleWheel = (e: WheelEvent) => {
-      // Trackpads send e.ctrlKey = true when users pinch-to-zoom.
-      // We want to let Google Maps handle zooming natively!
-      if (e.ctrlKey || e.metaKey) {
-        return;
-      }
-
-      // It's a standard scroll/swipe. Prevent zooming.
-      e.preventDefault();
-      e.stopPropagation();
-
-      // Pan the map based on the scroll/swipe velocity
-      // (You can multiply deltaX/Y by a fraction like 0.5 to slow it down if needed)
-      map.panBy(e.deltaX, e.deltaY);
-    };
-
-    // Attach the listener with passive: false so we can call preventDefault()
-    mapDiv.addEventListener('wheel', handleWheel, { passive: false, capture: true });
-
-    return () => {
-      mapDiv.removeEventListener('wheel', handleWheel, { capture: true } as EventListenerOptions);
-    };
-  }, [map]);
 
   return <>{children}</>;
 }
@@ -170,39 +142,18 @@ export default function MapView({ user, eventId }: MapViewProps) {
   const [hoveredEvent, setHoveredEvent] = useState<GameEvent | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 37.7749, lng: -122.4194 })
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 38.93, lng: -76.98 }) // Between DC and UMD
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeTime, setActiveTime] = useState("All");
-  const [currentZoom, setCurrentZoom] = useState(18);
+  const [currentZoom, setCurrentZoom] = useState(11);
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
 
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID;
 
   useEffect(() => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const newLat = position.coords.latitude;
-        const newLng = position.coords.longitude;
-        setUserLocation(prev =>
-          prev?.lat === newLat && prev?.lng === newLng ? prev : { lat: newLat, lng: newLng }
-        );
-        setMapCenter(prev =>
-          prev?.lat === newLat && prev?.lng === newLng ? prev : { lat: newLat, lng: newLng }
-        );
-      },
-      () => {
-        const defaultLat = 37.7749;
-        const defaultLng = -122.4194;
-        setUserLocation(prev =>
-          prev?.lat === defaultLat && prev?.lng === defaultLng ? prev : { lat: defaultLat, lng: defaultLng }
-        );
-        setMapCenter(prev =>
-          prev?.lat === defaultLat && prev?.lng === defaultLng ? prev : { lat: defaultLat, lng: defaultLng }
-        );
-      }
-    )
+    // Location is manually requested via the Locate Me button to prevent premature permission prompts
   }, [])
 
   const fetchEventsInView = useCallback(async () => {
@@ -295,11 +246,22 @@ export default function MapView({ user, eventId }: MapViewProps) {
   );
 
   const handleRecenter = useCallback(() => {
-    if (userLocation && map) {
-      map.panTo(userLocation);
-      map.setZoom(18);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const loc = { lat: position.coords.latitude, lng: position.coords.longitude };
+          setUserLocation(loc);
+          if (map) {
+            map.panTo(loc);
+            map.setZoom(15);
+          }
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+        }
+      );
     }
-  }, [userLocation, map]);
+  }, [map]);
 
   const filteredEvents = useMemo(() => {
     let result = events;
@@ -358,16 +320,7 @@ export default function MapView({ user, eventId }: MapViewProps) {
     );
   }
 
-  if (!userLocation) {
-    return (
-      <div className="min-h-screen liquid-gradient flex items-center justify-center text-center">
-        <div className="glass-surface rounded-lg p-6">
-          <Loader2 className="w-8 h-8 text-slate-50 animate-spin mx-auto mb-4" />
-          <p className="text-slate-300">Getting Location...</p>
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="h-screen flex flex-col liquid-gradient" id="map-view">
@@ -377,7 +330,7 @@ export default function MapView({ user, eventId }: MapViewProps) {
             <Map
               onIdle={debouncedFetchEventsInView}
               defaultCenter={mapCenter}
-              defaultZoom={18}
+              defaultZoom={11}
               className="w-full h-full"
               disableDefaultUI={true}
               mapId={mapId}
@@ -507,7 +460,7 @@ export default function MapView({ user, eventId }: MapViewProps) {
         </div>
 
         {selectedEvent && <EventDetailsDrawer event={selectedEvent} isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} onEventUpdated={() => { }} />}
-        {showCreateModal && <CreateEventModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onEventCreated={() => { }} userLocation={userLocation} />}
+        {showCreateModal && <CreateEventModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onEventCreated={() => { }} userLocation={userLocation || mapCenter} />}
       </APIProvider>
     </div>
   )
