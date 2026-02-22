@@ -34,7 +34,7 @@ export default function MyEventsPage() {
   };
 
   return (
-    <div className="min-h-screen liquid-gradient p-4 md:p-8">
+    <div className="min-h-screen liquid-gradient p-4 pb-28 md:p-8 md:pb-28">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
         <div className="space-y-1">
           <h1 className="text-4xl font-extrabold text-slate-50 tracking-tight">My Events</h1>

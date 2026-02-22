@@ -6,15 +6,15 @@ This production-ready application features a complete authentication system, rea
 
 | Landing Page | Maps Feed | Discover |
 | :---: | :---: | :---: |
-| ![Landing Page](Pages/landing.jpeg) | ![Maps View](Pages/maps.jpeg) | ![Discover Feed](Pages/discover.jpeg) |
+| ![Landing Page](Pages/landing%20page.jpeg) | ![Maps View](Pages/Maps.png) | ![Discover Feed](Pages/discover.jpeg) |
 
 | My Events | Create Event | Profile |
 | :---: | :---: | :---: |
-| ![My Events](Pages/my_events.jpeg) | ![Create Event](Pages/create_event.heic) | ![Profile Page](Pages/profile.jpeg) |
+| ![My Events](Pages/My%20events.jpeg) | ![Create Event](Pages/create%20event.jpeg) | ![Profile Page](Pages/Profile.jpeg) |
 
 | Login / Signup | 
 | :---: |
-| ![Auth Screen](Pages/login_signup.heic) | 
+| ![Auth Screen](Pages/login.jpeg) | 
 
 ## Key Features & Functionality
 
@@ -32,6 +32,9 @@ This production-ready application features a complete authentication system, rea
 *   **👤 Elegant User Profiles**: Premium "glassmorphic" profile pages showcasing user bios, dynamic "Interests" tags, and a history of organized/joined events.
 *   **🏆 Karma Score & Gamification**: Added a "Karma Score" system to reward organizers and active participants, complete with hoverable info tooltips explaining the calculation.
 *   **🔍 Global Search & Filtering**: Dedicated Discover page with persistent search, functional category tags, and sorting (Soonest vs. Closest). Added immediate "Show on Map" routing and local "View Details" drawers for a 1:1 consistent experience.
+*   **💾 Persistent Map State**: Utilizing `sessionStorage` to remember your last map position, zoom level, and UI states (like prompt dismissals). Navigation between pages no longer resets your perspective.
+*   **🧹 Decluttered Maps UX**: Custom map styling that intelligently hides business POIs (restaurants, shops) globally, ensuring your event pins are the primary focus of the experience.
+*   **📱 Native-Feel Mobile Navigation**: Fully responsive layouts with horizontal-scroll filter chips and optimized bottom padding to prevent content from being cut off by the floating glass navigation bar.
 
 ## UI/UX & Design Philosophy
 
