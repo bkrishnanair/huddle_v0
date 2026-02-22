@@ -35,7 +35,36 @@ const MapRenderer = ({ onMapLoad, children, styles }: { onMapLoad: (map: google.
 
 
   useEffect(() => {
-    // Add any necessary map initialization effects here later if needed
+    if (!map) return;
+
+    const mapDiv = map.getDiv();
+    let trackpadPanActive = false;
+    let panTimeout: ReturnType<typeof setTimeout>;
+
+    const handleWheel = (e: WheelEvent) => {
+      // ctrlKey means pinch-to-zoom on trackpad. Let Google handle it (zoom).
+      if (e.ctrlKey || e.metaKey) return;
+
+      // If we detect horizontal movement, lock into pan mode for this scroll session.
+      // This prevents accidental zooming when a diagonal swipe briefly becomes vertical.
+      if (Math.abs(e.deltaX) > 0.5 || trackpadPanActive) {
+        trackpadPanActive = true;
+        clearTimeout(panTimeout);
+        panTimeout = setTimeout(() => { trackpadPanActive = false; }, 150);
+
+        e.preventDefault();
+        e.stopPropagation();
+        map.panBy(e.deltaX, e.deltaY);
+      }
+    };
+
+    // Use capture to intercept before Google's internal listeners zoom the map
+    mapDiv.addEventListener("wheel", handleWheel, { passive: false, capture: true });
+
+    return () => {
+      mapDiv.removeEventListener("wheel", handleWheel, { capture: true } as EventListenerOptions);
+      clearTimeout(panTimeout);
+    };
   }, [map]);
 
   return <>{children}</>;
@@ -158,14 +187,17 @@ export default function MapView({ user, eventId }: MapViewProps) {
   const [activeTime, setActiveTime] = useState("All");
   const [currentZoom, setCurrentZoom] = useState(13);
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
-  const [showLocationPrompt, setShowLocationPrompt] = useState(true);
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [hasCenteredDefault, setHasCenteredDefault] = useState(false);
 
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID;
 
   useEffect(() => {
-    // Location is manually requested via the Locate Me button to prevent premature permission prompts
+    // Check if the prompt was previously dismissed
+    if (sessionStorage.getItem('huddlePromptDismissed') !== 'true') {
+      setShowLocationPrompt(true);
+    }
   }, [])
 
   const fetchEventsInView = useCallback(async () => {
@@ -208,8 +240,22 @@ export default function MapView({ user, eventId }: MapViewProps) {
 
   useEffect(() => {
     if (map && !hasCenteredDefault && !userLocation && !eventId) {
-      map.setCenter({ lat: 38.9897, lng: -76.9378 });
-      map.setZoom(13);
+      const savedCenterStr = sessionStorage.getItem('huddleMapCenter');
+      const savedZoomStr = sessionStorage.getItem('huddleMapZoom');
+
+      if (savedCenterStr && savedZoomStr) {
+        try {
+          const savedCenter = JSON.parse(savedCenterStr);
+          map.setCenter(savedCenter);
+          map.setZoom(Number(savedZoomStr));
+        } catch (e) {
+          map.setCenter({ lat: 38.9897, lng: -76.9378 });
+          map.setZoom(13);
+        }
+      } else {
+        map.setCenter({ lat: 38.9897, lng: -76.9378 });
+        map.setZoom(13);
+      }
       setHasCenteredDefault(true);
     }
   }, [map, hasCenteredDefault, userLocation, eventId]);
@@ -246,7 +292,15 @@ export default function MapView({ user, eventId }: MapViewProps) {
     return () => {
       clearTimeout(timeout);
       timeout = setTimeout(() => {
-        if (map) setCurrentZoom(map.getZoom() || 18);
+        if (map) {
+          const z = map.getZoom() || 18;
+          setCurrentZoom(z);
+          const c = map.getCenter();
+          if (c) {
+            sessionStorage.setItem('huddleMapCenter', JSON.stringify({ lat: c.lat(), lng: c.lng() }));
+            sessionStorage.setItem('huddleMapZoom', z.toString());
+          }
+        }
         fetchEventsInView();
       }, 500); // Wait 500ms after the map stops moving before fetching
     };
@@ -265,8 +319,13 @@ export default function MapView({ user, eventId }: MapViewProps) {
     [map]
   );
 
-  const handleRecenter = useCallback(() => {
+  const dismissPrompt = useCallback(() => {
     setShowLocationPrompt(false);
+    sessionStorage.setItem('huddlePromptDismissed', 'true');
+  }, []);
+
+  const handleRecenter = useCallback(() => {
+    dismissPrompt();
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -356,7 +415,6 @@ export default function MapView({ user, eventId }: MapViewProps) {
               styles={DARK_MAP_STYLE}
               // @ts-ignore
               colorScheme="DARK"
-              tilt={45}
               gestureHandling={'greedy'}
             >
               <MapRenderer onMapLoad={setMap} styles={DARK_MAP_STYLE}>
@@ -499,7 +557,7 @@ export default function MapView({ user, eventId }: MapViewProps) {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => setShowLocationPrompt(false)}
+                          onClick={dismissPrompt}
                           className="text-slate-400 hover:text-white text-xs px-2"
                         >
                           Not now
