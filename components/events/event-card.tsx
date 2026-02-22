@@ -12,9 +12,10 @@ interface EventCardProps {
   event: GameEvent;
   onSelectEvent: (event: GameEvent) => void;
   showMapButton?: boolean;
+  onUnjoin?: (eventId: string) => void;
 }
 
-export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = false }: EventCardProps) => {
+export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = false, onUnjoin }: EventCardProps) => {
   const isFull = event.currentPlayers >= event.maxPlayers;
 
   const getTimeDifference = (date: string, time: string) => {
@@ -71,6 +72,19 @@ export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = fal
                 <MapPin className="w-4 h-4 mr-1.5 text-primary" />
                 Map
               </Link>
+            </Button>
+          )}
+          {onUnjoin && (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={(e) => {
+                e.preventDefault();
+                onUnjoin(event.id);
+              }}
+              className="h-9 px-3"
+            >
+              Unjoin
             </Button>
           )}
           <Button

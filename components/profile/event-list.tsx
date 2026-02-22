@@ -4,13 +4,16 @@ import { useEffect, useState } from "react"
 import { GameEvent } from "@/lib/types"
 import { EventCard } from "@/components/events/event-card"
 import { Loader2, AlertCircle } from "lucide-react"
+import { toast } from "sonner"
+import { useAuth } from "@/lib/firebase-context"
 
 interface EventListProps {
   userId: string
-  eventType: "organized" | "participated"
+  eventType: "organized" | "joined"
 }
 
 export function EventList({ userId, eventType }: EventListProps) {
+  const { user } = useAuth()
   const [events, setEvents] = useState<GameEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -50,6 +53,38 @@ export function EventList({ userId, eventType }: EventListProps) {
     }
   }, [userId, eventType])
 
+  const handleUnjoin = async (eventId: string) => {
+    if (!user) return;
+
+    // Optimistic UI update
+    const previousEvents = [...events];
+    setEvents(events.filter(e => e.id !== eventId));
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/events/${eventId}/rsvp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ action: "leave" }),
+        credentials: "include"
+      });
+
+      if (response.ok) {
+        toast.success("You've unjoined the game");
+      } else {
+        throw new Error("Failed to leave event on server");
+      }
+    } catch (err) {
+      console.error("Unjoin error:", err);
+      toast.error("An error occurred while leaving the event");
+      // Revert optimistic update
+      setEvents(previousEvents);
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-8">
@@ -86,7 +121,8 @@ export function EventList({ userId, eventType }: EventListProps) {
         <EventCard
           key={event.id}
           event={event}
-          onSelectEvent={() => { }} // FIX: Provide the required onSelectEvent prop
+          onSelectEvent={() => { }} // Required prop; can implement navigation later
+          onUnjoin={eventType === "joined" ? () => handleUnjoin(event.id) : undefined}
         />
       ))}
     </div>

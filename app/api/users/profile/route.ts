@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerCurrentUser } from "@/lib/auth-server"
-import { db } from "@/lib/firebase-admin"
+import { getFirebaseAdminDb } from "@/lib/firebase-admin"
 import { z } from "zod"
 
 const profileSchema = z.object({
@@ -27,12 +27,17 @@ export async function POST(request: NextRequest) {
 
     const { displayName, bio, favoriteSports } = validationResult.data
 
-    const userRef = db.collection("users").doc(user.uid)
-    await userRef.update({
+    const adminDb = getFirebaseAdminDb()
+    if (!adminDb) {
+      throw new Error("Database service unavailable")
+    }
+
+    const userRef = adminDb.collection("users").doc(user.uid)
+    await userRef.set({
       displayName,
       bio: bio || "",
       favoriteSports: favoriteSports || [],
-    })
+    }, { merge: true })
 
     return NextResponse.json({ success: true })
   } catch (error) {

@@ -49,7 +49,11 @@ export default function EditProfileModal({ isOpen, onClose, userProfile, onProfi
           "Content-Type": "application/json",
           "Authorization": `Bearer ${idToken}`
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          displayName: formData.displayName,
+          bio: formData.bio,
+          favoriteSports: formData.interests,
+        }),
         credentials: 'include' // <-- Critical fix: ensures session cookies are sent
       })
 
@@ -58,7 +62,8 @@ export default function EditProfileModal({ isOpen, onClose, userProfile, onProfi
         onProfileUpdate()
       } else {
         const errorData = await response.json()
-        toast.error(`Failed to update profile: ${errorData.error}`)
+        const errorMessage = typeof errorData.error === 'object' ? JSON.stringify(errorData.error) : errorData.error;
+        toast.error(`Failed to update profile: ${errorMessage}`)
       }
     } catch (error) {
       console.error("Error updating profile:", error)
