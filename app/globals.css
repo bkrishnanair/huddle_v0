@@ -111,3 +111,15 @@
     font-size: 1.05rem;
   }
 }
+
+/* Ensure the Google Places Autocomplete dropdown is above Modals/UI and clickable on touch devices */
+.pac-container {
+    z-index: 10000 !important; 
+    pointer-events: auto !important;
+    touch-action: interpolation !important; 
+}
+
+/* Improve tap reliability on mobile */
+.pac-item {
+    cursor: pointer;
+}

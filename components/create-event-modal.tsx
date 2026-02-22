@@ -121,7 +121,17 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="glass-surface border-white/15 text-foreground p-0 gap-0 sm:max-w-md max-h-[90vh] flex flex-col">
+      <DialogContent
+        className="glass-surface border-white/15 text-foreground p-0 gap-0 sm:max-w-md max-h-[90vh] flex flex-col"
+        onInteractOutside={(e) => {
+          const target = e.target as HTMLElement;
+          // Prevent Radix from closing the modal or blocking the click 
+          // if the user is tapping the Google Places dropdown
+          if (target?.closest('.pac-container')) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader className="p-6 pb-4">
           <DialogTitle>Create a New Event</DialogTitle>
           <DialogDescription>Fill in the details to get your event on the map.</DialogDescription>

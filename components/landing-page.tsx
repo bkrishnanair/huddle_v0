@@ -3,18 +3,9 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Users,
-  MapPin,
-  Calendar,
-  Zap,
-  Clock,
-  Heart,
-  BookOpen,
-  Mic,
-  Palette,
-  Plus
-} from "lucide-react";
+import { MapPin, Users, Link as LinkIcon, Plus, Target, Compass } from "lucide-react";
+import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 const HuddleLogo = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-white drop-shadow-md">
@@ -22,246 +13,271 @@ const HuddleLogo = () => (
   </svg>
 );
 
-// High-End Premium Dark Aesthetic Background
-const PremiumBackground = () => (
-  <div className="absolute inset-0 overflow-hidden pointer-events-none bg-slate-950">
-    {/* Subtle Space Overlay */}
-    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
+const AbstractMapVisual = () => {
+  return (
+    <div className="relative w-full h-full min-h-[400px] flex items-center justify-center pointer-events-none">
+      <motion.div
+        animate={{ scale: [1, 1.05, 1], opacity: [0.6, 0.4, 0.6] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute w-72 h-72 rounded-full bg-teal-400/20 blur-[100px] mix-blend-screen"
+      />
+      <motion.div
+        animate={{ scale: [1, 1.1, 1], opacity: [0.4, 0.6, 0.4] }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+        className="absolute w-80 h-80 rounded-full bg-amber-400/20 blur-[120px] mix-blend-screen ml-40 mt-20"
+      />
+      <div className="relative z-10 w-full max-w-sm aspect-square bg-slate-900/40 backdrop-blur-2xl border border-white/10 rounded-full shadow-[0_0_80px_rgba(45,212,191,0.15)] flex items-center justify-center p-8 overflow-hidden">
+        {/* Radar Rings */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-full h-full rounded-full border border-teal-500/10" />
+          <motion.div
+            animate={{ scale: [1, 2], opacity: [0.5, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+            className="absolute w-1/2 h-1/2 rounded-full border border-teal-500/30"
+          />
+          <motion.div
+            animate={{ scale: [1, 2], opacity: [0.5, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "linear", delay: 1.5 }}
+            className="absolute w-1/2 h-1/2 rounded-full border border-teal-500/30"
+          />
+        </div>
 
-    {/* Dynamic Glowing Accents */}
-    <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-primary/20 blur-[120px] mix-blend-screen opacity-50 animate-pulse" style={{ animationDuration: '8s' }} />
-    <div className="absolute top-[20%] -right-20 w-[500px] h-[500px] rounded-full bg-blue-500/15 blur-[120px] mix-blend-screen opacity-50 animate-pulse" style={{ animationDuration: '10s' }} />
-    <div className="absolute -bottom-40 left-[20%] w-[700px] h-[700px] rounded-full bg-indigo-500/15 blur-[150px] mix-blend-screen opacity-40 animate-pulse" style={{ animationDuration: '12s' }} />
+        {/* Floating Pins */}
+        <motion.div
+          animate={{ y: [0, -10, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-1/4 left-1/4 w-3 h-3 bg-amber-400 rounded-full shadow-[0_0_20px_rgba(212,175,55,1)]"
+        />
+        <motion.div
+          animate={{ y: [0, -15, 0] }}
+          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          className="absolute bottom-1/3 right-1/4 w-4 h-4 bg-teal-400 rounded-full shadow-[0_0_20px_rgba(45,212,191,1)]"
+        />
+        <motion.div
+          animate={{ y: [0, -8, 0] }}
+          transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+          className="absolute top-1/2 right-1/4 w-2 h-2 bg-indigo-400 rounded-full shadow-[0_0_15px_rgba(129,140,248,1)]"
+        />
 
-    {/* Modern Grid Pattern (Very Subtle) */}
-    <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:3rem_3rem] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,#000_20%,transparent_100%)]" />
-  </div>
-);
+        {/* Center Pulse */}
+        <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center border border-white/20 backdrop-blur-md z-20 shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+          <Target className="w-6 h-6 text-teal-400" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const valueProps = [
+  {
+    icon: <Compass className="w-7 h-7 text-teal-400" />,
+    title: "Hyperlocal Discovery",
+    description: "See real-time events, study groups, and meetups happening within walking distance."
+  },
+  {
+    icon: <Users className="w-7 h-7 text-amber-400" />,
+    title: "Kill the Flake Rate",
+    description: "Frictionless RSVPs and attendee tracking. Know exactly who is showing up before you even leave your room."
+  },
+  {
+    icon: <LinkIcon className="w-7 h-7 text-indigo-400" />,
+    title: "One-Tap Sharing",
+    description: "Generate dynamic preview links for WhatsApp or iMessage. No app download required for friends to view and join."
+  }
+];
 
 interface LandingPageProps {
   onGetStarted: () => void;
   isAuthenticated?: boolean;
 }
 
-const useCases = [
-  {
-    icon: <BookOpen className="w-8 h-8 text-primary" />,
-    title: "The Student",
-    description: "Find a last-minute study group for your midterm, join a club meeting on the mall, or unwind with a game of soccer after class."
-  },
-  {
-    icon: <Mic className="w-8 h-8 text-blue-400" />,
-    title: "The Creator",
-    description: "Hosting a workshop, an open mic night, or a yoga class? Huddle gives you the tools to reach your local community and manage your event effortlessly."
-  },
-  {
-    icon: <Palette className="w-8 h-8 text-indigo-400" />,
-    title: "The Explorer",
-    description: "New to the area or just looking for something to do? Open the map and instantly see the vibrant, real-time pulse of your community."
-  }
-];
-
-const howItWorks = [
-  {
-    step: "1",
-    icon: <MapPin className="w-6 h-6 text-primary" />,
-    title: "Hyperlocal Discovery",
-    description: "Don't bury your event in a noisy group chat. Put it on the live map where people are already looking."
-  },
-  {
-    step: "2",
-    icon: <Users className="w-6 h-6 text-blue-400" />,
-    title: "Track Attendance",
-    description: "Frictionless RSVPs and real-time headcounts. Know exactly how many people to expect."
-  },
-  {
-    step: "3",
-    icon: <Calendar className="w-6 h-6 text-indigo-400" />,
-    title: "One-Tap Sharing",
-    description: "Generate a dynamic preview link for WhatsApp, Instagram, or Discord. No app download required to join."
-  }
-];
-
 export default function LandingPage({ onGetStarted, isAuthenticated = false }: LandingPageProps) {
-  const [currentUseCase, setCurrentUseCase] = useState(0);
+  const router = useRouter();
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentUseCase((prev) => (prev + 1) % useCases.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  const handleOpenMap = () => {
+    router.push('/map');
+  };
+
+  const handleHostEvent = () => {
+    // Navigate to map with an intent state or just tell them
+    router.push('/map?intent=create');
+  };
 
   return (
-    <div className="min-h-screen text-slate-50 overflow-hidden relative bg-slate-950 font-sans selection:bg-primary/30">
-      <PremiumBackground />
+    <div className="min-h-screen bg-[#121212] text-slate-50 overflow-hidden font-sans selection:bg-teal-500/30">
+      {/* Background Noise & Atmosphere */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(45,212,191,0.05)_0%,transparent_50%)]" />
+      </div>
 
       <div className="relative z-10 flex flex-col min-h-screen">
-        {/* Modern Header */}
-        <header className="flex items-center justify-between p-6">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center border border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+        {/* Header */}
+        <motion.header
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.6 }}
+          className="flex items-center justify-between p-6 px-6 md:px-12 w-full max-w-7xl mx-auto"
+        >
+          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => router.push('/')}>
+            <div className="w-10 h-10 bg-white/5 backdrop-blur-md rounded-xl flex items-center justify-center border border-white/10 shadow-[0_0_15px_rgba(0,0,0,0.5)] transition-colors hover:bg-white/10">
               <HuddleLogo />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-md">Huddle</h1>
           </div>
           <div className="flex items-center space-x-4">
-            <Button variant="outline" onClick={onGetStarted} className="px-6 h-11 rounded-full bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300 font-medium tracking-tight text-white shadow-lg">
+            <Button
+              variant="outline"
+              onClick={onGetStarted}
+              className="px-6 h-11 rounded-full bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-all duration-300 font-medium tracking-tight text-white shadow-lg"
+            >
               {isAuthenticated ? "Open App" : "Sign In"}
             </Button>
           </div>
-        </header>
+        </motion.header>
 
-        {/* Hero Section */}
-        <main className="flex-1 flex flex-col px-4 md:px-6 relative z-10">
-          <div className="flex-1 flex flex-col items-center justify-center text-center pb-20 pt-10">
-            <div className="max-w-5xl mx-auto mt-12 md:mt-24 relative">
+        {/* Split Screen Hero */}
+        <main className="flex-1 w-full max-w-7xl mx-auto px-6 md:px-12 flex flex-col justify-center py-12 lg:py-0">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center min-h-[75vh]">
 
-              {/* Premium Glow Behind Text */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[50%] bg-primary/20 blur-[100px] rounded-full pointer-events-none" />
+            {/* Left Content */}
+            <div className="flex flex-col justify-center space-y-8 z-20 text-center lg:text-left pt-10 lg:pt-0">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+              >
+                <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-sm font-semibold tracking-wide uppercase mb-6">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
+                  </span>
+                  <span>Your Social Life, Visualized</span>
+                </div>
 
-              <h1 className="text-5xl sm:text-7xl md:text-[5.5rem] font-black text-white mb-6 leading-[1.05] tracking-tighter relative z-10 drop-shadow-lg">
-                Stop Searching, Start Playing.<br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-orange-400 to-amber-500">Find Your Huddle.</span>
-              </h1>
+                <h1 className="text-5xl sm:text-7xl font-black text-white leading-[1.05] tracking-tighter mb-6 drop-shadow-2xl">
+                  The Live Map for<br className="hidden lg:block" />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 via-emerald-400 to-amber-300">
+                    Local Connection.
+                  </span>
+                </h1>
 
-              <p className="text-lg md:text-2xl text-slate-300 max-w-3xl mx-auto mb-12 leading-relaxed font-medium tracking-tight bg-slate-900/40 backdrop-blur-xl p-5 rounded-3xl border border-white/10 shadow-2xl relative z-10">
-                Discover and join local sports games in real-time. Connect with players, organize events effortlessly, and never miss a moment of the action.
-              </p>
+                <p className="text-lg md:text-xl text-slate-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-medium tracking-tight">
+                  Discover what's happening around you right now. Drop a pin, ditch the chaotic group chats, and instantly connect with your local community.
+                </p>
+              </motion.div>
 
-              <div className="flex flex-col sm:flex-row justify-center items-center gap-6 mb-24 relative z-10">
-                <Button onClick={onGetStarted} size="lg" className="group h-14 px-10 text-lg font-bold bg-primary text-white border border-transparent hover:bg-primary/90 rounded-full shadow-[0_0_30px_rgba(217,119,6,0.5)] hover:shadow-[0_0_40px_rgba(217,119,6,0.7)] transition-all duration-500 transform hover:-translate-y-1 tracking-tight">
-                  <MapPin className="mr-2 w-5 h-5 group-hover:animate-bounce" />
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4"
+              >
+                <Button
+                  onClick={handleOpenMap}
+                  size="lg"
+                  className="w-full sm:w-auto h-14 px-8 text-lg font-bold bg-teal-500 hover:bg-teal-400 text-slate-950 rounded-full shadow-[0_0_30px_rgba(45,212,191,0.3)] hover:shadow-[0_0_40px_rgba(45,212,191,0.5)] transition-all duration-300 transform hover:-translate-y-1 tracking-tight"
+                >
+                  <MapPin className="mr-2 w-5 h-5" />
                   Open Live Map
                 </Button>
 
-                <Button onClick={onGetStarted} variant="outline" size="lg" className="h-14 px-8 text-lg bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 hover:border-white/30 text-white rounded-full transition-all duration-300 tracking-tight shadow-xl">
-                  <Plus className="mr-2 w-5 h-5" />
+                <Button
+                  onClick={handleHostEvent}
+                  variant="outline"
+                  size="lg"
+                  className="w-full sm:w-auto h-14 px-8 text-lg font-bold bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 hover:border-amber-400/50 text-white rounded-full transition-all duration-300 tracking-tight shadow-xl group"
+                >
+                  <Plus className="mr-2 w-5 h-5 text-amber-400 group-hover:rotate-90 transition-transform duration-300" />
                   Host an Event
                 </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Pillars Section */}
-          <div className="max-w-6xl mx-auto py-24 relative z-10 border-t border-white/5">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 tracking-tight">
-                From idea to event in <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-amber-400">3 simple steps</span>
-              </h2>
-              <p className="text-lg text-slate-400 max-w-2xl mx-auto tracking-tight">
-                We've made finding and organizing local events so simple, you'll wonder how you ever managed without us.
-              </p>
+              </motion.div>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8">
-              {howItWorks.map((step, index) => (
-                <Card key={index} className="bg-white/[0.03] backdrop-blur-xl border-white/10 hover:border-white/20 hover:bg-white/[0.05] hover:shadow-[0_8px_30px_rgba(0,0,0,0.5)] transition-all duration-500 group relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  <CardContent className="p-8 text-center relative z-10">
-                    <div className="w-16 h-16 bg-slate-900 border border-white/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-500 shadow-inner">
-                      {step.icon}
-                    </div>
-                    <div className="w-8 h-8 bg-white/5 border border-white/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-white/10 transition-colors">
-                      <span className="text-slate-300 font-bold text-sm tracking-tighter">{step.step}</span>
-                    </div>
-                    <h3 className="text-xl font-bold text-white mb-3 tracking-tight">{step.title}</h3>
-                    <p className="text-slate-400 leading-relaxed tracking-tight text-sm">{step.description}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
+            {/* Right Visual */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
+              className="relative w-full aspect-square max-w-[600px] mx-auto lg:ml-auto"
+            >
+              <AbstractMapVisual />
+            </motion.div>
 
-          {/* Enhanced Use Cases Showcase */}
-          <div className="max-w-4xl mx-auto py-24 relative z-10">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 tracking-tight">
-                Built for <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">every community</span>
-              </h2>
-              <p className="text-lg text-slate-400 tracking-tight">
-                Every feature is designed to get you off your phone and into your community.
-              </p>
-            </div>
-
-            <Card className="bg-slate-900/50 backdrop-blur-2xl border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[80px] rounded-full pointer-events-none" />
-              <CardContent className="p-10 relative z-10">
-                <div className="flex flex-col md:flex-row items-center justify-center gap-8 text-left">
-                  <div className="w-24 h-24 bg-white/5 border border-white/10 rounded-3xl flex items-center justify-center flex-shrink-0 shadow-inner">
-                    <div className="scale-125 transition-transform duration-500">
-                      {useCases[currentUseCase].icon}
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-2xl md:text-3xl font-bold text-white mb-4 tracking-tight">
-                      {useCases[currentUseCase].title}
-                    </h3>
-                    <p className="text-slate-300 text-lg leading-relaxed tracking-tight">
-                      {useCases[currentUseCase].description}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex justify-center space-x-3 mt-12">
-                  {useCases.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentUseCase(index)}
-                      className={`h-2 rounded-full transition-all duration-500 ${index === currentUseCase
-                        ? 'bg-primary w-10 shadow-[0_0_10px_rgba(217,119,6,0.5)]'
-                        : 'bg-white/20 w-3 hover:bg-white/40'
-                        }`}
-                    />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Final CTA Section */}
-          <div className="max-w-4xl mx-auto py-24 text-center relative z-10">
-            <Card className="bg-gradient-to-br from-slate-900 via-slate-900 to-primary/10 border-white/10 backdrop-blur-3xl shadow-[0_0_60px_rgba(217,119,6,0.1)] overflow-hidden">
-              <CardContent className="p-16 relative z-10">
-                <h2 className="text-4xl md:text-5xl font-black text-white mb-6 tracking-tight drop-shadow-md">
-                  Ready to find your crowd?
-                </h2>
-                <p className="text-xl text-slate-300 mb-10 max-w-2xl mx-auto tracking-tight font-medium">
-                  Join thousands of members who've already discovered the easiest way to find, create, and join local events.
-                </p>
-                <div className="flex flex-col sm:flex-row justify-center items-center gap-6">
-                  <Button onClick={onGetStarted} size="lg" className="h-16 px-12 text-xl font-bold bg-white text-slate-950 hover:bg-slate-200 rounded-full shadow-[0_0_30px_rgba(255,255,255,0.3)] transition-all duration-300 transform hover:scale-105 tracking-tight border border-transparent">
-                    <Zap className="mr-3 w-6 h-6 text-primary" />
-                    {isAuthenticated ? "Go to Map" : "Get Started - It's Free"}
-                  </Button>
-                  <div className="flex items-center text-slate-400 text-sm font-medium">
-                    <Clock className="w-4 h-4 mr-2 text-primary" />
-                    Setup takes less than 2 minutes
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </main>
 
+        {/* 3-Column Bento Box Value Props */}
+        <section className="w-full max-w-7xl mx-auto px-6 md:px-12 py-24 z-20">
+          <div className="grid md:grid-cols-3 gap-6">
+            {valueProps.map((prop, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{ duration: 0.6, delay: idx * 0.15 }}
+              >
+                <Card className="h-full bg-[#1A1A1A]/80 backdrop-blur-xl border border-white/10 hover:border-teal-500/30 transition-colors duration-500 rounded-3xl overflow-hidden group shadow-2xl">
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none" />
+                  <CardContent className="p-8 relative z-10 flex flex-col h-full">
+                    <div className="w-14 h-14 bg-black/50 border border-white/5 rounded-2xl flex items-center justify-center mb-6 shadow-md group-hover:scale-110 transition-transform duration-500">
+                      {prop.icon}
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-3 tracking-tight group-hover:text-amber-400 transition-colors duration-300">
+                      {prop.title}
+                    </h3>
+                    <p className="text-slate-400 leading-relaxed font-medium">
+                      {prop.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+
+        {/* Bottom CTA */}
+        <motion.section
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="w-full max-w-4xl mx-auto px-6 py-24 text-center z-20"
+        >
+          <div className="p-16 rounded-[3rem] bg-gradient-to-b from-[#1A1A1A] to-[#121212] border border-white/10 shadow-[0_0_80px_rgba(0,0,0,0.5)] relative overflow-hidden">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-px bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
+
+            <h2 className="text-4xl md:text-5xl font-black text-white mb-6 tracking-tight drop-shadow-md">
+              Your community is waiting.
+            </h2>
+            <p className="text-xl text-slate-300 mb-10 max-w-2xl mx-auto tracking-tight font-medium">
+              Join thousands of locals turning screen time into real-world connection.
+            </p>
+
+            <Button
+              onClick={handleOpenMap}
+              size="lg"
+              className="h-16 px-12 text-xl font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-full shadow-[0_0_30px_rgba(212,175,55,0.3)] transition-all duration-300 transform hover:scale-105 tracking-tight border border-transparent"
+            >
+              Explore the Map
+            </Button>
+          </div>
+        </motion.section>
+
         {/* Minimal Footer */}
-        <footer className="p-6 mt-8 text-center relative z-20 border-t border-white/5">
-          <div className="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-8 text-slate-500 text-sm">
-            <div className="flex items-center space-x-2">
-              <Heart className="w-4 h-4 text-primary" />
-              <span>Made with love for local communities</span>
+        <footer className="p-8 text-center relative z-20 border-t border-white/5 w-full mt-auto">
+          <div className="flex flex-col md:flex-row justify-between items-center max-w-7xl mx-auto text-slate-500 text-sm font-medium">
+            <div className="mb-4 md:mb-0">
+              © 2026 Huddle. All rights reserved.
             </div>
             <div className="flex items-center space-x-6">
-              <span>© 2025 Huddle. All rights reserved.</span>
-              <span className="hidden sm:inline opacity-50">•</span>
-              <a href="#" className="hover:text-slate-300 transition-colors">Privacy Policy</a>
-              <span className="hidden sm:inline opacity-50">•</span>
-              <a href="#" className="hover:text-slate-300 transition-colors">Terms of Service</a>
+              <span className="hover:text-slate-300 transition-colors cursor-pointer">Privacy Policy</span>
+              <span className="hover:text-slate-300 transition-colors cursor-pointer">Terms of Service</span>
             </div>
           </div>
         </footer>
+
       </div>
     </div>
   );
