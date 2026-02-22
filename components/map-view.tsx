@@ -34,14 +34,46 @@ const MapRenderer = ({ onMapLoad, children, styles }: { onMapLoad: (map: google.
   }, [map, onMapLoad, styles]);
 
 
+  useEffect(() => {
+    if (!map) return;
+
+    const mapDiv = map.getDiv();
+
+    const handleWheel = (e: WheelEvent) => {
+      // 1. Let pinch-to-zoom (ctrlKey) through
+      if (e.ctrlKey || e.metaKey) return;
+
+      // 2. Intelligence: If there is horizontal movement, it's a trackpad swipe (Pan)
+      // Otherwise, if it's pure vertical, let Google handle it (it will Zoom).
+      if (Math.abs(e.deltaX) > 0.5) {
+        e.preventDefault();
+        e.stopPropagation();
+        map.panBy(e.deltaX, e.deltaY);
+      }
+    };
+
+    // Use capture to intercept before Google's internal listeners
+    mapDiv.addEventListener("wheel", handleWheel, { passive: false, capture: true });
+
+    return () => {
+      mapDiv.removeEventListener("wheel", handleWheel, { capture: true } as EventListenerOptions);
+    };
+  }, [map]);
+
   return <>{children}</>;
 }
 
 const getCategoryColor = (category: string): string => {
   const colors: { [key: string]: string } = {
-    Sports: "#f97316", Music: "#22c55e", Community: "#eab308", Learning: "#dc2626",
-    "Food & Drink": "#8b5cf6", Tech: "#06b6d4", "Arts & Culture": "#ec4899",
-    Outdoors: "#10b981", default: "#ef4444",
+    Sports: "#f59e0b", // Amber
+    Music: "#10b981", // Emerald
+    Community: "#0ea5e9", // Sky
+    Learning: "#6366f1", // Indigo
+    "Food & Drink": "#f43f5e", // Rose
+    Tech: "#06b6d4", // Cyan
+    "Arts & Culture": "#d946ef", // Fuchsia
+    Outdoors: "#84cc16", // Lime
+    default: "#f59e0b",
   }
   return colors[category] || colors.default
 }
@@ -142,11 +174,11 @@ export default function MapView({ user, eventId }: MapViewProps) {
   const [hoveredEvent, setHoveredEvent] = useState<GameEvent | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 38.93, lng: -76.98 }) // Between DC and UMD
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 38.9897, lng: -76.9378 }) // College Park, MD
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeTime, setActiveTime] = useState("All");
-  const [currentZoom, setCurrentZoom] = useState(11);
+  const [currentZoom, setCurrentZoom] = useState(13);
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
 
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -330,14 +362,14 @@ export default function MapView({ user, eventId }: MapViewProps) {
             <Map
               onIdle={debouncedFetchEventsInView}
               defaultCenter={mapCenter}
-              defaultZoom={11}
+              defaultZoom={13}
               className="w-full h-full"
               disableDefaultUI={true}
               mapId={mapId}
               styles={DARK_MAP_STYLE}
               // @ts-ignore
               colorScheme="DARK"
-              tilt={40} // <-- FIX: Added the tilt property for a 3D view
+              tilt={45} // Slightly more tilt for depth
               gestureHandling={'greedy'}
             >
               <MapRenderer onMapLoad={setMap} styles={DARK_MAP_STYLE}>
@@ -358,9 +390,21 @@ export default function MapView({ user, eventId }: MapViewProps) {
                           style={{ zIndex: isHovered ? 50 : (showDetails ? 10 : 0) }}
                         >
                           <div className={`transition-all duration-300 transform origin-bottom ${isHovered ? 'scale-110' : ''}`}>
-                            <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-full shadow-lg border border-white/20 text-white backdrop-blur-md transition-colors ${isHovered ? 'bg-slate-900 border-primary drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]' : 'bg-slate-900/80'}`}>
-                              {/* Inner Emoji Circle */}
-                              <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/10 shrink-0">
+                            <div
+                              className={`flex items-center gap-2 px-2.5 py-1.5 rounded-full shadow-lg border backdrop-blur-md transition-all duration-300 ${isHovered
+                                ? 'bg-slate-900 border-white text-white scale-105'
+                                : 'bg-slate-900/40 border-white/20 text-white'
+                                }`}
+                              style={{
+                                borderColor: isHovered ? getCategoryColor(event.category) : `${getCategoryColor(event.category)}66`,
+                                boxShadow: `0 0 20px ${getCategoryColor(event.category)}${isHovered ? '88' : '44'}`
+                              }}
+                            >
+                              {/* Colored Glow Ring */}
+                              <div
+                                className="flex items-center justify-center w-7 h-7 rounded-full shrink-0"
+                                style={{ backgroundColor: `${getCategoryColor(event.category)}33`, border: `1px solid ${getCategoryColor(event.category)}44` }}
+                              >
                                 <span className="text-sm leading-none">{getCategoryIcon(event.category)}</span>
                               </div>
 
@@ -379,7 +423,13 @@ export default function MapView({ user, eventId }: MapViewProps) {
                             </div>
 
                             {/* Anchor Triange */}
-                            <div className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 border-r border-b border-white/20 ${isHovered ? 'bg-slate-900' : 'bg-slate-900/80'} backdrop-blur-md z-[-1]`}></div>
+                            <div
+                              className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 border-r border-b backdrop-blur-md z-[-1] transition-colors duration-300`}
+                              style={{
+                                backgroundColor: isHovered ? 'rgba(15, 23, 42, 1)' : 'rgba(15, 23, 42, 0.4)',
+                                borderColor: isHovered ? getCategoryColor(event.category) : `${getCategoryColor(event.category)}66`
+                              }}
+                            ></div>
                           </div>
                         </AdvancedMarker>
                       );
