@@ -32,6 +32,36 @@ const MapRenderer = ({ onMapLoad, children, styles }: { onMapLoad: (map: google.
       onMapLoad(map);
     }
   }, [map, onMapLoad, styles]);
+
+  useEffect(() => {
+    if (!map) return;
+
+    const mapDiv = map.getDiv();
+
+    const handleWheel = (e: WheelEvent) => {
+      // Trackpads send e.ctrlKey = true when users pinch-to-zoom.
+      // We want to let Google Maps handle zooming natively!
+      if (e.ctrlKey || e.metaKey) {
+        return;
+      }
+
+      // It's a standard scroll/swipe. Prevent zooming.
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Pan the map based on the scroll/swipe velocity
+      // (You can multiply deltaX/Y by a fraction like 0.5 to slow it down if needed)
+      map.panBy(e.deltaX, e.deltaY);
+    };
+
+    // Attach the listener with passive: false so we can call preventDefault()
+    mapDiv.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      mapDiv.removeEventListener('wheel', handleWheel);
+    };
+  }, [map]);
+
   return <>{children}</>;
 }
 
