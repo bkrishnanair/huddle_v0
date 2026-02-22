@@ -35,29 +35,7 @@ const MapRenderer = ({ onMapLoad, children, styles }: { onMapLoad: (map: google.
 
 
   useEffect(() => {
-    if (!map) return;
-
-    const mapDiv = map.getDiv();
-
-    const handleWheel = (e: WheelEvent) => {
-      // 1. Let pinch-to-zoom (ctrlKey) through
-      if (e.ctrlKey || e.metaKey) return;
-
-      // 2. Intelligence: If there is horizontal movement, it's a trackpad swipe (Pan)
-      // Otherwise, if it's pure vertical, let Google handle it (it will Zoom).
-      if (Math.abs(e.deltaX) > 0.5) {
-        e.preventDefault();
-        e.stopPropagation();
-        map.panBy(e.deltaX, e.deltaY);
-      }
-    };
-
-    // Use capture to intercept before Google's internal listeners
-    mapDiv.addEventListener("wheel", handleWheel, { passive: false, capture: true });
-
-    return () => {
-      mapDiv.removeEventListener("wheel", handleWheel, { capture: true } as EventListenerOptions);
-    };
+    // Add any necessary map initialization effects here later if needed
   }, [map]);
 
   return <>{children}</>;
