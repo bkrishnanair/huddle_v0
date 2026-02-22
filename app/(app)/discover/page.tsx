@@ -133,6 +133,18 @@ export default function DiscoverPage() {
                 }
             }
 
+            let isNotPast = true;
+            if (!event.date || event.date.includes('/')) {
+                isNotPast = true; // Legacy events
+            } else {
+                try {
+                    const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
+                    if (!isNaN(eventDateTime.getTime())) {
+                        isNotPast = isFuture(addHours(eventDateTime, 1));
+                    }
+                } catch (e) { }
+            }
+
             let matchesTime = true;
             if (activeTime !== 'All') {
                 const now = new Date();
@@ -155,7 +167,7 @@ export default function DiscoverPage() {
                 }
             }
 
-            return matchesSearch && matchesCategory && matchesRange && matchesTime;
+            return matchesSearch && matchesCategory && matchesRange && matchesTime && isNotPast;
         });
 
         const favoriteCategories = userProfile?.favoriteCategories || [];
@@ -220,52 +232,91 @@ export default function DiscoverPage() {
 
     return (
         <div className="min-h-screen liquid-gradient p-4 md:p-8">
-            <header className="flex justify-between items-center mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-50 mb-2">Discover</h1>
-                    <p className="text-slate-300">Find events happening around you.</p>
+            <header className="flex justify-between items-start mb-10">
+                <div className="space-y-1">
+                    <h1 className="text-4xl font-extrabold text-slate-50 tracking-tight">Discover</h1>
+                    <p className="text-slate-400 font-medium text-lg">Find events happening around you.</p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => { /* Open Settings */ }}>
-                        <Settings className="w-5 h-5" />
+                <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl glass-surface border border-white/10 shadow-xl hover:bg-white/5" onClick={() => { /* Open Settings */ }}>
+                        <Settings className="w-5 h-5 text-slate-400" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={handleLogout}>
+                    <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl glass-surface border border-rose-500/20 shadow-xl hover:bg-rose-500/10 text-rose-400" onClick={handleLogout}>
                         <LogOut className="w-5 h-5" />
                     </Button>
                 </div>
             </header>
 
-            <div className="space-y-4 mb-8">
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <Input placeholder="Search by name or category..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 glass-surface border-white/15 h-12" />
-                </div>
-                <div className="flex flex-col md:flex-row items-start justify-between gap-4">
-                    <div className="flex flex-col gap-3 w-full">
-                        <div className="flex flex-wrap gap-2">
-                            {CATEGORY_FILTERS.map(category => <Chip key={category} isActive={activeCategory === category} onClick={() => setActiveCategory(category)}>{category}</Chip>)}
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {["All", "Next 2 Hrs", "Today", "This Weekend"].map(time => <Chip key={time} isActive={activeTime === time} onClick={() => setActiveTime(time)}>{time}</Chip>)}
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-slate-400">Within:</span>
-                            <div className="flex flex-wrap gap-2">
-                                {["All", "5 Miles", "10 Miles", "25 Miles"].map(range => <Chip key={range} isActive={activeRange === range} onClick={() => setActiveRange(range)}>{range}</Chip>)}
-                            </div>
-                        </div>
+            <div className="flex flex-col gap-6 mb-12">
+                {/* Search & Sort Group */}
+                <div className="flex flex-col md:flex-row items-center gap-4 w-full">
+                    <div className="relative flex-1 w-full group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors" />
+                        <Input
+                            placeholder="Search by name or category..."
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            className="pl-12 glass-surface border-white/10 h-14 rounded-2xl shadow-2xl text-lg focus:ring-primary/20"
+                        />
                     </div>
                     <div className="w-full md:w-auto shrink-0">
                         <Select value={sortBy} onValueChange={setSortBy}>
-                            <SelectTrigger className="w-full md:w-[180px] glass-surface border-white/15 h-11">
-                                <SlidersHorizontal className="w-4 h-4 mr-2" />
+                            <SelectTrigger className="w-full md:w-[200px] glass-surface border-white/10 h-14 rounded-2xl shadow-2xl font-bold text-slate-300">
+                                <SlidersHorizontal className="w-4 h-4 mr-3 text-primary" />
                                 <SelectValue />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="glass-surface border-white/10">
                                 <SelectItem value="soonest">Sort: Soonest</SelectItem>
                                 <SelectItem value="closest">Sort: Closest</SelectItem>
                             </SelectContent>
                         </Select>
+                    </div>
+                </div>
+
+                {/* Filter Cluster */}
+                <div className="flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                        {/* Category Group */}
+                        <div className="flex items-center gap-2 p-1.5 glass-surface border border-white/10 rounded-full shadow-2xl max-w-max">
+                            {CATEGORY_FILTERS.map(category => (
+                                <Chip
+                                    key={category}
+                                    isActive={activeCategory === category}
+                                    onClick={() => setActiveCategory(category)}
+                                >
+                                    {category}
+                                </Chip>
+                            ))}
+                        </div>
+
+                        {/* Time Group */}
+                        <div className="flex items-center gap-2 p-1.5 glass-surface border border-white/10 rounded-full shadow-2xl max-w-max">
+                            {["All", "Next 2 Hrs", "Today", "This Weekend"].map(time => (
+                                <Chip
+                                    key={time}
+                                    isActive={activeTime === time}
+                                    onClick={() => setActiveTime(time)}
+                                >
+                                    {time}
+                                </Chip>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Range Group */}
+                    <div className="flex items-center gap-3 p-1.5 glass-surface border border-white/10 rounded-full shadow-2xl max-w-max px-4">
+                        <span className="text-sm font-bold text-slate-500 uppercase tracking-widest mr-1">Range:</span>
+                        <div className="flex items-center gap-2">
+                            {["All", "5 Miles", "10 Miles", "25 Miles"].map(range => (
+                                <Chip
+                                    key={range}
+                                    isActive={activeRange === range}
+                                    onClick={() => setActiveRange(range)}
+                                >
+                                    {range}
+                                </Chip>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>

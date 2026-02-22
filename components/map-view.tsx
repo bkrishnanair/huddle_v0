@@ -17,13 +17,21 @@ interface MapViewProps {
   eventId?: string
 }
 
-const MapRenderer = ({ onMapLoad, children }: { onMapLoad: (map: google.maps.Map) => void, children: React.ReactNode }) => {
+const MapRenderer = ({ onMapLoad, children, styles }: { onMapLoad: (map: google.maps.Map) => void, children: React.ReactNode, styles?: google.maps.MapTypeStyle[] }) => {
   const map = useMap();
   useEffect(() => {
     if (map) {
+      if (styles) {
+        map.setOptions({
+          styles: styles,
+          backgroundColor: '#010b13',
+          // @ts-ignore - for newer Maps API features
+          colorScheme: 'DARK'
+        });
+      }
       onMapLoad(map);
     }
-  }, [map, onMapLoad]);
+  }, [map, onMapLoad, styles]);
   return <>{children}</>;
 }
 
@@ -44,6 +52,87 @@ const getCategoryIcon = (category: string): string => {
   }
   return icons[category] || icons.default
 }
+
+const DARK_MAP_STYLE = [
+  { elementType: "geometry", stylers: [{ color: "#010b13" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#010b13" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+  {
+    featureType: "administrative.locality",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#d59563" }],
+  },
+  {
+    featureType: "poi",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#d59563" }],
+  },
+  {
+    featureType: "poi.park",
+    elementType: "geometry",
+    stylers: [{ color: "#002020" }],
+  },
+  {
+    featureType: "poi.park",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#6b9a76" }],
+  },
+  {
+    featureType: "road",
+    elementType: "geometry",
+    stylers: [{ color: "#0b2233" }],
+  },
+  {
+    featureType: "road",
+    elementType: "geometry.stroke",
+    stylers: [{ color: "#feffff" }, { visibility: "off" }],
+  },
+  {
+    featureType: "road",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#9ca5b3" }],
+  },
+  {
+    featureType: "road.highway",
+    elementType: "geometry",
+    stylers: [{ color: "#14334a" }],
+  },
+  {
+    featureType: "road.highway",
+    elementType: "geometry.stroke",
+    stylers: [{ color: "#1f2835" }],
+  },
+  {
+    featureType: "road.highway",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#f3d19c" }],
+  },
+  {
+    featureType: "transit",
+    elementType: "geometry",
+    stylers: [{ color: "#2f3948" }],
+  },
+  {
+    featureType: "transit.station",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#d59563" }],
+  },
+  {
+    featureType: "water",
+    elementType: "geometry",
+    stylers: [{ color: "#010103" }],
+  },
+  {
+    featureType: "water",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#515c6d" }],
+  },
+  {
+    featureType: "water",
+    elementType: "labels.text.stroke",
+    stylers: [{ color: "#17263c" }],
+  },
+];
 
 export default function MapView({ user, eventId }: MapViewProps) {
   const [events, setEvents] = useState<GameEvent[]>([])
@@ -214,7 +303,17 @@ export default function MapView({ user, eventId }: MapViewProps) {
       });
     }
 
-    return result;
+    return result.filter(event => {
+      if (!event.date || event.date.includes('/')) return true;
+      try {
+        const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
+        if (!isNaN(eventDateTime.getTime())) {
+          // Hide events 1 hour after they start
+          return isFuture(addHours(eventDateTime, 1));
+        }
+      } catch (e) { }
+      return true;
+    });
   }, [events, activeCategory, activeTime]);
 
   if (!mapsApiKey) {
@@ -252,9 +351,13 @@ export default function MapView({ user, eventId }: MapViewProps) {
               className="w-full h-full"
               disableDefaultUI={true}
               mapId={mapId}
+              styles={DARK_MAP_STYLE}
+              // @ts-ignore
+              colorScheme="DARK"
               tilt={40} // <-- FIX: Added the tilt property for a 3D view
+              gestureHandling={'greedy'}
             >
-              <MapRenderer onMapLoad={setMap}>
+              <MapRenderer onMapLoad={setMap} styles={DARK_MAP_STYLE}>
                 {map && (
                   <>
                     {userLocation && <AdvancedMarker position={userLocation} />}
@@ -304,42 +407,47 @@ export default function MapView({ user, eventId }: MapViewProps) {
             </Map>
           </div>
 
-          <div className="absolute top-4 left-4 right-4 z-10 flex flex-col gap-2 pointer-events-none">
-            {/* Search Bar */}
-            <div className="glass-surface border border-white/10 rounded-xl overflow-hidden shadow-lg p-1 pointer-events-auto">
-              <LocationSearchInput onPlaceSelect={handleGlobalSearchSelect} />
+          <div className="absolute top-4 left-4 right-4 z-10 flex flex-col gap-3 pointer-events-none">
+            {/* Header: Search Bar & Toggle */}
+            <div className="flex items-center gap-3 w-full pointer-events-auto">
+              {/* Search Bar */}
+              <div className="flex-1 glass-surface border border-white/10 rounded-2xl overflow-hidden shadow-2xl p-1">
+                <LocationSearchInput onPlaceSelect={handleGlobalSearchSelect} />
+              </div>
+
+              {/* View Toggle */}
+              <div className="flex items-center p-1 glass-surface border border-white/10 rounded-2xl shadow-2xl shrink-0">
+                <Button variant="ghost" size="icon" className={`rounded-xl h-10 w-10 ${viewMode === 'map' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-slate-300 hover:text-white'}`} onClick={() => setViewMode('map')}>
+                  <MapIcon className="w-5 h-5" />
+                </Button>
+                <Button variant="ghost" size="icon" className={`rounded-xl h-10 w-10 ${viewMode === 'list' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-slate-300 hover:text-white'}`} onClick={() => setViewMode('list')}>
+                  <List className="w-5 h-5" />
+                </Button>
+              </div>
             </div>
 
-            {/* Category Chips and Toggle */}
-            <div className="flex items-center justify-between w-full space-x-2 pointer-events-auto">
-              <div className="flex items-center space-x-2 p-2 glass-surface rounded-full overflow-x-auto no-scrollbar flex-1">
+            {/* Filter Group: Category and Time */}
+            <div className="flex flex-col gap-2 pointer-events-auto">
+              {/* Category Chips */}
+              <div className="flex items-center space-x-2 p-1.5 glass-surface border border-white/10 rounded-full overflow-x-auto no-scrollbar max-w-max shadow-xl">
                 <Chip isActive={activeCategory === 'All'} onClick={() => setActiveCategory('All')}>All</Chip>
                 <Chip isActive={activeCategory === 'Sports'} onClick={() => setActiveCategory('Sports')}>Sports</Chip>
                 <Chip isActive={activeCategory === 'Music'} onClick={() => setActiveCategory('Music')}>Music</Chip>
                 <Chip isActive={activeCategory === 'Community'} onClick={() => setActiveCategory('Community')}>Community</Chip>
               </div>
 
-              <div className="flex items-center p-1 glass-surface rounded-full shadow-lg shrink-0">
-                <Button variant="ghost" size="icon" className={`rounded-full h-9 w-9 ${viewMode === 'map' ? 'bg-primary text-primary-foreground' : 'text-slate-300 hover:text-white'}`} onClick={() => setViewMode('map')}>
-                  <MapIcon className="w-5 h-5" />
-                </Button>
-                <Button variant="ghost" size="icon" className={`rounded-full h-9 w-9 ${viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-slate-300 hover:text-white'}`} onClick={() => setViewMode('list')}>
-                  <List className="w-5 h-5" />
-                </Button>
+              {/* Time Filter Chips */}
+              <div className="flex items-center space-x-2 p-1.5 glass-surface border border-white/10 rounded-full overflow-x-auto no-scrollbar max-w-max shadow-xl">
+                <Chip isActive={activeTime === 'All'} onClick={() => setActiveTime('All')}>All</Chip>
+                <Chip isActive={activeTime === 'Next 2 Hrs'} onClick={() => setActiveTime('Next 2 Hrs')}>Next 2 Hrs</Chip>
+                <Chip isActive={activeTime === 'Today'} onClick={() => setActiveTime('Today')}>Today</Chip>
+                <Chip isActive={activeTime === 'This Weekend'} onClick={() => setActiveTime('This Weekend')}>This Weekend</Chip>
               </div>
-            </div>
-
-            {/* Time Filter Chips */}
-            <div className="flex items-center space-x-2 p-2 glass-surface rounded-full overflow-x-auto no-scrollbar pointer-events-auto">
-              <Chip isActive={activeTime === 'All'} onClick={() => setActiveTime('All')}>All</Chip>
-              <Chip isActive={activeTime === 'Next 2 Hrs'} onClick={() => setActiveTime('Next 2 Hrs')}>Next 2 Hrs</Chip>
-              <Chip isActive={activeTime === 'Today'} onClick={() => setActiveTime('Today')}>Today</Chip>
-              <Chip isActive={activeTime === 'This Weekend'} onClick={() => setActiveTime('This Weekend')}>This Weekend</Chip>
             </div>
           </div>
 
           {viewMode === 'list' && (
-            <div className="absolute inset-0 z-0 pt-[120px] px-4 pb-24 overflow-y-auto no-scrollbar pointer-events-auto">
+            <div className="absolute inset-0 z-0 pt-[190px] px-4 pb-24 overflow-y-auto no-scrollbar pointer-events-auto">
               {filteredEvents.length === 0 ? (
                 <div className="text-center text-slate-400 mt-10">
                   <p>No events found in this area.</p>

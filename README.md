@@ -4,23 +4,21 @@ Huddle is a modern, full-stack web application designed to help users discover, 
 
 This production-ready application features a complete authentication system, real-time event management, and interactive social features, creating an engaging and reliable user experience for sports enthusiasts.
 
-## Screenshots
-
-| Landing Page 1 | Landing Page 2 | Login/Signup |
+| Landing Page | Maps Feed | Discover |
 | :---: | :---: | :---: |
-| ![alt text](Pages/landingpage-1.png) | ![alt text](Pages/landingpage-2.png) | ![alt text](Pages/old/image-5.png) |
+| ![Landing Page](Pages/landing.jpeg) | ![Maps View](Pages/maps.jpeg) | ![Discover Feed](Pages/discover.jpeg) |
 
-| Discover Events | Events Page | Event Search |
+| My Events | Create Event | Profile |
 | :---: | :---: | :---: |
-| ![alt text](Pages/old/image-4.png) | ![alt text](Pages/old/image-1.png) | ![alt text](Pages/old/image-6.png) |
+| ![My Events](Pages/my_events.jpeg) | ![Create Event](Pages/create_event.heic) | ![Profile Page](Pages/profile.jpeg) |
 
-| Create Event | Chat | Profile |
-| :---: | :---: | :---: |
-| ![alt text](Pages/old/image-7.png) | ![alt text](Pages/old/image-3.png) | ![alt text](Pages/old/image.png) |
+| Login / Signup | 
+| :---: |
+| ![Auth Screen](Pages/login_signup.heic) | 
 
 ## Key Features & Functionality
 
-*   **🌍 Frictionless Discovery & Interactive Map**: Unauthenticated users can instantly explore the live map, densely populated with hyperlocal, realistic events (College Park / DC Area). No sign-up required to browse!
+*   **🌍 Frictionless Guest Access**: Unauthenticated users can instantly explore the live map and Discover feed. Replaced aggressive auth-walls with a "Continue as Guest" experience, allowing community exploration before commitment.
 *   **📍 Advanced Map UX (Emoji Pins & Hover States)**: Replaced clunky native popups with sleek, custom-built intuitive React nodes. Pins display category-specific emojis and elegantly expand to show event details on hover or when zooming in close.
 *   **🔗 Social Deep Linking & Open Graph**: Shareable event links (`/map?eventId=xyz`) automatically generate rich Open Graph previews (Title, Category) for iMessage/Discord. Clicking the link instantly pans the map to the coordinates and opens the event drawer.
 *   **🔐 Secure Hybrid Authentication**: Complete session management with Next.js 15 App Router compatibility. Combines Firebase Auth on the client with the Firebase Admin SDK on the server using secure HTTP-only cookies.
@@ -31,8 +29,9 @@ This production-ready application features a complete authentication system, rea
 *   **🕒 Time-Based Discovery Filters**: Surface events happening "Next 2 Hrs", "Today", or "This Weekend" with a single tap using new horizontal chip filters.
 *   **🕵️ Private Events & Deep Linking**: Added support for link-only private events that are hidden from the discovery feed but accessible via secure deep links.
 *   **💬 Live Event Chat**: Each event features instantaneous live messaging for participants to coordinate logistics, powered by optimistic UI updates.
-*   **👤 Elegant User Profiles**: Premium "glassmorphic" profile pages showcasing user bios, dynamic "Interests" tags, unlocked achievement badges, and a history of organized/joined events.
-*   **🔍 Global Search & Filtering**: Dedicated Discover page with persistent search, functional category tags (Sports, Music, Tech, etc.), and sorting constraints (Soonest vs. Closest). Added immediate "Show on Map" routing from any event card.
+*   **👤 Elegant User Profiles**: Premium "glassmorphic" profile pages showcasing user bios, dynamic "Interests" tags, and a history of organized/joined events.
+*   **🏆 Karma Score & Gamification**: Added a "Karma Score" system to reward organizers and active participants, complete with hoverable info tooltips explaining the calculation.
+*   **🔍 Global Search & Filtering**: Dedicated Discover page with persistent search, functional category tags, and sorting (Soonest vs. Closest). Added immediate "Show on Map" routing and local "View Details" drawers for a 1:1 consistent experience.
 
 ## UI/UX & Design Philosophy
 

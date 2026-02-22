@@ -15,11 +15,12 @@ export default function AppLayout({
   const { user, loading } = useFirebase()
   const router = useRouter()
   const pathname = usePathname()
-  const isPublicRoute = pathname === "/map"
+  const isPublicRoute = pathname === "/map" || pathname === "/discover" || pathname === "/login"
 
   useEffect(() => {
+    // Only redirect if they are not loading, not logged in, and NOT on a public route
     if (!loading && !user && !isPublicRoute) {
-      router.push("/")
+      router.push("/login")
     }
   }, [user, loading, router, isPublicRoute])
 
@@ -34,10 +35,9 @@ export default function AppLayout({
     )
   }
 
-  if (!user) {
-    if (isPublicRoute) {
-      return <div className="relative">{children}</div>
-    }
+  // If there's no user, but they are on a public route, STILL render the layout
+  // (which includes the bottom navigation below), so they can navigate public areas.
+  if (!user && !isPublicRoute) {
     return null
   }
 

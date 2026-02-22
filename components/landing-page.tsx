@@ -40,6 +40,7 @@ const PremiumBackground = () => (
 
 interface LandingPageProps {
   onGetStarted: () => void;
+  isAuthenticated?: boolean;
 }
 
 const useCases = [
@@ -81,7 +82,7 @@ const howItWorks = [
   }
 ];
 
-export default function LandingPage({ onGetStarted }: LandingPageProps) {
+export default function LandingPage({ onGetStarted, isAuthenticated = false }: LandingPageProps) {
   const [currentUseCase, setCurrentUseCase] = useState(0);
 
   useEffect(() => {
@@ -106,7 +107,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
           </div>
           <div className="flex items-center space-x-4">
             <Button variant="outline" onClick={onGetStarted} className="px-6 h-11 rounded-full bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300 font-medium tracking-tight text-white shadow-lg">
-              Sign In
+              {isAuthenticated ? "Open App" : "Sign In"}
             </Button>
           </div>
         </header>
@@ -120,12 +121,12 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[50%] bg-primary/20 blur-[100px] rounded-full pointer-events-none" />
 
               <h1 className="text-5xl sm:text-7xl md:text-[5.5rem] font-black text-white mb-6 leading-[1.05] tracking-tighter relative z-10 drop-shadow-lg">
-                Your Community is Waiting.<br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-orange-400 to-amber-500">Find it with Huddle.</span>
+                Stop Searching, Start Playing.<br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-orange-400 to-amber-500">Find Your Huddle.</span>
               </h1>
 
               <p className="text-lg md:text-2xl text-slate-300 max-w-3xl mx-auto mb-12 leading-relaxed font-medium tracking-tight bg-slate-900/40 backdrop-blur-xl p-5 rounded-3xl border border-white/10 shadow-2xl relative z-10">
-                From pickup games to study groups, discover and join what's happening around you in real-time.
+                Discover and join local sports games in real-time. Connect with players, organize events effortlessly, and never miss a moment of the action.
               </p>
 
               <div className="flex flex-col sm:flex-row justify-center items-center gap-6 mb-24 relative z-10">
@@ -233,7 +234,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 <div className="flex flex-col sm:flex-row justify-center items-center gap-6">
                   <Button onClick={onGetStarted} size="lg" className="h-16 px-12 text-xl font-bold bg-white text-slate-950 hover:bg-slate-200 rounded-full shadow-[0_0_30px_rgba(255,255,255,0.3)] transition-all duration-300 transform hover:scale-105 tracking-tight border border-transparent">
                     <Zap className="mr-3 w-6 h-6 text-primary" />
-                    Get Started - It's Free
+                    {isAuthenticated ? "Go to Map" : "Get Started - It's Free"}
                   </Button>
                   <div className="flex items-center text-slate-400 text-sm font-medium">
                     <Clock className="w-4 h-4 mr-2 text-primary" />

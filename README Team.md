@@ -9,8 +9,9 @@ Huddle is a production-ready geospatial social platform for local pickup sports.
 **Core Architectural Pattern: Secure Route Groups**
 The app's foundation is a **secure route group** structure implemented with the Next.js App Router. This is a critical concept for any developer working on the project.
 
--   **Public Routes (`/`)**: The root of the application is the public-facing landing and authentication page. It has its own simple layout and is the only part of the app accessible to unauthenticated users.
--   **Private Routes (`app/(app)/*`)**: All main application pages (`/map`, `/events`, `/chat`, `/profile`) are located inside a route group folder named `(app)`. This group is governed by a secure layout (`app/(app)/layout.tsx`) that acts as an **authentication gateway**. It automatically verifies the user's session and redirects any unauthenticated requests to the login page, ensuring the application is secure by default.
+-   **Public Routes (`/`, `/map`, `/discover`, `/login`)**: The application allows guest access to the Landing page, Map, and Discover feeds. This is tracked via the `isPublicRoute` constant in the layout.
+-   **Private Routes (`app/(app)/*`)**: Restricted pages like `/my-events` and `/profile` are gated. If a guest attempts to access these, the secure layout (`app/(app)/layout.tsx`) automatically redirects them to the dedicated `/login` page.
+-   **Authentication Gateway**: The layout verifies the Firebase session cookie. Authenticated users can freely visit the Landing page (clicked via Logo) without being forced back into the app map, thanks to dynamic "Open App" CTA logic.
 
 ## 2. Technology Stack
 
@@ -72,6 +73,7 @@ All API routes are located in the `app/api/` directory and are secured with Zod 
 | `/api/events/[id]/details` | `GET` | Fetches detail info & player profiles (Publicly accessible) | ✅ Working |
 | `/api/events/[id]/rsvp` | `POST` | **Auth.** Join/Unjoin events. Admin Transaction protected. | ✅ Working |
 | `/api/users/[id]/profile`| `GET` | **Auth.** Secure user profile access (self-only) + Past Events history | ✅ Working |
+| `/login` | `PAGE` | Dedicated auth entry point for guest redirects | ✅ Working |
 
 ## 6. Key Architecture Implementations
 
@@ -80,6 +82,8 @@ All API routes are located in the `app/api/` directory and are secured with Zod 
 *   **Server Component Deep Linking:** The `/map/page.tsx` is built as a Server Component. Sharing an event link (`?eventId=xyz`) queries the database server-side to generate dynamic **Open Graph (OG) Tags**, allowing rich previews (Title, Category) inside iMessage/Discord before the JS bundle even loads.
 *   **Advanced Marker UX:** Dropped clunky Google Maps `InfoWindow` components in favor of customizable React DOM nodes injected into `@vis.gl/react-google-maps` `AdvancedMarker` tags. Emojis scale responsively, fixing persistent z-index layout shifts.
 *   **Hoisted Location Context:** The `APIProvider` is hoisted to the root of the map view to ensure `LocationSearchInput` (Places Library) share the same singleton instance as the Map canvas, preventing initialization race conditions.
+*   **Greedy Gesture Handling:** To solve trackpad/touch scrolling issues in embedded Google Maps, `gestureHandling: 'greedy'` is enforced. This ensures the map captures all scroll/pan inputs without requiring modifier keys (Cmd/Ctrl).
+*   **Karma Gamification:** Profile pages include a `Karma Score` tracking system. This uses an experimental "Organizing vs. Participating" weighted logic, displayed with hoverable Radix tooltips for transparency.
 *   **Dropdown Focus Locking:** Next.js Radix Dialog modals aggressively steal focus, breaking Google Places autocomplete dropdowns on mobile. We defeated this by capturing `mousedown`/`touchstart` events and invoking `e.preventDefault()` locally inside our search bar.
 
 ## 7. Local Development Setup

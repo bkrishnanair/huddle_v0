@@ -13,11 +13,8 @@ export default function Home() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const router = useRouter()
 
-  useEffect(() => {
-    if (user) {
-      router.push("/map") // Changed redirect to the map page
-    }
-  }, [user, router])
+  // Removed the auto-redirect to '/map' when user is authenticated
+  // This allows the user to click the Huddle logo and view the landing page
 
   if (error) {
     return (
@@ -30,7 +27,7 @@ export default function Home() {
     )
   }
 
-  if (loading || user) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-white">
         <div className="text-center">
@@ -43,7 +40,16 @@ export default function Home() {
 
   return (
     <>
-      <LandingPage onGetStarted={() => setIsAuthModalOpen(true)} />
+      <LandingPage
+        isAuthenticated={!!user}
+        onGetStarted={() => {
+          if (user) {
+            router.push("/map")
+          } else {
+            setIsAuthModalOpen(true)
+          }
+        }}
+      />
 
       <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
         <DialogContent className="glass-surface border-white/15 bg-slate-900/80 max-w-md p-0 gap-0 rounded-2xl overflow-hidden">
