@@ -56,10 +56,9 @@ Data is organized into collections of documents. The schema uses denormalization
 The app uses a robust hybrid authentication model that is fully compatible with Next.js 15 and production-ready.
 
 *   **Client-Side (`lib/auth.ts`)**: Contains functions for browser-based auth flows (login, signup, Google Sign-In) and a `getCurrentUser` function for synchronous UI checks.
-*   **Server-Side (`lib/auth-server.ts`)**: Contains a `getServerCurrentUser` function that **must** be used in all API Routes. It securely verifies session cookies using the Firebase Admin SDK with proper Next.js 15 async cookies() support. This is the source of truth for user identity on the backend.
-*   **Firebase Admin (`lib/firebase-admin.ts`)**: Modular Firebase Admin SDK initialization with proper error handling, health checks, and secure credential management.
-*   **Session State (`lib/firebase-context.tsx`)**: A central React Context provider (`FirebaseProvider`) uses the `onAuthStateChanged` listener to manage the user's session state, making it available to all components via the `useAuth` hook.
-*   **Security**: All protected routes include `export const runtime = 'nodejs'` and use secure HTTP-only session cookies for authentication.
+*   **Server-Side (`lib/auth-server.ts`)**: securely verifies session cookies using the Firebase Admin SDK with proper Next.js 15 async `cookies()` support. This is the source of truth for user identity on the backend.
+*   **Firebase Admin (`lib/firebase-admin.ts`)**: Modular Firebase Admin SDK initialization using escaped private keys to bypass restrictive Cloud Firestore Security Rules securely.
+*   **Module Separation (CRITICAL)**: To prevent Turbopack from leaking server-only modules into the client bundle, database logic is strictly separated into `lib/db.ts` (Server & Admin SDK only) and `lib/db-client.ts` (Client & Firebase SDK only). Never cross-contaminate these files.
 
 ## 5. API Endpoints (Next.js API Routes)
 
@@ -68,54 +67,44 @@ All API routes are located in the `app/api/` directory and are secured with Zod 
 | Endpoint | Method | Description | Status |
 | :--- | :--- | :--- | :--- |
 | `/api/events` | `GET` | Fetches nearby events with geospatial filtering and viewport optimization | ✅ Working |
-| `/api/events` | `POST` | **Authenticated.** Creates single or recurring events with Zod validation | ✅ Working |
-| `/api/events/[id]/details` | `GET` | **Authenticated.** Fetches detailed event info including player profiles | ✅ Working |
-| `/api/events/[id]/rsvp` | `POST` | **Authenticated.** Join/leave events, awards badges, real-time updates | ✅ Working |
-| `/api/events/[id]/checkin` | `POST` | **Authenticated & Organizer Only.** Real-time player check-ins | ✅ Working |
-| `/api/events/[id]/chat` | `POST` | **Authenticated.** Real-time chat messaging with proper validation | ✅ Working |
-| `/api/users/[id]/events`| `GET` | **Authenticated.** User's organized and joined events with pagination | ✅ Working |
-| `/api/users/[id]/profile`| `GET` | **Authenticated.** Secure user profile access (self-only) | ✅ Working |
-| `/api/users/profile`| `POST` | **Authenticated.** Profile updates with Zod validation | ✅ Working |
-| `/api/connections/request`| `POST` | **Authenticated.** Send connection requests with validation | ✅ Working |
-| `/api/connections/accept`| `POST` | **Authenticated.** Accept requests using Firestore transactions | ✅ Working |
+| `/api/events` | `POST` | **Auth.** Creates single/recurring events with Zod validation | ✅ Working |
+| `/api/events/[id]` | `DELETE` | **Auth.** Securely delete event (Creator only) | ✅ Working |
+| `/api/events/[id]/details` | `GET` | Fetches detail info & player profiles (Publicly accessible) | ✅ Working |
+| `/api/events/[id]/rsvp` | `POST` | **Auth.** Join/Unjoin events. Admin Transaction protected. | ✅ Working |
+| `/api/users/[id]/profile`| `GET` | **Auth.** Secure user profile access (self-only) + Past Events history | ✅ Working |
 
+## 6. Key Architecture Implementations
 
-## 6. Key Feature Implementations
-
-*   **Server-Side Validation**: All critical API endpoints use `zod` schemas to validate incoming data, preventing invalid data from reaching the database.
-*   **Global Error Notifications**: The app uses `sonner` to provide users with toast notifications for success and error states on all major actions.
-*   **Automated Push Notifications (Cloud Function)**:
-    *   A scheduled Cloud Function (`functions/send-reminders.js`) runs every 10 minutes.
-    *   It queries for events starting in the near future, retrieves the `fcmTokens` for all RSVP'd users, and sends a reminder notification via Firebase Cloud Messaging.
-*   **Gamification (Achievements)**:
-    *   The `/api/events/[id]/rsvp` route contains logic to detect when a user joins their first event.
-    *   When this occurs, the user's document is updated with a "first_game" badge, which is then displayed on their profile.
+*   **Transactional Admin Overrides:** Firestore security rules purposefully restrict client manipulation. RSVPs (event joining/leaving) and Player Counts are executed securely on the backend using `adminDb.runTransaction()`. This ensures atomicity and prevents permission denial loops.
+*   **Geospatial API Throttling:** The interactive map employs custom debouncing in `map-view.tsx` (500ms wait after scrolling) and strict geographical equality checks (`===`) before triggering API queries. This severed a previously critical infinite fetch loop.
+*   **Server Component Deep Linking:** The `/map/page.tsx` is built as a Server Component. Sharing an event link (`?eventId=xyz`) queries the database server-side to generate dynamic **Open Graph (OG) Tags**, allowing rich previews (Title, Category) inside iMessage/Discord before the JS bundle even loads.
+*   **Advanced Marker UX:** Dropped clunky Google Maps `InfoWindow` components in favor of customizable React DOM nodes injected into `@vis.gl/react-google-maps` `AdvancedMarker` tags. Emojis scale responsively, fixing persistent z-index layout shifts.
+*   **Hoisted Location Context:** The `APIProvider` is hoisted to the root of the map view to ensure `LocationSearchInput` (Places Library) share the same singleton instance as the Map canvas, preventing initialization race conditions.
+*   **Dropdown Focus Locking:** Next.js Radix Dialog modals aggressively steal focus, breaking Google Places autocomplete dropdowns on mobile. We defeated this by capturing `mousedown`/`touchstart` events and invoking `e.preventDefault()` locally inside our search bar.
 
 ## 7. Local Development Setup
 
 1.  **Environment Variables**: Create a `.env.local` file in the project root. It needs credentials for the Firebase Client SDK, Google Maps, and the Firebase Admin SDK (for server-side authentication). Refer to `README.md` for the full list of required variables.
 2.  **Install Dependencies**: This project uses PNPM. You only need to install dependencies in the root directory.
-    \`\`\`bash
+    ```bash
     pnpm install
-    \`\`\`
+    ```
 3.  **Run the App**:
-    \`\`\`bash
+    ```bash
     pnpm run dev
-    \`\`\`
+    ```
 
 ## 8. Production Deployment Status
 
 ### ✅ **FULLY FUNCTIONAL SYSTEMS**
 - **Authentication**: Complete Next.js 15 compatible session management
-- **Event Management**: CRUD operations with real-time updates  
-- **RSVP System**: Join/leave functionality with proper state management
+- **Event Management**: CRUD operations with real-time updates and transactional RSVPs
+- **Performance Architecture**: Strict separation of client/server Next.js modules (0 build errors)
 - **Real-time Chat**: Firebase Firestore listeners with optimistic updates
-- **User Profiles**: Complete profile management with API endpoints
-- **Mobile Responsive**: Touch interactions and mobile-first UI
-- **Maps Integration**: Google Maps with geospatial queries and custom styling
+- **Maps Integration**: Google Maps with deep linking, debouncing, and custom emoji DOM pins.
+- **Mobile Responsive**: Touch interactions and dropdown focus bugs solved.
 
 ### 🔧 **CONFIGURATION NEEDED FOR PRODUCTION**
-- Firebase environment variables (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY)
-- Google Maps API keys with proper API restrictions
-- Domain configuration in `next.config.mjs` for production
-- Firestore security rules review for production environment
+- Firebase environment variables (`FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`)
+- Google Maps API keys with proper API restrictions (Maps JS API, Places API, Geocoding)
+- Domain configuration in `next.config.mjs` for production CNAME routing.

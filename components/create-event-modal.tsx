@@ -38,6 +38,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   const [isAiLoading, setIsAiLoading] = useState(false)
   const [suggestions, setSuggestions] = useState([])
   const [boostEvent, setBoostEvent] = useState(false)
+  const [isPrivate, setIsPrivate] = useState(false)
   const [mapCenter, setMapCenter] = useState(userLocation || { lat: 37.7749, lng: -122.4194 })
   const [markerPosition, setMarkerPosition] = useState(userLocation || { lat: 37.7749, lng: -122.4194 })
 
@@ -90,7 +91,8 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         body: JSON.stringify({
           ...formData,
           geopoint: { latitude: markerPosition.lat, longitude: markerPosition.lng },
-          isBoosted: boostEvent
+          isBoosted: boostEvent,
+          isPrivate: isPrivate
         }),
         credentials: 'include'
       })
@@ -146,7 +148,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
               <Label htmlFor="location-search">Location</Label>
               {mapsApiKey ? (
                 <APIProvider apiKey={mapsApiKey}>
-                  <LocationSearchInput onPlaceSelect={handlePlaceSelect} />
+                  <LocationSearchInput onPlaceSelect={handlePlaceSelect} insideModal={true} />
                   <div className="h-48 w-full rounded-lg overflow-hidden relative mt-2 border border-border">
                     <Map
                       defaultCenter={mapCenter}
@@ -187,6 +189,16 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
             </div>
 
             <div className="space-y-4 pt-4 border-t border-border">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-white/5">
+                <div>
+                  <Label htmlFor="private" className="font-bold flex items-center gap-2">
+                    Make Private (Link Only)
+                  </Label>
+                  <p className="text-sm text-slate-400 mt-1">Hide this event from the global map feed.</p>
+                </div>
+                <Switch id="private" checked={isPrivate} onCheckedChange={setIsPrivate} />
+              </div>
+
               <div className="flex items-center justify-between p-4 rounded-lg bg-white/5">
                 <div>
                   <Label htmlFor="boost" className="font-bold flex items-center gap-2">

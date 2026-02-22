@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerCurrentUser } from "@/lib/auth-server"
 import { adminDb } from "@/lib/firebase-admin"
-import { getEventCountsForUser } from "@/lib/db"
+import { getEventCountsForUser, getUserJoinedEvents } from "@/lib/db"
 
 export const runtime = 'nodejs'
 
@@ -56,8 +56,27 @@ export async function GET(
     }
 
     const stats = await getEventCountsForUser(requestedUserId);
+    const joinedEvents = await getUserJoinedEvents(requestedUserId);
+    const now = Date.now();
 
-    return NextResponse.json({ profile, stats })
+    // Process and sort for strictly past events
+    const pastEvents = joinedEvents
+      .filter((event: any) => {
+        if (!event.date || event.date.includes('/')) return false;
+        try {
+          const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
+          return !isNaN(eventDateTime.getTime()) && eventDateTime.getTime() < now;
+        } catch (e) {
+          return false;
+        }
+      })
+      .sort((a: any, b: any) => {
+        const dateA = new Date(`${a.date}T${a.time || '00:00'}`).getTime();
+        const dateB = new Date(`${b.date}T${b.time || '00:00'}`).getTime();
+        return dateB - dateA; // Most recent past events first
+      });
+
+    return NextResponse.json({ profile, stats, pastEvents })
   } catch (error) {
     console.error(`Error fetching profile for user:`, error)
     return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 })

@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Trophy, LogOut, Settings, UserCircle, Pencil, Zap } from "lucide-react"
+import { Trophy, LogOut, Settings, UserCircle, Pencil, Zap, Calendar } from "lucide-react"
 import EditProfileModal from "@/components/profile/edit-profile-modal"
 import HuddleProModal from "@/components/huddle-pro-modal"
 import { signOut } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
+import { EventCard } from "@/components/events/event-card"
 
 function ProfileSkeleton() {
   return (
@@ -54,6 +55,7 @@ export default function ProfilePage() {
   const router = useRouter()
   const [userProfile, setUserProfile] = useState<any>(null)
   const [userStats, setUserStats] = useState({ organized: 0, joined: 0, upcoming: 0 })
+  const [pastEvents, setPastEvents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isProModalOpen, setIsProModalOpen] = useState(false)
@@ -73,6 +75,7 @@ export default function ProfilePage() {
         const data = await res.json()
         setUserProfile(data.profile)
         setUserStats(data.stats || { organized: 0, joined: 0, upcoming: 0 })
+        setPastEvents(data.pastEvents || [])
       }
     } catch (error) {
       console.error("Error loading user data:", error)
@@ -174,6 +177,26 @@ export default function ProfilePage() {
             </CardHeader>
             <CardContent>
               <p className="text-slate-300">Your trophy case is waiting. Join a game to start collecting!</p>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-surface border-white/15">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-emerald-400" />
+                Recent Events Attended
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {pastEvents.length === 0 ? (
+                <p className="text-slate-300">No past events found. Get out there and join some games!</p>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {pastEvents.map((event: any) => (
+                    <EventCard key={event.id} event={event} onSelectEvent={() => router.push(`/map?eventId=${event.id}`)} />
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

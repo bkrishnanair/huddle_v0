@@ -15,6 +15,7 @@ import { signOut } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import { isToday, isWeekend, isBefore, addHours, isFuture } from "date-fns"
 
 const CATEGORY_FILTERS = ["All", "Sports", "Music", "Community", "Learning", "Food & Drink"];
 
@@ -42,6 +43,8 @@ export default function DiscoverPage() {
 
     const [searchQuery, setSearchQuery] = useState("");
     const [activeCategory, setActiveCategory] = useState("All");
+    const [activeTime, setActiveTime] = useState("All");
+    const [activeRange, setActiveRange] = useState("All");
     const [sortBy, setSortBy] = useState("soonest");
 
     useEffect(() => {
@@ -107,7 +110,52 @@ export default function DiscoverPage() {
         const filtered = allNearbyEvents.filter(event => {
             const matchesSearch = event.name.toLowerCase().includes(searchQuery.toLowerCase());
             const matchesCategory = activeCategory === 'All' || event.category === activeCategory;
-            return matchesSearch && matchesCategory;
+
+            let matchesRange = true;
+            let eventDistance = event.distance;
+
+            if (userLocation && event.geopoint) {
+                const R = 3958.8; // Radius in miles
+                const dLat = (event.geopoint.latitude - userLocation.lat) * Math.PI / 180;
+                const dLon = (event.geopoint.longitude - userLocation.lng) * Math.PI / 180;
+                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(event.geopoint.latitude * Math.PI / 180) *
+                    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                eventDistance = R * c;
+                event.distance = eventDistance; // Store for sorting
+            }
+
+            if (activeRange !== 'All' && eventDistance !== undefined) {
+                const rangeMiles = parseInt(activeRange);
+                if (eventDistance > rangeMiles) {
+                    matchesRange = false;
+                }
+            }
+
+            let matchesTime = true;
+            if (activeTime !== 'All') {
+                const now = new Date();
+                if (!event.date || event.date.includes('/')) matchesTime = true; // Skip bad legacy data
+                else {
+                    try {
+                        const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
+                        if (!isNaN(eventDateTime.getTime())) {
+                            if (activeTime === 'Next 2 Hrs') {
+                                matchesTime = isBefore(eventDateTime, addHours(now, 2)) && isFuture(eventDateTime);
+                            } else if (activeTime === 'Today') {
+                                matchesTime = isToday(eventDateTime);
+                            } else if (activeTime === 'This Weekend') {
+                                matchesTime = isWeekend(eventDateTime) && isFuture(eventDateTime);
+                            }
+                        }
+                    } catch (e) {
+                        matchesTime = true;
+                    }
+                }
+            }
+
+            return matchesSearch && matchesCategory && matchesRange && matchesTime;
         });
 
         const favoriteCategories = userProfile?.favoriteCategories || [];
@@ -130,7 +178,7 @@ export default function DiscoverPage() {
         });
 
         return { recommendedEvents: recommended, otherEvents: others };
-    }, [allNearbyEvents, searchQuery, activeCategory, sortBy, userProfile]);
+    }, [allNearbyEvents, searchQuery, activeCategory, activeTime, activeRange, sortBy, userProfile, userLocation]);
 
     const renderContent = () => {
         if (!initialLoadComplete) {
@@ -192,20 +240,33 @@ export default function DiscoverPage() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <Input placeholder="Search by name or category..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 glass-surface border-white/15 h-12" />
                 </div>
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div className="flex flex-wrap gap-2">
-                        {CATEGORY_FILTERS.map(category => <Chip key={category} isActive={activeCategory === category} onClick={() => setActiveCategory(category)}>{category}</Chip>)}
+                <div className="flex flex-col md:flex-row items-start justify-between gap-4">
+                    <div className="flex flex-col gap-3 w-full">
+                        <div className="flex flex-wrap gap-2">
+                            {CATEGORY_FILTERS.map(category => <Chip key={category} isActive={activeCategory === category} onClick={() => setActiveCategory(category)}>{category}</Chip>)}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {["All", "Next 2 Hrs", "Today", "This Weekend"].map(time => <Chip key={time} isActive={activeTime === time} onClick={() => setActiveTime(time)}>{time}</Chip>)}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-slate-400">Within:</span>
+                            <div className="flex flex-wrap gap-2">
+                                {["All", "5 Miles", "10 Miles", "25 Miles"].map(range => <Chip key={range} isActive={activeRange === range} onClick={() => setActiveRange(range)}>{range}</Chip>)}
+                            </div>
+                        </div>
                     </div>
-                    <Select value={sortBy} onValueChange={setSortBy}>
-                        <SelectTrigger className="w-full md:w-[180px] glass-surface border-white/15 h-11">
-                            <SlidersHorizontal className="w-4 h-4 mr-2" />
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="soonest">Sort: Soonest</SelectItem>
-                            <SelectItem value="closest">Sort: Closest</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <div className="w-full md:w-auto shrink-0">
+                        <Select value={sortBy} onValueChange={setSortBy}>
+                            <SelectTrigger className="w-full md:w-[180px] glass-surface border-white/15 h-11">
+                                <SlidersHorizontal className="w-4 h-4 mr-2" />
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="soonest">Sort: Soonest</SelectItem>
+                                <SelectItem value="closest">Sort: Closest</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
             </div>
 

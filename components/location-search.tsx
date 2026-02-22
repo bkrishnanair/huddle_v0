@@ -7,9 +7,10 @@ import { useMapsLibrary } from "@vis.gl/react-google-maps";
 // SEARCH: Define the props for our new component.
 interface LocationSearchInputProps {
   onPlaceSelect: (place: google.maps.places.PlaceResult | null) => void;
+  insideModal?: boolean;
 }
 
-export default function LocationSearchInput({ onPlaceSelect }: LocationSearchInputProps) {
+export default function LocationSearchInput({ onPlaceSelect, insideModal = false }: LocationSearchInputProps) {
   // SEARCH: Get a reference to the input element.
   const inputRef = useRef<HTMLInputElement>(null);
   // SEARCH: Load the 'places' library from Google Maps.
@@ -47,6 +48,7 @@ export default function LocationSearchInput({ onPlaceSelect }: LocationSearchInp
   // FIX: Prevent Radix Dialog / Input onBlur from hiding the Google Maps Places Autocomplete dropdown prematurely.
   // The .pac-container dropdown loses focus on mousedown/touchstart before the native click event fires.
   useEffect(() => {
+    if (!insideModal) return;
     const handleDropdownInteraction = (e: MouseEvent | TouchEvent) => {
       const target = e.target as HTMLElement;
       if (target && target.closest(".pac-container")) {

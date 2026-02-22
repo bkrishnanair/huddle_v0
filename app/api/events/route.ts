@@ -18,6 +18,7 @@ const eventSchema = z.object({
   minPlayers: z.number().optional(),
   description: z.string().optional(),
   isBoosted: z.boolean().optional(),
+  isPrivate: z.boolean().optional(),
   geopoint: z.object({
     latitude: z.number(),
     longitude: z.number(),
@@ -40,13 +41,13 @@ export async function GET(request: NextRequest) {
       )
 
       // Combine Firebase events with static Mock Events for frictionless discovery
-      const combinedEvents = [...MOCK_EVENTS, ...events]
+      const combinedEvents = [...MOCK_EVENTS, ...events].filter((e: any) => !e.isPrivate)
 
       return NextResponse.json({ events: combinedEvents })
     }
 
     const events = await getEvents()
-    const combinedEvents = [...MOCK_EVENTS, ...events]
+    const combinedEvents = [...MOCK_EVENTS, ...events].filter((e: any) => !e.isPrivate)
     return NextResponse.json({ events: combinedEvents })
   } catch (error) {
     console.error("Error fetching events:", error)

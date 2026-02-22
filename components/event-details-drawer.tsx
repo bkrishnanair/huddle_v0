@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/drawer"
 import { Button } from "@/components/ui/button"
 import { GameEvent } from "@/lib/types"
-import { Users, Calendar, Clock, MapPin, Loader2 } from "lucide-react"
+import { Users, Calendar, Clock, MapPin, Loader2, Share, Trash2 } from "lucide-react"
 import { useFirebase } from "@/lib/firebase-context"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -28,6 +28,58 @@ export default function EventDetailsDrawer({ event, isOpen, onClose, onEventUpda
   const { user } = useFirebase()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/map?eventId=${event.id}`
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Huddle: ${event.title}`,
+          text: `Check out this ${event.sport} event on Huddle!`,
+          url: shareUrl,
+        })
+      } catch (err) {
+        // user cancelled share, fail silently
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareUrl)
+        toast.success("Link copied to clipboard!")
+      } catch (err) {
+        toast.error("Failed to copy link")
+      }
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!confirm("Are you sure you want to delete this event? This action cannot be undone.")) return;
+    setIsLoading(true);
+
+    try {
+      const idToken = await user?.getIdToken();
+      const response = await fetch(`/api/events/${event.id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${idToken}`
+        }
+      });
+
+      if (response.ok) {
+        toast.success("Event deleted successfully");
+        onClose();
+        // Since the event is gone, trigger a map refresh by passing null or handling the update
+        onEventUpdated({ ...event, deleted: true } as any);
+      } else {
+        const data = await response.json();
+        toast.error(data.error || "Failed to delete event");
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast.error("An unexpected error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   if (!event) return null;
 
@@ -60,7 +112,7 @@ export default function EventDetailsDrawer({ event, isOpen, onClose, onEventUpda
       if (response.ok) {
         const data = await response.json()
         onEventUpdated(data.event)
-        toast.success(action === "join" ? "You've joined the game!" : "You've left the game")
+        toast.success(action === "join" ? "You've joined the game!" : "You've unjoined the game")
       } else {
         const errorData = await response.json()
         toast.error(errorData.error || "Failed to update RSVP")
@@ -76,7 +128,7 @@ export default function EventDetailsDrawer({ event, isOpen, onClose, onEventUpda
   const getButtonText = () => {
     if (isLoading) return hasJoined ? "Leaving..." : "Joining..."
     if (!user) return "Sign In to Join"
-    if (hasJoined) return "Leave Game"
+    if (hasJoined) return "Unjoin"
     if (isFull) return "Event Full"
     return "Join Game"
   }
@@ -113,19 +165,39 @@ export default function EventDetailsDrawer({ event, isOpen, onClose, onEventUpda
             <span>{typeof event.location === 'string' ? event.location : 'Location unavailable'}</span>
           </div>
         </div>
-        <DrawerFooter>
-          <Button
-            size="lg"
-            onClick={handleRSVP}
-            disabled={isLoading || (isFull && !hasJoined && !!user)}
-            variant={getButtonVariant()}
-          >
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {getButtonText()}
-          </Button>
-          <DrawerClose asChild>
-            <Button variant="outline">Close</Button>
-          </DrawerClose>
+        <DrawerFooter className="flex flex-col gap-2">
+          {user && event.createdBy === user.uid ? (
+            <Button
+              size="lg"
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isLoading}
+            >
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Event
+            </Button>
+          ) : (
+            <Button
+              size="lg"
+              onClick={handleRSVP}
+              disabled={isLoading || (isFull && !hasJoined && !!user)}
+              variant={getButtonVariant()}
+            >
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {getButtonText()}
+            </Button>
+          )}
+
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="secondary" onClick={handleShare}>
+              <Share className="w-4 h-4 mr-2" />
+              Share Event
+            </Button>
+            <DrawerClose asChild>
+              <Button variant="outline">Close</Button>
+            </DrawerClose>
+          </div>
         </DrawerFooter>
       </DrawerContent>
     </Drawer>

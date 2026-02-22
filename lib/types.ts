@@ -30,4 +30,5 @@ export interface GameEvent {
   checkedInPlayers?: string[];
   distance?: number;
   isBoosted?: boolean;
+  isPrivate?: boolean;
 }
