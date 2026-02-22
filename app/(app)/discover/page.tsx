@@ -231,7 +231,7 @@ export default function DiscoverPage() {
     }
 
     return (
-        <div className="min-h-screen liquid-gradient p-4 md:p-8">
+        <div className="min-h-screen w-full liquid-gradient p-4 pb-28 md:p-8 md:pb-28 overflow-x-hidden">
             <header className="flex justify-between items-start mb-10">
                 <div className="space-y-1">
                     <h1 className="text-4xl font-extrabold text-slate-50 tracking-tight">Discover</h1>
@@ -274,49 +274,48 @@ export default function DiscoverPage() {
                 </div>
 
                 {/* Filter Cluster */}
-                <div className="flex flex-col gap-3">
-                    <div className="flex flex-wrap items-center gap-3">
-                        {/* Category Group */}
-                        <div className="flex items-center gap-2 p-1.5 glass-surface border border-white/10 rounded-full shadow-2xl max-w-max">
-                            {CATEGORY_FILTERS.map(category => (
+                <div className="flex flex-col gap-3 w-full">
+                    {/* Category Group */}
+                    <div className="flex items-center gap-2 p-1.5 glass-surface border border-white/10 rounded-full shadow-2xl max-w-full overflow-x-auto no-scrollbar">
+                        {CATEGORY_FILTERS.map(category => (
+                            <div key={category} className="shrink-0">
                                 <Chip
-                                    key={category}
                                     isActive={activeCategory === category}
                                     onClick={() => setActiveCategory(category)}
                                 >
                                     {category}
                                 </Chip>
-                            ))}
-                        </div>
+                            </div>
+                        ))}
+                    </div>
 
-                        {/* Time Group */}
-                        <div className="flex items-center gap-2 p-1.5 glass-surface border border-white/10 rounded-full shadow-2xl max-w-max">
-                            {["All", "Next 2 Hrs", "Today", "This Weekend"].map(time => (
+                    {/* Time Group */}
+                    <div className="flex items-center gap-2 p-1.5 glass-surface border border-white/10 rounded-full shadow-2xl max-w-full overflow-x-auto no-scrollbar">
+                        {["All", "Next 2 Hrs", "Today", "This Weekend"].map(time => (
+                            <div key={time} className="shrink-0">
                                 <Chip
-                                    key={time}
                                     isActive={activeTime === time}
                                     onClick={() => setActiveTime(time)}
                                 >
                                     {time}
                                 </Chip>
-                            ))}
-                        </div>
+                            </div>
+                        ))}
                     </div>
 
                     {/* Range Group */}
-                    <div className="flex items-center gap-3 p-1.5 glass-surface border border-white/10 rounded-full shadow-2xl max-w-max px-4">
-                        <span className="text-sm font-bold text-slate-500 uppercase tracking-widest mr-1">Range:</span>
-                        <div className="flex items-center gap-2">
-                            {["All", "5 Miles", "10 Miles", "25 Miles"].map(range => (
+                    <div className="flex items-center gap-3 p-1.5 glass-surface border border-white/10 rounded-full shadow-2xl max-w-full overflow-x-auto no-scrollbar px-4">
+                        <span className="text-sm font-bold text-slate-500 uppercase tracking-widest mr-1 shrink-0">Range:</span>
+                        {["All", "5 Miles", "10 Miles", "25 Miles"].map(range => (
+                            <div key={range} className="shrink-0">
                                 <Chip
-                                    key={range}
                                     isActive={activeRange === range}
                                     onClick={() => setActiveRange(range)}
                                 >
                                     {range}
                                 </Chip>
-                            ))}
-                        </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
