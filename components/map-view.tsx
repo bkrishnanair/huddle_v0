@@ -55,10 +55,10 @@ const MapRenderer = ({ onMapLoad, children, styles }: { onMapLoad: (map: google.
     };
 
     // Attach the listener with passive: false so we can call preventDefault()
-    mapDiv.addEventListener('wheel', handleWheel, { passive: false });
+    mapDiv.addEventListener('wheel', handleWheel, { passive: false, capture: true });
 
     return () => {
-      mapDiv.removeEventListener('wheel', handleWheel);
+      mapDiv.removeEventListener('wheel', handleWheel, { capture: true } as EventListenerOptions);
     };
   }, [map]);
 
