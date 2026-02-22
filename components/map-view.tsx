@@ -181,6 +181,7 @@ export default function MapView({ user, eventId }: MapViewProps) {
   const [currentZoom, setCurrentZoom] = useState(13);
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
   const [showLocationPrompt, setShowLocationPrompt] = useState(true);
+  const [hasCenteredDefault, setHasCenteredDefault] = useState(false);
 
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID;
@@ -226,6 +227,14 @@ export default function MapView({ user, eventId }: MapViewProps) {
       console.error("Failed to load events:", error);
     }
   }, [map]);
+
+  useEffect(() => {
+    if (map && !hasCenteredDefault && !userLocation && !eventId) {
+      map.setCenter({ lat: 38.9897, lng: -76.9378 });
+      map.setZoom(13);
+      setHasCenteredDefault(true);
+    }
+  }, [map, hasCenteredDefault, userLocation, eventId]);
 
   // Deep Link handler: Pans map and opens drawer when eventId is supplied via URL
   useEffect(() => {
@@ -279,6 +288,7 @@ export default function MapView({ user, eventId }: MapViewProps) {
   );
 
   const handleRecenter = useCallback(() => {
+    setShowLocationPrompt(false);
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -353,8 +363,6 @@ export default function MapView({ user, eventId }: MapViewProps) {
     );
   }
 
-
-
   return (
     <div className="h-screen flex flex-col liquid-gradient" id="map-view">
       <APIProvider apiKey={mapsApiKey} libraries={['geometry', 'places']}>
@@ -370,13 +378,23 @@ export default function MapView({ user, eventId }: MapViewProps) {
               styles={DARK_MAP_STYLE}
               // @ts-ignore
               colorScheme="DARK"
-              tilt={45} // Slightly more tilt for depth
+              tilt={45}
               gestureHandling={'greedy'}
             >
               <MapRenderer onMapLoad={setMap} styles={DARK_MAP_STYLE}>
                 {map && (
                   <>
                     {userLocation && <AdvancedMarker position={userLocation} />}
+                    {!userLocation && (
+                      <AdvancedMarker position={{ lat: 38.9897, lng: -76.9378 }}>
+                        <div className="flex flex-col items-center">
+                          <div className="bg-primary/20 backdrop-blur-sm border border-primary/50 text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-full mb-1">
+                            College Park
+                          </div>
+                          <div className="w-3 h-3 bg-primary rounded-full border-2 border-white shadow-lg animate-pulse" />
+                        </div>
+                      </AdvancedMarker>
+                    )}
                     {filteredEvents.map((event: GameEvent) => {
                       const isHovered = hoveredEvent?.id === event.id;
                       const showDetails = isHovered || currentZoom >= 16;
@@ -480,7 +498,7 @@ export default function MapView({ user, eventId }: MapViewProps) {
 
             {/* Location Permission Toast/Prompt */}
             {showLocationPrompt && !userLocation && (
-              <div className="absolute top-48 left-1/2 -translate-x-1/2 z-20 w-[90%] max-w-sm">
+              <div className="absolute top-48 left-1/2 -translate-x-1/2 z-20 w-[90%] max-w-sm pointer-events-auto">
                 <div className="glass-surface border border-primary/30 p-4 rounded-3xl shadow-[0_0_30px_rgba(245,158,11,0.2)] animate-in fade-in slide-in-from-top-4 duration-500">
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
@@ -495,10 +513,7 @@ export default function MapView({ user, eventId }: MapViewProps) {
                         <Button
                           size="sm"
                           variant="default"
-                          onClick={() => {
-                            setShowLocationPrompt(false);
-                            handleRecenter();
-                          }}
+                          onClick={handleRecenter}
                           className="bg-primary hover:bg-orange-600 text-white text-xs font-bold rounded-full px-4"
                         >
                           Share Location
@@ -536,13 +551,13 @@ export default function MapView({ user, eventId }: MapViewProps) {
             )}
 
             {viewMode === 'map' && user && (
-              <Button id="create-event-button" onClick={() => setShowCreateModal(true)} size="lg" className="absolute bottom-44 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-105 transition-transform">
+              <Button id="create-event-button" onClick={() => setShowCreateModal(true)} size="lg" className="absolute bottom-44 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-105 transition-transform pointer-events-auto">
                 <Plus className="w-6 h-6" />
               </Button>
             )}
 
             {viewMode === 'map' && (
-              <Button onClick={handleRecenter} variant="default" size="lg" className="absolute bottom-28 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-orange-600 hover:scale-105 transition-all">
+              <Button onClick={handleRecenter} variant="default" size="lg" className="absolute bottom-28 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-orange-600 hover:scale-105 transition-all pointer-events-auto">
                 <LocateFixed className="w-6 h-6" />
               </Button>
             )}
