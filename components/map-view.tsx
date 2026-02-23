@@ -285,17 +285,32 @@ export default function MapView({ user, eventId }: MapViewProps) {
     if (eventId && map && !selectedEvent) {
       const fetchAndFocusEvent = async () => {
         try {
-          const fetchOptions: RequestInit = user ? {
-            headers: { "Authorization": `Bearer ${await user.getIdToken()}` }
-          } : {};
+          // Temporarily disable the hasCenteredDefault so it doesn't fight this request
+          setHasCenteredDefault(true);
+
+          let fetchOptions: RequestInit = {};
+
+          try {
+            // Wrap auth check so unauthenticated users can still deep link
+            if (user) {
+              const token = await user.getIdToken();
+              if (token) {
+                fetchOptions = { headers: { "Authorization": `Bearer ${token}` } };
+              }
+            }
+          } catch (e) { }
 
           const response = await fetch(`/api/events/${eventId}/details`, fetchOptions);
           if (response.ok) {
             const event: GameEvent = await response.json();
             if (event.geopoint) {
-              map.panTo({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
-              map.setZoom(18);
+              // Pan correctly and update zoom
+              map.setCenter({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
+              map.setZoom(17);
               setSelectedEvent(event);
+
+              // Prevent default center from re-running
+              setUserLocation({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
             }
           }
         } catch (error) {
@@ -471,19 +486,18 @@ export default function MapView({ user, eventId }: MapViewProps) {
                         >
                           <div className={`transition-all duration-300 transform origin-bottom ${isHovered ? 'scale-110' : ''}`}>
                             <div
-                              className={`flex items-center gap-2 px-2.5 py-1.5 rounded-full shadow-lg border backdrop-blur-md transition-all duration-300 ${isHovered
-                                ? 'bg-slate-900 border-white text-white scale-105'
-                                : 'bg-slate-900/40 border-white/20 text-white'
+                              className={`flex items-center gap-2 px-2.5 py-1.5 rounded-full shadow-lg border transition-all duration-300 ${isHovered
+                                ? 'border-white text-white scale-105'
+                                : 'border-transparent text-white'
                                 }`}
                               style={{
-                                borderColor: isHovered ? getCategoryColor(event.category) : `${getCategoryColor(event.category)}66`,
-                                boxShadow: `0 0 20px ${getCategoryColor(event.category)}${isHovered ? '88' : '44'}`
+                                backgroundColor: getCategoryColor(event.category),
+                                boxShadow: `0 0 20px ${getCategoryColor(event.category)}${isHovered ? 'aa' : '66'}`
                               }}
                             >
-                              {/* Colored Glow Ring */}
+                              {/* Colored Glow Ring -> Now a subtle white overlay */}
                               <div
-                                className="flex items-center justify-center w-7 h-7 rounded-full shrink-0"
-                                style={{ backgroundColor: `${getCategoryColor(event.category)}33`, border: `1px solid ${getCategoryColor(event.category)}44` }}
+                                className="flex items-center justify-center w-7 h-7 rounded-full shrink-0 bg-white/25"
                               >
                                 <span className="text-sm leading-none">{getCategoryIcon(event.category)}</span>
                               </div>
@@ -493,9 +507,9 @@ export default function MapView({ user, eventId }: MapViewProps) {
                                 <div className="flex flex-col whitespace-nowrap min-w-[100px]">
                                   <span className="font-bold text-xs max-w-[150px] truncate">{event.name}</span>
                                   <div className="flex items-center justify-between mt-0.5">
-                                    <span className="text-[10px] text-slate-300 font-medium">{event.time}</span>
+                                    <span className="text-[10px] text-white/80 font-medium">{event.time}</span>
                                     {isHovered && currentZoom < 16 && (
-                                      <span className="text-[9px] text-primary font-bold">Open</span>
+                                      <span className="text-[9px] text-white font-black bg-black/20 px-1.5 rounded-sm">OPEN</span>
                                     )}
                                   </div>
                                 </div>
@@ -504,10 +518,10 @@ export default function MapView({ user, eventId }: MapViewProps) {
 
                             {/* Anchor Triange */}
                             <div
-                              className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 border-r border-b backdrop-blur-md z-[-1] transition-colors duration-300`}
+                              className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 border-r border-b z-[-1] transition-colors duration-300`}
                               style={{
-                                backgroundColor: isHovered ? 'rgba(15, 23, 42, 1)' : 'rgba(15, 23, 42, 0.4)',
-                                borderColor: isHovered ? getCategoryColor(event.category) : `${getCategoryColor(event.category)}66`
+                                backgroundColor: getCategoryColor(event.category),
+                                borderColor: isHovered ? '#ffffff' : getCategoryColor(event.category) // Match outline on hover
                               }}
                             ></div>
                           </div>
