@@ -15,6 +15,7 @@ import { isToday, isWeekend, isBefore, addHours, isFuture } from "date-fns"
 interface MapViewProps {
   user: any
   eventId?: string
+  initialCenter?: { lat: number; lng: number }
 }
 
 const MapRenderer = ({ onMapLoad, children, styles }: { onMapLoad: (map: google.maps.Map) => void, children: React.ReactNode, styles?: google.maps.MapTypeStyle[] }) => {
@@ -195,20 +196,20 @@ const DARK_MAP_STYLE = [
   },
 ];
 
-export default function MapView({ user, eventId }: MapViewProps) {
+export default function MapView({ user, eventId, initialCenter }: MapViewProps) {
   const [events, setEvents] = useState<GameEvent[]>([])
   const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null)
   const [hoveredEvent, setHoveredEvent] = useState<GameEvent | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 38.9897, lng: -76.9378 }) // College Park, MD
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>(initialCenter || { lat: 38.9897, lng: -76.9378 }) // College Park, MD
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeTime, setActiveTime] = useState("All");
-  const [currentZoom, setCurrentZoom] = useState(13);
+  const [currentZoom, setCurrentZoom] = useState(initialCenter ? 17 : 13);
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
-  const [hasCenteredDefault, setHasCenteredDefault] = useState(false);
+  const [hasCenteredDefault, setHasCenteredDefault] = useState(!!initialCenter);
 
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID;
@@ -304,13 +305,12 @@ export default function MapView({ user, eventId }: MapViewProps) {
           if (response.ok) {
             const event: GameEvent = await response.json();
             if (event.geopoint) {
-              // Pan correctly and update zoom
-              map.setCenter({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
-              map.setZoom(17);
+              // Only pan/zoom if we don't have an initialCenter (which already set the view)
+              if (!initialCenter) {
+                map.setCenter({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
+                map.setZoom(17);
+              }
               setSelectedEvent(event);
-
-              // Prevent default center from re-running
-              setUserLocation({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
             }
           }
         } catch (error) {
@@ -319,7 +319,7 @@ export default function MapView({ user, eventId }: MapViewProps) {
       };
       fetchAndFocusEvent();
     }
-  }, [user, eventId, map, selectedEvent]);
+  }, [user, eventId, map, selectedEvent, initialCenter]);
 
   // Debounce the map idle event to prevent spamming the API when dragging/zooming rapidly
   const debouncedFetchEventsInView = useMemo(() => {
@@ -633,13 +633,13 @@ export default function MapView({ user, eventId }: MapViewProps) {
           )}
 
           {viewMode === 'map' && user && (
-            <Button id="create-event-button" onClick={() => setShowCreateModal(true)} size="lg" className="absolute bottom-44 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-110 transition-transform z-10">
+            <Button id="create-event-button" onClick={() => setShowCreateModal(true)} size="lg" className="absolute bottom-60 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-110 transition-transform z-10">
               <Plus className="w-6 h-6" />
             </Button>
           )}
 
           {viewMode === 'map' && (
-            <Button onClick={handleRecenter} variant="default" size="lg" className="absolute bottom-28 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-orange-600 hover:scale-110 transition-all z-10">
+            <Button onClick={handleRecenter} variant="default" size="lg" className="absolute bottom-44 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-orange-600 hover:scale-110 transition-all z-10">
               <LocateFixed className="w-6 h-6" />
             </Button>
           )}

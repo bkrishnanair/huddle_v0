@@ -41,6 +41,21 @@ export async function generateMetadata(
 export default async function MapPage({ searchParams }: Props) {
   const resolvedParams = await searchParams;
   const eventId = resolvedParams.eventId as string;
+  let initialCenter = undefined;
 
-  return <MapClient eventId={eventId} />
+  if (eventId) {
+    try {
+      const event = await getEvent(eventId) as GameEvent;
+      if (event && event.geopoint) {
+        initialCenter = {
+          lat: event.geopoint.latitude,
+          lng: event.geopoint.longitude
+        };
+      }
+    } catch (e) {
+      console.error("Error fetching initial event center", e);
+    }
+  }
+
+  return <MapClient eventId={eventId} initialCenter={initialCenter} />
 }

@@ -12,6 +12,11 @@ import { auth } from "./firebase";
 import { createUser, getUser } from "./db-client";
 
 const googleProvider = new GoogleAuthProvider();
+googleProvider.addScope('https://www.googleapis.com/auth/userinfo.email');
+googleProvider.addScope('https://www.googleapis.com/auth/userinfo.profile');
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+});
 
 // These functions are designed to be called only in the browser.
 
