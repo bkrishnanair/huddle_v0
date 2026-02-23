@@ -19,14 +19,14 @@ This production-ready application features a complete authentication system, rea
 ## Key Features & Functionality
 
 *   **🌍 Frictionless Guest Access**: Unauthenticated users can instantly explore the live map and Discover feed. Replaced aggressive auth-walls with a "Continue as Guest" experience, allowing community exploration before commitment.
-*   **📍 Advanced Map UX (Emoji Pins & Hover States)**: Replaced clunky native popups with sleek, custom-built intuitive React nodes. Pins display category-specific emojis and elegantly expand to show event details on hover or when zooming in close.
-*   **🔗 Social Deep Linking & Open Graph**: Shareable event links (`/map?eventId=xyz`) automatically generate rich Open Graph previews (Title, Category) for iMessage/Discord. Clicking the link instantly pans the map to the coordinates and opens the event drawer.
+*   **📍 Advanced Map UX (Trackpad Panning & Emoji Pins)**: Optimized Google Maps for native macOS navigation. Removed `greedy` gesture handling to allow standard trackpad panning. Built custom React marker nodes that display category-specific emojis and elegantly expand to show event details on hover.
+*   **🔗 Social Deep Linking & Open Graph**: Shareable event links (`/map?eventId=xyz`) automatically generate rich Open Graph previews (Title, Category) for iMessage/Discord. Clicking the link instantly pans the map to the coordinates and opens the event drawer using a high-performance server-to-client handoff.
 *   **🔐 Secure Hybrid Authentication**: Complete session management with Next.js 15 App Router compatibility. Combines Firebase Auth on the client with the Firebase Admin SDK on the server using secure HTTP-only cookies.
 *   **📅 AI-Powered Event Creation**: Create single or recurring events with an intuitive modal featuring a global location search bar, draggable map pins, server-side validation, and instant Gemini AI-powered description generation.
 *   **👥 RSVP & Unjoin Optimization**: Users can join/unjoin events seamlessly with optimistic UI updates. Added a dedicated "Unjoin" button to the "Joined" tab on the "My Events" page for quick action.
 *   **🗑️ Event Deletion & Management**: Organizers can now delete their events directly from the event details drawer or organized feed. Securely enforced via server-side permission checks.
 *   **🔄 Map/List View Toggle**: Instantly switch between the interactive map and a scrollable vertical feed (List View) of events without losing state.
-*   **🕒 Time-Based Discovery Filters**: Surface events happening "Next 2 Hrs", "Today", or "This Weekend" with a single tap using new horizontal chip filters.
+*   **🕙 Discovery Filters (Time & Range)**: Surface events happening "Next 2 Hrs", "Today", or "This Weekend" with a single tap. Added a functional "Within Range" filter (5-50 miles) powered by client-side Haversine math for precise DMV area discoveries.
 *   **🕵️ Private Events & Deep Linking**: Added support for link-only private events that are hidden from the discovery feed but accessible via secure deep links.
 *   **💬 Live Event Chat**: Each event features instantaneous live messaging for participants to coordinate logistics, powered by optimistic UI updates.
 *   **👤 Elegant User Profiles**: Premium "glassmorphic" profile pages showcasing user bios, dynamic "Interests" tags, and a history of organized/joined events.
@@ -35,6 +35,7 @@ This production-ready application features a complete authentication system, rea
 *   **💾 Persistent Map State**: Utilizing `sessionStorage` to remember your last map position, zoom level, and UI states (like prompt dismissals). Navigation between pages no longer resets your perspective.
 *   **🧹 Decluttered Maps UX**: Custom map styling that intelligently hides business POIs (restaurants, shops) globally, ensuring your event pins are the primary focus of the experience.
 *   **📱 Native-Feel Mobile Navigation**: Fully responsive layouts with horizontal-scroll filter chips and optimized bottom padding to prevent content from being cut off by the floating glass navigation bar.
+*   **🎓 University-Specific Mock Seeding**: Includes a powerful Node.js seeding suite (`scripts/seed_umd.ts`) to populate the map with realistic, landmark-specific events at UMD (McKeldin, Iribe, Eppley) and other Top 20 US universities.
 
 ## UI/UX & Design Philosophy
 
