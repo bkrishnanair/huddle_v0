@@ -8,7 +8,7 @@ import { EventCard, EventCardSkeleton } from "@/components/events/event-card"
 import EventDetailsDrawer from "@/components/event-details-drawer"
 import CreateEventModal from "@/components/create-event-modal"
 import { Chip } from "@/components/ui/chip"
-import { Search, SlidersHorizontal, PlusCircle, Star, Settings, LogOut } from "lucide-react"
+import { Search, SlidersHorizontal, PlusCircle, Star, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { GameEvent } from "@/lib/types"
 import { signOut } from "firebase/auth"
@@ -17,7 +17,7 @@ import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { isToday, isWeekend, isBefore, addHours, isFuture } from "date-fns"
 
-const CATEGORY_FILTERS = ["All", "Sports", "Music", "Community", "Learning", "Food & Drink"];
+const CATEGORY_FILTERS = ["All", "Sports", "Music", "Community", "Learning", "Food & Drink", "Tech", "Arts & Culture", "Outdoors"];
 
 const ActionableEmptyState = ({ onOpenCreateModal }: { onOpenCreateModal: () => void }) => (
     <div className="text-center glass-surface border-white/15 rounded-2xl p-8 mt-8">
@@ -68,23 +68,32 @@ export default function DiscoverPage() {
 
     useEffect(() => {
         const fetchInitialData = async () => {
-            if (!user?.uid || !userLocation) return;
+            if (!userLocation) return;
             setLoading(true);
             try {
-                const radius = 50000;
+                // Fetch events globally if 'All' is possible (huge radius)
+                const radius = 5000000;
 
-                // Use token for authenticated profile fetch to avoid 401s if locked down
-                const token = await user.getIdToken();
-
-                const [profileRes, eventsRes] = await Promise.all([
-                    fetch(`/api/users/${user.uid}/profile`, {
-                        headers: { "Authorization": `Bearer ${token}` }
-                    }),
+                const fetchPromises: Promise<Response>[] = [
                     fetch(`/api/events?lat=${userLocation.lat}&lon=${userLocation.lng}&radius=${radius}`)
-                ]);
+                ];
 
-                if (profileRes.ok) setUserProfile((await profileRes.json()).profile);
+                if (user?.uid) {
+                    const token = await user.getIdToken();
+                    fetchPromises.push(
+                        fetch(`/api/users/${user.uid}/profile`, {
+                            headers: { "Authorization": `Bearer ${token}` }
+                        })
+                    );
+                }
+
+                const responses = await Promise.all(fetchPromises);
+                const eventsRes = responses[0];
                 if (eventsRes.ok) setAllNearbyEvents((await eventsRes.json()).events || []);
+
+                if (responses.length > 1 && responses[1].ok) {
+                    setUserProfile((await responses[1].json()).profile);
+                }
             } catch (error) {
                 console.error("Failed to fetch initial data:", error);
             } finally {
@@ -108,7 +117,11 @@ export default function DiscoverPage() {
 
     const { recommendedEvents, otherEvents } = useMemo(() => {
         const filtered = allNearbyEvents.filter(event => {
-            const matchesSearch = event.name.toLowerCase().includes(searchQuery.toLowerCase());
+            const searchLower = searchQuery.toLowerCase();
+            const matchesSearch =
+                event.name.toLowerCase().includes(searchLower) ||
+                (event.category && event.category.toLowerCase().includes(searchLower)) ||
+                (typeof event.location === 'string' && event.location.toLowerCase().includes(searchLower));
             const matchesCategory = activeCategory === 'All' || event.category === activeCategory;
 
             let matchesRange = true;
@@ -238,9 +251,6 @@ export default function DiscoverPage() {
                     <p className="text-slate-400 font-medium text-lg">Find events happening around you.</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl glass-surface border border-white/10 shadow-xl hover:bg-white/5" onClick={() => { /* Open Settings */ }}>
-                        <Settings className="w-5 h-5 text-slate-400" />
-                    </Button>
                     <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl glass-surface border border-rose-500/20 shadow-xl hover:bg-rose-500/10 text-rose-400" onClick={handleLogout}>
                         <LogOut className="w-5 h-5" />
                     </Button>
@@ -253,7 +263,7 @@ export default function DiscoverPage() {
                     <div className="relative flex-1 w-full group">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors" />
                         <Input
-                            placeholder="Search by name or category..."
+                            placeholder="Search by name, category, or location..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                             className="pl-12 glass-surface border-white/10 h-14 rounded-2xl shadow-2xl text-lg focus:ring-primary/20"

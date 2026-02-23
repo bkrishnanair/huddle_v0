@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState, useCallback, useMemo } from "react"
+import { useEffect, useState, useCallback, useMemo, useRef } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Chip } from "@/components/ui/chip"
 import { Plus, MapPin, LocateFixed, AlertCircle, Loader2, Star, Calendar, Clock, Map as MapIcon, List } from "lucide-react"
@@ -11,11 +12,13 @@ import { APIProvider, Map, AdvancedMarker, Pin, useMap, InfoWindow } from "@vis.
 import { GameEvent } from "@/lib/types"
 import LocationSearchInput from "./location-search"
 import { isToday, isWeekend, isBefore, addHours, isFuture } from "date-fns"
+import { toast } from "sonner"
 
 interface MapViewProps {
   user: any
   eventId?: string
   initialCenter?: { lat: number; lng: number }
+  intent?: string
 }
 
 const MapRenderer = ({ onMapLoad, children, styles }: { onMapLoad: (map: google.maps.Map) => void, children: React.ReactNode, styles?: google.maps.MapTypeStyle[] }) => {
@@ -196,7 +199,9 @@ const DARK_MAP_STYLE = [
   },
 ];
 
-export default function MapView({ user, eventId, initialCenter }: MapViewProps) {
+export default function MapView({ user, eventId, initialCenter, intent }: MapViewProps) {
+  const router = useRouter()
+  const isProcessingDeepLink = useRef(!!eventId)
   const [events, setEvents] = useState<GameEvent[]>([])
   const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null)
   const [hoveredEvent, setHoveredEvent] = useState<GameEvent | null>(null)
@@ -215,11 +220,22 @@ export default function MapView({ user, eventId, initialCenter }: MapViewProps) 
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID;
 
   useEffect(() => {
-    // Check if the prompt was previously dismissed
-    if (sessionStorage.getItem('huddlePromptDismissed') !== 'true') {
+    // Check if the prompt was previously dismissed and ensure we aren't deep linking
+    if (sessionStorage.getItem('huddlePromptDismissed') !== 'true' && !eventId) {
       setShowLocationPrompt(true);
     }
-  }, [])
+
+    // Unauthenticated Host Flow
+    if (intent === 'create' && !user) {
+      toast.error("Please sign in or create an account to host an event.");
+      // We delay the redirect slightly to allow the toast to be seen
+      setTimeout(() => {
+        router.push('/login?return_to=/map?intent=create');
+      }, 1500)
+    } else if (intent === 'create' && user) {
+      setShowCreateModal(true)
+    }
+  }, [intent, user, eventId, router])
 
   const fetchEventsInView = useCallback(async () => {
     if (!map) return;
@@ -285,6 +301,7 @@ export default function MapView({ user, eventId, initialCenter }: MapViewProps) 
   useEffect(() => {
     if (eventId && map && !selectedEvent) {
       const fetchAndFocusEvent = async () => {
+        isProcessingDeepLink.current = true; // Lock the map
         try {
           // Temporarily disable the hasCenteredDefault so it doesn't fight this request
           setHasCenteredDefault(true);
@@ -305,21 +322,27 @@ export default function MapView({ user, eventId, initialCenter }: MapViewProps) 
           if (response.ok) {
             const event: GameEvent = await response.json();
             if (event.geopoint) {
-              // Only pan/zoom if we don't have an initialCenter (which already set the view)
-              if (!initialCenter) {
-                map.setCenter({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
-                map.setZoom(17);
-              }
+              // Override map centering for deep links to ensure it pans correctly
+              map.panTo({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
+              map.setZoom(17);
+              // Store the deep link center so handleRecenter knows not to override it initially
+              sessionStorage.setItem('huddleMapCenter', JSON.stringify({ lat: event.geopoint.latitude, lng: event.geopoint.longitude }));
               setSelectedEvent(event);
+
+              // Prevent default center from re-running (but don't set user physical location)
+              setHasCenteredDefault(true);
             }
           }
         } catch (error) {
           console.error("Failed to fetch deep linked event:", error);
+        } finally {
+          // Unlock the map so manual user actions (like the Locate Me button) work again
+          isProcessingDeepLink.current = false;
         }
       };
       fetchAndFocusEvent();
     }
-  }, [user, eventId, map, selectedEvent, initialCenter]);
+  }, [user, eventId, map, selectedEvent]);
 
   // Debounce the map idle event to prevent spamming the API when dragging/zooming rapidly
   const debouncedFetchEventsInView = useMemo(() => {
@@ -366,7 +389,8 @@ export default function MapView({ user, eventId, initialCenter }: MapViewProps) 
         (position) => {
           const loc = { lat: position.coords.latitude, lng: position.coords.longitude };
           setUserLocation(loc);
-          if (map) {
+          // Only pan if we aren't currently auto-focusing a deep link
+          if (map && !isProcessingDeepLink.current) {
             map.panTo(loc);
             map.setZoom(15);
           }
@@ -376,7 +400,7 @@ export default function MapView({ user, eventId, initialCenter }: MapViewProps) 
         }
       );
     }
-  }, [map]);
+  }, [map, dismissPrompt]);
 
   const filteredEvents = useMemo(() => {
     let result = events;
@@ -448,7 +472,7 @@ export default function MapView({ user, eventId, initialCenter }: MapViewProps) 
             <Map
               onIdle={debouncedFetchEventsInView}
               defaultCenter={mapCenter}
-              defaultZoom={13}
+              defaultZoom={initialCenter ? 17 : 13}
               className="w-full h-full"
               disableDefaultUI={true}
               mapId={mapId}
@@ -474,6 +498,7 @@ export default function MapView({ user, eventId, initialCenter }: MapViewProps) 
                     {filteredEvents.map((event: GameEvent) => {
                       const isHovered = hoveredEvent?.id === event.id;
                       const showDetails = isHovered || currentZoom >= 16;
+                      const categoryColor = getCategoryColor(event.category);
 
                       return (
                         <AdvancedMarker
@@ -484,46 +509,54 @@ export default function MapView({ user, eventId, initialCenter }: MapViewProps) 
                           onMouseLeave={() => setHoveredEvent(null)}
                           style={{ zIndex: isHovered ? 50 : (showDetails ? 10 : 0) }}
                         >
-                          <div className={`transition-all duration-300 transform origin-bottom ${isHovered ? 'scale-110' : ''}`}>
-                            <div
-                              className={`flex items-center gap-2 px-2.5 py-1.5 rounded-full shadow-lg border transition-all duration-300 ${isHovered
-                                ? 'border-white text-white scale-105'
-                                : 'border-transparent text-white'
-                                }`}
-                              style={{
-                                backgroundColor: getCategoryColor(event.category),
-                                boxShadow: `0 0 20px ${getCategoryColor(event.category)}${isHovered ? 'aa' : '66'}`
-                              }}
-                            >
-                              {/* Colored Glow Ring -> Now a subtle white overlay */}
-                              <div
-                                className="flex items-center justify-center w-7 h-7 rounded-full shrink-0 bg-white/25"
-                              >
-                                <span className="text-sm leading-none">{getCategoryIcon(event.category)}</span>
+                          <div className={`flex flex-col items-center transition-all duration-500 transform origin-bottom ${isHovered ? 'scale-110 -translate-y-1' : 'scale-100'}`}>
+                            {/* Floating Info Bubble */}
+                            <div className={`
+                              mb-2 px-3 py-1.5 rounded-2xl glass-surface border border-white/20 shadow-2xl
+                              transition-all duration-300 ease-out flex flex-col items-center
+                              ${showDetails ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
+                            `}>
+                              <span className="text-[11px] font-black text-white whitespace-nowrap leading-none mb-1">{event.name}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[9px] text-slate-300 font-bold leading-none">{event.time}</span>
+                                {isHovered && (
+                                  <span className="text-[8px] bg-primary/20 text-primary px-1 rounded font-black">OPEN</span>
+                                )}
                               </div>
+                            </div>
 
-                              {/* Expanded Details Wrapper */}
-                              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${showDetails ? 'max-w-[200px] opacity-100 mr-2' : 'max-w-0 opacity-0 mr-0'}`}>
-                                <div className="flex flex-col whitespace-nowrap min-w-[100px]">
-                                  <span className="font-bold text-xs max-w-[150px] truncate">{event.name}</span>
-                                  <div className="flex items-center justify-between mt-0.5">
-                                    <span className="text-[10px] text-white/80 font-medium">{event.time}</span>
-                                    {isHovered && currentZoom < 16 && (
-                                      <span className="text-[9px] text-white font-black bg-black/20 px-1.5 rounded-sm">OPEN</span>
-                                    )}
-                                  </div>
+                            {/* Teardrop Pin */}
+                            <div className="relative group">
+                              {/* Pulse effect for hovered pins */}
+                              {isHovered && (
+                                <div
+                                  className="absolute inset-0 rounded-full animate-ping opacity-40"
+                                  style={{ backgroundColor: categoryColor }}
+                                />
+                              )}
+
+                              <div
+                                className={`
+                                  relative w-10 h-10 flex items-center justify-center
+                                  rounded-full rounded-br-none rotate-45
+                                  border-2 border-white shadow-xl transition-all duration-300
+                                `}
+                                style={{
+                                  background: `linear-gradient(135deg, ${categoryColor}, ${categoryColor}dd)`,
+                                  boxShadow: isHovered ? `0 0 25px ${categoryColor}aa` : `0 4px 10px rgba(0,0,0,0.4)`
+                                }}
+                              >
+                                <div className="-rotate-45 text-xl filter drop-shadow-sm brightness-110">
+                                  {getCategoryIcon(event.category)}
                                 </div>
                               </div>
                             </div>
 
-                            {/* Anchor Triange */}
-                            <div
-                              className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 border-r border-b z-[-1] transition-colors duration-300`}
-                              style={{
-                                backgroundColor: getCategoryColor(event.category),
-                                borderColor: isHovered ? '#ffffff' : getCategoryColor(event.category) // Match outline on hover
-                              }}
-                            ></div>
+                            {/* Mini shadow at base */}
+                            <div className={`
+                              w-4 h-1 bg-black/40 rounded-full blur-[2px] mt-1 transition-all duration-300
+                              ${isHovered ? 'scale-150 opacity-60' : 'scale-100 opacity-30'}
+                            `} />
                           </div>
                         </AdvancedMarker>
                       );
@@ -561,6 +594,11 @@ export default function MapView({ user, eventId, initialCenter }: MapViewProps) 
                 <Chip isActive={activeCategory === 'Sports'} onClick={() => setActiveCategory('Sports')}>Sports</Chip>
                 <Chip isActive={activeCategory === 'Music'} onClick={() => setActiveCategory('Music')}>Music</Chip>
                 <Chip isActive={activeCategory === 'Community'} onClick={() => setActiveCategory('Community')}>Community</Chip>
+                <Chip isActive={activeCategory === 'Learning'} onClick={() => setActiveCategory('Learning')}>Learning</Chip>
+                <Chip isActive={activeCategory === 'Food & Drink'} onClick={() => setActiveCategory('Food & Drink')}>Food & Drink</Chip>
+                <Chip isActive={activeCategory === 'Tech'} onClick={() => setActiveCategory('Tech')}>Tech</Chip>
+                <Chip isActive={activeCategory === 'Arts & Culture'} onClick={() => setActiveCategory('Arts & Culture')}>Arts & Culture</Chip>
+                <Chip isActive={activeCategory === 'Outdoors'} onClick={() => setActiveCategory('Outdoors')}>Outdoors</Chip>
               </div>
 
               {/* Time Filter Chips */}
@@ -632,8 +670,22 @@ export default function MapView({ user, eventId, initialCenter }: MapViewProps) 
             </div>
           )}
 
-          {viewMode === 'map' && user && (
-            <Button id="create-event-button" onClick={() => setShowCreateModal(true)} size="lg" className="absolute bottom-60 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-110 transition-transform z-10">
+          {viewMode === 'map' && (
+            <Button
+              id="create-event-button"
+              onClick={() => {
+                if (!user) {
+                  toast.error("Please sign in to host an event.");
+                  setTimeout(() => {
+                    router.push('/login?return_to=/map?intent=create');
+                  }, 1500)
+                } else {
+                  setShowCreateModal(true);
+                }
+              }}
+              size="lg"
+              className="absolute bottom-60 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-110 transition-transform z-10"
+            >
               <Plus className="w-6 h-6" />
             </Button>
           )}

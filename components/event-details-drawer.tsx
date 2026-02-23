@@ -16,6 +16,7 @@ import { Users, Calendar, Clock, MapPin, Loader2, Share, Trash2 } from "lucide-r
 import { useFirebase } from "@/lib/firebase-context"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { format, parseISO } from "date-fns"
 
 interface EventDetailsDrawerProps {
   event: GameEvent
@@ -154,16 +155,21 @@ export default function EventDetailsDrawer({ event, isOpen, onClose, onEventUpda
           </div>
           <div className="flex items-center">
             <Calendar className="w-5 h-5 mr-2" />
-            <span>{new Date(event.date).toLocaleDateString()}</span>
+            <span>{event.date.includes('/') ? event.date : format(parseISO(event.date), 'MMM d, yyyy')}</span>
           </div>
           <div className="flex items-center">
             <Clock className="w-5 h-5 mr-2" />
             <span>{event.time}</span>
           </div>
           <div className="flex items-center">
-            <MapPin className="w-5 h-5 mr-2" />
-            <span>{typeof event.location === 'string' ? event.location : 'Location unavailable'}</span>
+            <MapPin className="w-5 h-5 mr-2 shrink-0" />
+            <span className="truncate">{typeof event.location === 'string' ? event.location : 'Location unavailable'}</span>
           </div>
+          {event.description && (
+            <div className="flex items-start bg-slate-800/50 p-3 rounded-lg mt-2">
+              <span className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">{event.description}</span>
+            </div>
+          )}
         </div>
         <DrawerFooter className="flex flex-col gap-2">
           {user && event.createdBy === user.uid ? (

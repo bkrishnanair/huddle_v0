@@ -68,11 +68,11 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
       {/* Hero Section */}
       <div className="text-center mb-10">
         <h2 className="text-4xl md:text-5xl font-black text-white mb-4 leading-tight tracking-tight">
-          Stop Searching, Start Playing.<br />
+          Your community is waiting discover events and network<br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-orange-400 to-amber-500 drop-shadow-sm">Find Your Huddle.</span>
         </h2>
         <p className="text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed font-medium">
-          Discover and join local sports games in real-time. Connect with players, organize events effortlessly, and never miss a moment of the action.
+          Discover and join local events in real-time. Drop a pin, connect with your community, organize effortlessly, and never miss out on what's happening around you.
         </p>
       </div>
 

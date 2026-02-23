@@ -41,6 +41,7 @@ export async function generateMetadata(
 export default async function MapPage({ searchParams }: Props) {
   const resolvedParams = await searchParams;
   const eventId = resolvedParams.eventId as string;
+  const intent = resolvedParams.intent as string;
   let initialCenter = undefined;
 
   if (eventId) {
@@ -57,5 +58,5 @@ export default async function MapPage({ searchParams }: Props) {
     }
   }
 
-  return <MapClient eventId={eventId} initialCenter={initialCenter} />
+  return <MapClient eventId={eventId} initialCenter={initialCenter} intent={intent} />
 }

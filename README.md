@@ -18,11 +18,11 @@ This production-ready application features a complete authentication system, rea
 
 ## Key Features & Functionality
 
-*   **🌍 Frictionless Guest Access**: Unauthenticated users can instantly explore the live map and Discover feed. Replaced aggressive auth-walls with a "Continue as Guest" experience, allowing community exploration before commitment.
-*   **📍 Advanced Map UX (Trackpad Panning & Emoji Pins)**: Optimized Google Maps for native macOS navigation. Removed `greedy` gesture handling to allow standard trackpad panning. Built custom React marker nodes that display category-specific emojis and elegantly expand to show event details on hover.
-*   **🔗 Social Deep Linking & Open Graph**: Shareable event links (`/map?eventId=xyz`) automatically generate rich Open Graph previews (Title, Category) for iMessage/Discord. Clicking the link instantly pans the map to the coordinates and opens the event drawer using a high-performance server-to-client handoff.
+*   **🌍 Frictionless Guest Access**: Unauthenticated users can instantly explore the live map and Discover feed. Secure interceptions (`router.push`) reroute guests trying to host to a login page without jarring full-page reloads.
+*   **📍 Premium Map Pins**: Custom React teardrop nodes featuring rich south-facing gradients, drop shadows, and scale-on-hover micro-animations. Replaces generic Google clusters while visually categorizing events via custom emojis.
+*   **🔗 Strict Deep Link Priority**: Shareable event links (`/map?eventId=xyz`) use a rigid `useRef` map lock. The map instantly pans to the deep-linked coordinates on mount, guaranteeing HTML5 geolocation prompts cannot steal focus away from the shared event.
 *   **🔐 Secure Hybrid Authentication**: Complete session management with Next.js 15 App Router compatibility. Combines Firebase Auth on the client with the Firebase Admin SDK on the server using secure HTTP-only cookies.
-*   **📅 AI-Powered Event Creation**: Create single or recurring events with an intuitive modal featuring a global location search bar, draggable map pins, server-side validation, and instant Gemini AI-powered description generation.
+*   **📅 Event Creation UX**: Native date/time picker integrations forcing high-contrast dark mode icons. Fully touch-responsive Google Places dropdown searches ensuring stable mobile entries.
 *   **👥 RSVP & Unjoin Optimization**: Users can join/unjoin events seamlessly with optimistic UI updates. Added a dedicated "Unjoin" button to the "Joined" tab on the "My Events" page for quick action.
 *   **🗑️ Event Deletion & Management**: Organizers can now delete their events directly from the event details drawer or organized feed. Securely enforced via server-side permission checks.
 *   **🔄 Map/List View Toggle**: Instantly switch between the interactive map and a scrollable vertical feed (List View) of events without losing state.
@@ -31,7 +31,7 @@ This production-ready application features a complete authentication system, rea
 *   **💬 Live Event Chat**: Each event features instantaneous live messaging for participants to coordinate logistics, powered by optimistic UI updates.
 *   **👤 Elegant User Profiles**: Premium "glassmorphic" profile pages showcasing user bios, dynamic "Interests" tags, and a history of organized/joined events.
 *   **🏆 Karma Score & Gamification**: Added a "Karma Score" system to reward organizers and active participants, complete with hoverable info tooltips explaining the calculation.
-*   **🔍 Global Search & Filtering**: Dedicated Discover page with persistent search, functional category tags, and sorting (Soonest vs. Closest). Added immediate "Show on Map" routing and local "View Details" drawers for a 1:1 consistent experience.
+*   **🔍 Global Search & Filtering**: Dedicated Discover page featuring unified search across Name, Category, AND Location simultaneously. Expanded filter arrays (Tech, Outdoors, etc.) housed in horizontal scrolling panes.
 *   **💾 Persistent Map State**: Utilizing `sessionStorage` to remember your last map position, zoom level, and UI states (like prompt dismissals). Navigation between pages no longer resets your perspective.
 *   **🧹 Decluttered Maps UX**: Custom map styling that intelligently hides business POIs (restaurants, shops) globally, ensuring your event pins are the primary focus of the experience.
 *   **📱 Native-Feel Mobile Navigation**: Fully responsive layouts with horizontal-scroll filter chips and optimized bottom padding to prevent content from being cut off by the floating glass navigation bar.

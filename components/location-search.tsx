@@ -45,37 +45,6 @@ export default function LocationSearchInput({ onPlaceSelect, insideModal = false
     return () => google.maps.event.removeListener(listener);
   }, [autocomplete, onPlaceSelect]);
 
-  // FIX: Prevent Radix Dialog / Input onBlur from hiding the Google Maps Places Autocomplete dropdown prematurely.
-  // The .pac-container dropdown loses focus on mousedown/touchstart before the native click event fires.
-  useEffect(() => {
-    const handleDropdownInteraction = (e: MouseEvent | TouchEvent | PointerEvent) => {
-      const target = e.target as HTMLElement;
-      if (target && target.closest(".pac-container")) {
-        // Prevent focus loss on the input field when tapping the dropdown
-        // This is critical for Google Places Autocomplete inside Radix Dialogs
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-
-        // Explicitly keep focus on the input to ensure maps dropdown stays visible
-        if (inputRef.current) {
-          inputRef.current.focus();
-        }
-      }
-    };
-
-    // Use capture phase so we intercept before input blur or Radix focus trap triggers
-    document.addEventListener("mousedown", handleDropdownInteraction, { capture: true });
-    document.addEventListener("pointerdown", handleDropdownInteraction, { capture: true });
-    document.addEventListener("touchstart", handleDropdownInteraction, { capture: true, passive: false });
-
-    return () => {
-      document.removeEventListener("mousedown", handleDropdownInteraction, { capture: true });
-      document.removeEventListener("pointerdown", handleDropdownInteraction, { capture: true });
-      document.removeEventListener("touchstart", handleDropdownInteraction, { capture: true });
-    };
-  }, []);
-
   return (
     <div className="relative">
       <Input
