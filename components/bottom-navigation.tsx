@@ -1,8 +1,10 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { MapPin, Calendar, Search, User } from "lucide-react"
+import { useFirebase } from "@/lib/firebase-context"
+import { toast } from "sonner"
 
 const HuddleLogo = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-slate-50">
@@ -12,6 +14,8 @@ const HuddleLogo = () => (
 
 export default function BottomNavigation() {
   const pathname = usePathname()
+  const router = useRouter()
+  const { user } = useFirebase()
 
   const tabs = [
     { id: "map", label: "Map", icon: MapPin, href: "/map" },
@@ -35,6 +39,15 @@ export default function BottomNavigation() {
               key={tab.id}
               id={`${tab.id}-button`}
               href={tab.href}
+              onClick={(e) => {
+                if (!user && (tab.id === "my-events" || tab.id === "profile")) {
+                  e.preventDefault()
+                  toast.error("Please sign in to access this page", { position: "top-center" })
+                  setTimeout(() => {
+                    router.push(`/login?return_to=${tab.href}`)
+                  }, 1200)
+                }
+              }}
               className={`
                 flex flex-col items-center justify-center w-16 h-16 rounded-2xl
                 transition-colors duration-200

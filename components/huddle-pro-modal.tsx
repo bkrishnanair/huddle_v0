@@ -16,10 +16,11 @@ interface HuddleProModalProps {
 }
 
 const proFeatures = [
-    { icon: <Zap className="w-5 h-5 text-primary" />, text: "Boost your games to the top of the map." },
-    { icon: <CheckCircle className="w-5 h-5 text-primary" />, text: "Create recurring weekly or bi-weekly events." },
-    { icon: <CheckCircle className="w-5 h-5 text-primary" />, text: "Get advanced analytics on your games." },
-    { icon: <CheckCircle className="w-5 h-5 text-primary" />, text: "Priority access to new features and support." },
+  { icon: <Zap className="w-5 h-5 text-primary" />, text: "Generate events instantly using AI." },
+  { icon: <Zap className="w-5 h-5 text-primary" />, text: "Boost your games to the top of the map." },
+  { icon: <CheckCircle className="w-5 h-5 text-primary" />, text: "Create recurring weekly or bi-weekly events." },
+  { icon: <CheckCircle className="w-5 h-5 text-primary" />, text: "Get advanced analytics on your games." },
+  { icon: <CheckCircle className="w-5 h-5 text-primary" />, text: "Priority access to new features and support." },
 ]
 
 export default function HuddleProModal({ isOpen, onClose }: HuddleProModalProps) {

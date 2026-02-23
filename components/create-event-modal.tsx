@@ -14,8 +14,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Rocket, Loader2 } from "lucide-react"
 import LocationSearchInput from "./location-search"
-import AIGenerateButton from "./ai-generate-button"
-import AISuggestionsList from "./ai-suggestions-list"
 import { toast } from "sonner"
 
 interface CreateEventModalProps {
@@ -144,9 +142,6 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
               <Input id="name" placeholder="e.g., Community Workshop" value={formData.name} onChange={(e) => handleInputChange("name", e.target.value)} required />
             </div>
 
-            <AIGenerateButton onClick={() => { }} isLoading={isAiLoading} />
-            <AISuggestionsList suggestions={suggestions} onSelect={() => { }} />
-
             <div>
               <Label htmlFor="description">Description</Label>
               <Input id="description" placeholder="A short and friendly description" value={formData.description} onChange={(e) => handleInputChange("description", e.target.value)} />
@@ -188,11 +183,11 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="date">Date</Label>
-                <Input id="date" type="date" value={formData.date} onChange={(e) => handleInputChange("date", e.target.value)} required />
+                <Input id="date" type="date" value={formData.date} onChange={(e) => handleInputChange("date", e.target.value)} style={{ colorScheme: "dark" }} required />
               </div>
               <div>
                 <Label htmlFor="time">Time</Label>
-                <Input id="time" type="time" value={formData.time} onChange={(e) => handleInputChange("time", e.target.value)} required />
+                <Input id="time" type="time" value={formData.time} onChange={(e) => handleInputChange("time", e.target.value)} style={{ colorScheme: "dark" }} required />
               </div>
             </div>
 

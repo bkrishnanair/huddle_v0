@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Trophy, LogOut, Settings, UserCircle, Pencil, Zap, Calendar, Star, Info } from "lucide-react"
+import { Trophy, LogOut, UserCircle, Pencil, Zap, Calendar, Star, Info } from "lucide-react"
 import EditProfileModal from "@/components/profile/edit-profile-modal"
 import HuddleProModal from "@/components/huddle-pro-modal"
 import { signOut } from "firebase/auth"
@@ -156,9 +156,6 @@ export default function ProfilePage() {
     <>
       <div className="min-h-screen liquid-gradient pb-28">
         <header className="p-4 flex justify-end items-center gap-3">
-          <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl glass-surface border border-white/10 shadow-xl hover:bg-white/5" onClick={() => { /* Open Settings */ }}>
-            <Settings className="w-5 h-5 text-slate-400" />
-          </Button>
           <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl glass-surface border border-rose-500/20 shadow-xl hover:bg-rose-500/10 text-rose-400" onClick={handleLogout}>
             <LogOut className="w-5 h-5" />
           </Button>
