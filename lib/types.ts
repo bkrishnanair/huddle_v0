@@ -26,6 +26,7 @@ export interface GameEvent {
   organizerName: string;
   organizerPhotoURL?: string;
   players: string[];
+  waitlist?: string[];
   playerDetails?: Player[];
   checkedInPlayers?: string[];
   distance?: number;
