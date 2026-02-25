@@ -24,6 +24,11 @@ This production-ready application features a complete authentication system, rea
 *   **🔐 Secure Hybrid Authentication**: Complete session management with Next.js 15 App Router compatibility. Combines Firebase Auth on the client with the Firebase Admin SDK on the server using secure HTTP-only cookies.
 *   **📅 Event Creation UX**: Native date/time picker integrations forcing high-contrast dark mode icons. Fully touch-responsive Google Places dropdown searches ensuring stable mobile entries.
 *   **👥 RSVP & Unjoin Optimization**: Users can join/unjoin events seamlessly with optimistic UI updates. Added a dedicated "Unjoin" button to the "Joined" tab on the "My Events" page for quick action.
+*   **⏳ Smart Waitlists (Atomic)**: Built-in waitlist system preventing over-selling. Uses `adminDb.runTransaction()` to safely push excess users to a waitlist. If a seated attendee cancels, the system automatically pops the first waitlisted user into the active roster.
+*   **📊 Organizer B2B Features (The "Trojan Horse")**:
+    *   **CRM & Loyalty Badges**: Organizers can see a real-time list of attendees. The backend securely computes past attendance and dynamically renders an amber "🔥 Repeat Attendee (xN)" badge for loyal users.
+    *   **CSV Exports**: One-click download of the attendee roster as a `.csv` file directly from the browser for capacity planning and attendance tracking.
+    *   **One-Click Cloning**: Instantly duplicate repetitive intramural/club events pre-filled with location and copy, while safely blanking date/time fields to prevent overlaps.
 *   **🗑️ Event Deletion & Management**: Organizers can now delete their events directly from the event details drawer or organized feed. Securely enforced via server-side permission checks.
 *   **🔄 Map/List View Toggle**: Instantly switch between the interactive map and a scrollable vertical feed (List View) of events without losing state.
 *   **🕙 Discovery Filters (Time & Range)**: Surface events happening "Next 2 Hrs", "Today", or "This Weekend" with a single tap. Added a functional "Within Range" filter (5-50 miles) powered by client-side Haversine math for precise DMV area discoveries.
