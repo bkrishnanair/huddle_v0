@@ -102,19 +102,19 @@ export default function EventChat({ eventId }: EventChatProps) {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-slate-950/20">
       {/* Chat Header */}
-      <div className="flex items-center space-x-2 p-3 border-b bg-gray-50">
-        <MessageCircle className="w-5 h-5 text-blue-600" />
-        <h3 className="font-semibold">Event Chat</h3>
-        <span className="text-sm text-gray-500">({messages.length} messages)</span>
+      <div className="flex items-center space-x-2 p-3 border-b border-white/10 bg-white/5">
+        <MessageCircle className="w-5 h-5 text-primary" />
+        <h3 className="font-semibold text-white">Event Chat</h3>
+        <span className="text-sm text-slate-400">({messages.length} messages)</span>
       </div>
 
       {/* Messages Area */}
       <ScrollArea className="flex-1 p-3" ref={scrollAreaRef}>
         {messages.length === 0 ? (
-          <div className="text-center text-gray-500 py-8">
-            <MessageCircle className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+          <div className="text-center text-slate-500 py-8">
+            <MessageCircle className="w-8 h-8 mx-auto mb-2 text-slate-700" />
             <p className="text-sm">No messages yet. Start the conversation!</p>
           </div>
         ) : (
@@ -122,14 +122,16 @@ export default function EventChat({ eventId }: EventChatProps) {
             {messages.map((message) => (
               <div key={message.id} className={`flex ${message.userId === user?.uid ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-xs lg:max-w-md px-3 py-2 rounded-lg ${message.userId === user?.uid ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-900"
+                  className={`max-w-xs lg:max-w-md px-3 py-2 rounded-2xl ${message.userId === user?.uid
+                    ? "bg-primary text-primary-foreground shadow-[0_0_15px_rgba(234,88,12,0.2)]"
+                    : "bg-white/10 text-slate-100 border border-white/5"
                     }`}
                 >
                   {message.userId !== user?.uid && (
-                    <p className="text-xs font-semibold mb-1 opacity-75">{message.userName}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider mb-1 text-primary/80">{message.userName}</p>
                   )}
-                  <p className="text-sm">{message.message}</p>
-                  <p className={`text-xs mt-1 ${message.userId === user?.uid ? "text-blue-100" : "text-gray-500"}`}>
+                  <p className="text-sm leading-relaxed">{message.message}</p>
+                  <p className={`text-[9px] mt-1 text-right font-medium ${message.userId === user?.uid ? "text-primary-foreground/70" : "text-slate-400"}`}>
                     {formatTime(message.timestamp)}
                   </p>
                 </div>
@@ -141,7 +143,7 @@ export default function EventChat({ eventId }: EventChatProps) {
       </ScrollArea>
 
       {/* Message Input */}
-      <form onSubmit={handleSendMessage} className="p-3 border-t bg-white">
+      <form onSubmit={handleSendMessage} className="p-3 border-t border-white/10 bg-white/5">
         <div className="flex space-x-2">
           <Input
             value={newMessage}
@@ -149,13 +151,15 @@ export default function EventChat({ eventId }: EventChatProps) {
             placeholder="Type a message..."
             maxLength={500}
             disabled={sending}
-            className="flex-1"
+            className="flex-1 glass border-white/20 text-white placeholder:text-white/40 h-10"
           />
-          <Button type="submit" disabled={!newMessage.trim() || sending} size="sm" className="px-3">
+          <Button type="submit" disabled={!newMessage.trim() || sending} size="sm" className="px-4 h-10 bg-primary hover:bg-primary/90 text-primary-foreground">
             <Send className="w-4 h-4" />
           </Button>
         </div>
-        <p className="text-xs text-gray-500 mt-1">{newMessage.length}/500 characters</p>
+        <div className="flex justify-end mt-1">
+          <p className="text-[10px] text-slate-500">{newMessage.length}/500</p>
+        </div>
       </form>
     </div>
   )
