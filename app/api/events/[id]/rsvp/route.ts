@@ -2,10 +2,9 @@ export const dynamic = "force-dynamic";
 
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerCurrentUser } from "@/lib/auth-server"
-import { db } from "@/lib/firebase-admin"
-import { getEvent, joinEvent, leaveEvent } from "@/lib/db"
+import { getFirebaseAdminDb } from "@/lib/firebase-admin"
 import { z } from "zod"
-import { firestore } from "firebase-admin"
+import { FieldValue } from "firebase-admin/firestore"
 
 const rsvpSchema = z.object({
   action: z.enum(["join", "leave"]),
@@ -28,50 +27,115 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     const { action } = validationResult.data
-    const event = await getEvent(id) as any
 
-    if (!event) {
-      return NextResponse.json({ error: "Event not found" }, { status: 404 })
+    const adminDb = getFirebaseAdminDb()
+    if (!adminDb) {
+      return NextResponse.json({ error: "Firebase admin DB not found" }, { status: 500 })
     }
 
-    let updatedEvent
+    const eventRef = adminDb.collection("events").doc(id)
+    let updatedEventData: any;
+    let joinedPlayers = false; // to determine if we should issue achievement
 
-    if (action === "join") {
-      if (event.players?.includes(user.uid)) {
-        return NextResponse.json({ error: "You have already joined this event" }, { status: 400 })
+    await adminDb.runTransaction(async (transaction) => {
+      const eventDoc = await transaction.get(eventRef)
+
+      if (!eventDoc.exists) {
+        throw new Error("EVENT_NOT_FOUND")
       }
 
-      const currentPlayers = event.currentPlayers || 0
-      const maxPlayers = event.maxPlayers || 0
+      const eventData = eventDoc.data() as any
+      const players = eventData.players || []
+      const waitlist = eventData.waitlist || []
+      const maxPlayers = eventData.maxPlayers || 0
 
-      if (currentPlayers >= maxPlayers) {
-        return NextResponse.json({ error: "This event is already full" }, { status: 400 })
-      }
+      if (action === "join") {
+        if (players.includes(user.uid) || waitlist.includes(user.uid)) {
+          throw new Error("ALREADY_JOINED")
+        }
 
-      updatedEvent = await joinEvent(id, user.uid)
-
-      // Gamification: Check for first game achievement
-      if (db) {
-        const userEventsQuery = await db.collection("events").where("players", "array-contains", user.uid).get()
-        if (userEventsQuery.size === 1) {
-          const userRef = db.collection("users").doc(user.uid)
-          await userRef.update({
-            badges: firestore.FieldValue.arrayUnion("first_game"),
+        if (players.length >= maxPlayers) {
+          // Join waitlist
+          transaction.update(eventRef, {
+            waitlist: FieldValue.arrayUnion(user.uid)
           })
+          updatedEventData = { ...eventData, waitlist: [...waitlist, user.uid] }
+        } else {
+          // Join players
+          transaction.update(eventRef, {
+            players: FieldValue.arrayUnion(user.uid),
+            currentPlayers: players.length + 1
+          })
+          updatedEventData = { ...eventData, players: [...players, user.uid], currentPlayers: players.length + 1 }
+          joinedPlayers = true;
+        }
+      } else {
+        // action === "leave"
+        if (!players.includes(user.uid) && !waitlist.includes(user.uid)) {
+          throw new Error("NOT_JOINED")
+        }
+
+        if (waitlist.includes(user.uid)) {
+          // Leave waitlist
+          transaction.update(eventRef, {
+            waitlist: FieldValue.arrayRemove(user.uid)
+          })
+          updatedEventData = { ...eventData, waitlist: waitlist.filter((uid: string) => uid !== user.uid) }
+        } else if (players.includes(user.uid)) {
+          // Leave players
+          const newPlayers = players.filter((uid: string) => uid !== user.uid)
+          let newWaitlist = [...waitlist]
+
+          if (newWaitlist.length > 0) {
+            // Pop the first user from waitlist and push to players
+            const nextUser = newWaitlist.shift()
+            newPlayers.push(nextUser)
+
+            // Overwrite arrays because we are doing both remove and push on different lists
+            transaction.update(eventRef, {
+              players: newPlayers,
+              waitlist: newWaitlist,
+              // currentPlayers remains the same since we swapped one for one
+            })
+            updatedEventData = { ...eventData, players: newPlayers, waitlist: newWaitlist }
+          } else {
+            // Just normal leave
+            transaction.update(eventRef, {
+              players: FieldValue.arrayRemove(user.uid),
+              currentPlayers: newPlayers.length
+            })
+            updatedEventData = { ...eventData, players: newPlayers, currentPlayers: newPlayers.length }
+          }
         }
       }
-    } else {
-      // action === "leave"
-      if (!event.players?.includes(user.uid)) {
-        return NextResponse.json({ error: "You are not currently joined to this event" }, { status: 400 })
-      }
+    })
 
-      updatedEvent = await leaveEvent(id, user.uid)
+    // Gamification: Check for first game achievement (only if joined players list, not waitlist)
+    if (joinedPlayers && updatedEventData) {
+      try {
+        const userEventsQuery = await adminDb.collection("events").where("players", "array-contains", user.uid).get()
+        if (userEventsQuery.size === 1) { // 1 because they just joined
+          const userRef = adminDb.collection("users").doc(user.uid)
+          await userRef.update({
+            badges: FieldValue.arrayUnion("first_game"),
+          })
+        }
+      } catch (e) {
+        console.error("Failed to assign badge", e);
+      }
     }
 
-    return NextResponse.json({ event: updatedEvent })
-  } catch (error) {
+    return NextResponse.json({ event: { id, ...updatedEventData } })
+  } catch (error: any) {
     console.error("RSVP error:", error)
+    if (error.message === "EVENT_NOT_FOUND") {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 })
+    } else if (error.message === "ALREADY_JOINED") {
+      return NextResponse.json({ error: "You have already joined or waitlisted for this event" }, { status: 400 })
+    } else if (error.message === "NOT_JOINED") {
+      return NextResponse.json({ error: "You are not currently joined to this event" }, { status: 400 })
+    }
+
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Invalid data format" }, { status: 400 })
     }

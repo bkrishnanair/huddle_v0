@@ -21,13 +21,14 @@ interface CreateEventModalProps {
   onClose: () => void
   onEventCreated: (event: any) => void
   userLocation: { lat: number; lng: number } | null
+  initialData?: any
 }
 
 const CATEGORIES = [
   "Sports", "Music", "Community", "Learning", "Food & Drink", "Tech", "Arts & Culture", "Outdoors"
 ]
 
-export default function CreateEventModal({ isOpen, onClose, onEventCreated, userLocation }: CreateEventModalProps) {
+export default function CreateEventModal({ isOpen, onClose, onEventCreated, userLocation, initialData }: CreateEventModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: "", category: "", tags: [], location: "",
@@ -45,11 +46,45 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID;
 
   useEffect(() => {
-    if (isOpen && userLocation) {
-      setMapCenter(userLocation)
-      setMarkerPosition(userLocation)
+    if (isOpen) {
+      if (initialData) {
+        setFormData({
+          name: String(initialData.name || initialData.title || ""),
+          category: String(initialData.category || initialData.sport || ""),
+          tags: Array.isArray(initialData.tags) ? initialData.tags : [],
+          location: typeof initialData.location === 'string' ? initialData.location : (initialData.location?.name || ""),
+          description: String(initialData.description || ""),
+          maxPlayers: Number(initialData.maxPlayers || 10),
+          date: "", // Explicitly blank for new events
+          time: "", // Explicitly blank for new events
+        })
+        setIsPrivate(!!initialData.isPrivate)
+        if (initialData.geopoint) {
+          const loc = {
+            lat: Number(initialData.geopoint.latitude) || 37.7749,
+            lng: Number(initialData.geopoint.longitude) || -122.4194
+          }
+          setMapCenter(loc)
+          setMarkerPosition(loc)
+        } else if (userLocation) {
+          setMapCenter(userLocation)
+          setMarkerPosition(userLocation)
+        }
+      } else {
+        // Reset form for fresh creation
+        setFormData({
+          name: "", category: "", tags: [], location: "",
+          date: "", time: "", maxPlayers: 10, description: "",
+        })
+        setIsPrivate(false)
+        setBoostEvent(false)
+        if (userLocation) {
+          setMapCenter(userLocation)
+          setMarkerPosition(userLocation)
+        }
+      }
     }
-  }, [isOpen, userLocation])
+  }, [isOpen, initialData, userLocation])
 
   const handleInputChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -162,7 +197,6 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                   <LocationSearchInput onPlaceSelect={handlePlaceSelect} insideModal={true} />
                   <div className="h-48 w-full rounded-lg overflow-hidden relative mt-2 border border-border">
                     <Map
-                      defaultCenter={mapCenter}
                       center={mapCenter}
                       defaultZoom={15}
                       gestureHandling={"greedy"}
