@@ -18,29 +18,24 @@ This production-ready application features a complete authentication system, rea
 
 ## Key Features & Functionality
 
-*   **🌍 Frictionless Guest Access**: Unauthenticated users can instantly explore the live map and Discover feed. Secure interceptions (`router.push`) reroute guests trying to host to a login page without jarring full-page reloads.
+*   **🌍 Frictionless Guest Access**: Unauthenticated users can instantly explore the live map and Discover feed. Recent updates allow for **Anonymous Guest RSVPs**, letting users join events with just a name and optional note without ever seeing a signup screen.
 *   **📍 Premium Map Pins**: Custom React teardrop nodes featuring rich south-facing gradients, drop shadows, and scale-on-hover micro-animations. Replaces generic Google clusters while visually categorizing events via custom emojis.
-*   **🔗 Strict Deep Link Priority**: Shareable event links (`/map?eventId=xyz`) use a rigid `useRef` map lock. The map instantly pans to the deep-linked coordinates on mount, guaranteeing HTML5 geolocation prompts cannot steal focus away from the shared event.
-*   **🔐 Secure Hybrid Authentication**: Complete session management with Next.js 15 App Router compatibility. Combines Firebase Auth on the client with the Firebase Admin SDK on the server using secure HTTP-only cookies.
-*   **📅 Event Creation UX**: Native date/time picker integrations forcing high-contrast dark mode icons. Fully touch-responsive Google Places dropdown searches ensuring stable mobile entries.
-*   **👥 RSVP & Unjoin Optimization**: Users can join/unjoin events seamlessly with optimistic UI updates. Added a dedicated "Unjoin" button to the "Joined" tab on the "My Events" page for quick action.
 *   **⏳ Smart Waitlists (Atomic)**: Built-in waitlist system preventing over-selling. Uses `adminDb.runTransaction()` to safely push excess users to a waitlist. If a seated attendee cancels, the system automatically pops the first waitlisted user into the active roster.
-*   **📊 Organizer B2B Features (The "Trojan Horse")**:
-    *   **CRM & Loyalty Badges**: Organizers can see a real-time list of attendees. The backend securely computes past attendance and dynamically renders an amber "🔥 Repeat Attendee (xN)" badge for loyal users.
-    *   **CSV Exports**: One-click download of the attendee roster as a `.csv` file directly from the browser for capacity planning and attendance tracking.
+*   **📊 Organizer Logistics & CRM (Phase 1 & 2)**:
+    *   **Advanced RSVP Logic**: Organizers can now require answers to custom logistics questions (e.g., "Need a ride?", "Dietary restrictions?") and force selection of specific **Pickup Points**.
+    *   **Real-Time Dashboard**: A live-updating roster via `onSnapshot()` featuring a capacity meter and "🔥 Repeat Attendee" loyalty badges.
+    *   **Automated Scheduling (Cron)**: Built-in support for Vercel Cron jobs that automatically broadcast scheduled messages and announcements to the event chat.
+    *   **CSV Exports**: Enhanced one-click roster downloads now include columns for user notes, question answers, and pickup selections.
     *   **One-Click Cloning**: Instantly duplicate repetitive intramural/club events pre-filled with location and copy, while safely blanking date/time fields to prevent overlaps.
-*   **🗑️ Event Deletion & Management**: Organizers can now delete their events directly from the event details drawer or organized feed. Securely enforced via server-side permission checks.
-*   **🔄 Map/List View Toggle**: Instantly switch between the interactive map and a scrollable vertical feed (List View) of events without losing state.
-*   **🕙 Discovery Filters (Time & Range)**: Surface events happening "Next 2 Hrs", "Today", or "This Weekend" with a single tap. Added a functional "Within Range" filter (5-50 miles) powered by client-side Haversine math for precise DMV area discoveries.
-*   **🕵️ Private Events & Deep Linking**: Added support for link-only private events that are hidden from the discovery feed but accessible via secure deep links.
-*   **💬 Live Event Chat**: Each event features instantaneous live messaging for participants to coordinate logistics, powered by optimistic UI updates.
-*   **👤 Elegant User Profiles**: Premium "glassmorphic" profile pages showcasing user bios, dynamic "Interests" tags, and a history of organized/joined events.
-*   **🏆 Karma Score & Gamification**: Added a "Karma Score" system to reward organizers and active participants, complete with hoverable info tooltips explaining the calculation.
-*   **🔍 Global Search & Filtering**: Dedicated Discover page featuring unified search across Name, Category, AND Location simultaneously. Expanded filter arrays (Tech, Outdoors, etc.) housed in horizontal scrolling panes.
-*   **💾 Persistent Map State**: Utilizing `sessionStorage` to remember your last map position, zoom level, and UI states (like prompt dismissals). Navigation between pages no longer resets your perspective.
-*   **🧹 Decluttered Maps UX**: Custom map styling that intelligently hides business POIs (restaurants, shops) globally, ensuring your event pins are the primary focus of the experience.
-*   **📱 Native-Feel Mobile Navigation**: Fully responsive layouts with horizontal-scroll filter chips and optimized bottom padding to prevent content from being cut off by the floating glass navigation bar.
-*   **🎓 University-Specific Mock Seeding**: Includes a powerful Node.js seeding suite (`scripts/seed_umd.ts`) to populate the map with realistic, landmark-specific events at UMD (McKeldin, Iribe, Eppley) and other Top 20 US universities.
+*   **🚩 Limited Seating Alerts**: Automatic red flashing badges injected into feed cards and detail drawers when remaining spots hit critical thresholds (≤ 3).
+*   **💬 Live Event Chat & Pinned Comms**: Each event features instantaneous live messaging. Organizers can "Pin" essential announcements to the top of the chat viewport for high visibility.
+*   **🗑️ Event Deletion & Editing**: Creators can delete or live-edit event details (time, venue, capacity) directly from the details drawer with server-side permission enforcement.
+*   **🕙 Discovery Filters (Time & Range)**: Surface events happening "Next 2 Hrs", "Today", or "This Weekend" with a single tap. Functional "Within Range" filter powered by client-side Haversine math.
+*   **🕵️ Private Events & Deep Linking**: Support for link-only private events hidden from the discovery feed but accessible via secure deep links with `useRef` map locking.
+*   **👤 Elegant User Profiles**: Premium glassmorphic pages showcasing bios, interests, and an updated **Attendance History** (Past Events) view.
+*   **🏆 Karma Score & Gamification**: A weighted "Karma" system to reward reliable organizers and active participants.
+*   **📱 Native-Feel Mobile UX**: Fully responsive layouts with horizontal-scroll filter chips and optimized bottom padding for the floating glass navigation bar.
+*   **🎓 University-Specific Mock Seeding**: Powerful Node.js seeding suite (`scripts/seed_umd.ts`) to populate the map with realistic, landmark-specific events.
 
 ## UI/UX & Design Philosophy
 
