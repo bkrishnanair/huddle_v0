@@ -5,6 +5,7 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
+  signInAnonymously,
   signOut,
   type User,
 } from "firebase/auth";
@@ -56,6 +57,22 @@ export const signInWithGoogle = async () => {
   }
 
   // 4. Return the user object for the application to use.
+  return user;
+};
+
+// GUEST LOGIN: Create an anonymous account and save their chosen name
+export const signInAsGuest = async (name: string) => {
+  if (!auth) throw new Error("Firebase Auth is not initialized on the client.");
+
+  const result = await signInAnonymously(auth);
+  const user = result.user;
+
+  // We save them in our users collection so they can chat and be seen by organizers
+  await createUser(user.uid, {
+    name: name,
+    isGuest: true,
+  });
+
   return user;
 };
 

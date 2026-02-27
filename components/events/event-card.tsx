@@ -37,8 +37,15 @@ export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = fal
     <Card className="glass-surface border-white/15 overflow-hidden flex flex-col">
       <CardContent className="p-4 flex-grow">
         <div className="flex justify-between items-start mb-3">
-          <h3 className="font-bold text-lg text-slate-50 pr-2">{event.name}</h3>
-          <Badge variant="secondary" className="bg-white/10 text-slate-300 border-none whitespace-nowrap">
+          <div className="flex items-center gap-2 pr-2 overflow-hidden">
+            <h3 className="font-bold text-lg text-slate-50 truncate">{event.name}</h3>
+            {event.maxPlayers - event.currentPlayers > 0 && event.maxPlayers - event.currentPlayers <= 3 && (
+              <Badge variant="destructive" className="bg-red-500/20 text-red-400 border border-red-500/30 whitespace-nowrap text-[9px] font-black uppercase tracking-wider px-1.5 shadow-sm">
+                Limited Seating
+              </Badge>
+            )}
+          </div>
+          <Badge variant="secondary" className="bg-white/10 text-slate-300 border-none whitespace-nowrap shrink-0">
             {event.category}
           </Badge>
         </div>

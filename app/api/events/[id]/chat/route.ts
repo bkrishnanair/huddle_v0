@@ -6,6 +6,7 @@ import { sendMessage, getChatMessages } from "@/lib/db"
 import { z } from "zod"
 
 const chatSchema = z.object({
+  action: z.enum(["send", "pin"]).optional().default("send"),
   message: z.string().trim().min(1, "Message cannot be empty").max(500, "Message too long (max 500 characters)"),
 })
 
@@ -25,8 +26,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: validationResult.error.flatten().fieldErrors }, { status: 400 })
     }
 
-    const { message } = validationResult.data
-    const displayName = user.displayName || "Anonymous"
+    const { message, action } = validationResult.data
+    const displayName = user.name || user.displayName || "Anonymous"
+
+    if (action === "pin") {
+      const adminDb = (await import("@/lib/firebase-admin")).getFirebaseAdminDb();
+      if (!adminDb) throw new Error("Firebase admin db not found");
+
+      const eventRef = adminDb.collection("events").doc(id);
+      const eventDoc = await eventRef.get();
+      if (!eventDoc.exists) return NextResponse.json({ error: "Event not found" }, { status: 404 });
+      if (eventDoc.data()?.createdBy !== user.uid) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      }
+
+      await eventRef.update({ pinnedMessage: message });
+      return NextResponse.json({ success: true, pinnedMessage: message });
+    }
 
     await sendMessage(id, user.uid, displayName, message)
 

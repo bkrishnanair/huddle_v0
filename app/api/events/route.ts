@@ -23,6 +23,14 @@ const eventSchema = z.object({
     latitude: z.number(),
     longitude: z.number(),
   }),
+  questions: z.array(z.string()).optional(),
+  pickupPoints: z.array(z.object({
+    id: z.string(),
+    location: z.string(),
+    time: z.string(),
+  })).optional(),
+  stayUntil: z.string().optional(),
+  transitTips: z.string().optional(),
 })
 
 

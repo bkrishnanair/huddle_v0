@@ -7,7 +7,11 @@ import { z } from "zod"
 import { FieldValue } from "firebase-admin/firestore"
 
 const rsvpSchema = z.object({
-  action: z.enum(["join", "leave"]),
+  action: z.enum(["join", "leave", "remove"]),
+  note: z.string().optional(),
+  targetUserId: z.string().optional(),
+  answers: z.record(z.string()).optional(),
+  pickupPointId: z.string().optional(),
 })
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -26,7 +30,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: validationResult.error.flatten().fieldErrors }, { status: 400 })
     }
 
-    const { action } = validationResult.data
+    const { action, note, targetUserId, answers, pickupPointId } = validationResult.data
+
+    if (action === "remove" && !targetUserId) {
+      return NextResponse.json({ error: "targetUserId is required for remove action" }, { status: 400 })
+    }
 
     const adminDb = getFirebaseAdminDb()
     if (!adminDb) {
@@ -47,43 +55,84 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const eventData = eventDoc.data() as any
       const players = eventData.players || []
       const waitlist = eventData.waitlist || []
+      const attendeeNotes = eventData.attendeeNotes || {}
       const maxPlayers = eventData.maxPlayers || 0
+
+      const attendeeAnswers = eventData.attendeeAnswers || {}
+      const attendeePickup = eventData.attendeePickup || {}
 
       if (action === "join") {
         if (players.includes(user.uid) || waitlist.includes(user.uid)) {
           throw new Error("ALREADY_JOINED")
         }
 
+        // Process Note if provided
+        const newAttendeeNotes = { ...attendeeNotes };
+        if (note && note.trim().length > 0) {
+          newAttendeeNotes[user.uid] = note.trim();
+        }
+
+        const newAttendeeAnswers = { ...attendeeAnswers };
+        if (answers && Object.keys(answers).length > 0) {
+          newAttendeeAnswers[user.uid] = answers;
+        }
+
+        const newAttendeePickup = { ...attendeePickup };
+        if (pickupPointId) {
+          newAttendeePickup[user.uid] = pickupPointId;
+        }
+
         if (players.length >= maxPlayers) {
           // Join waitlist
           transaction.update(eventRef, {
-            waitlist: FieldValue.arrayUnion(user.uid)
+            waitlist: FieldValue.arrayUnion(user.uid),
+            attendeeNotes: newAttendeeNotes,
+            attendeeAnswers: newAttendeeAnswers,
+            attendeePickup: newAttendeePickup
           })
-          updatedEventData = { ...eventData, waitlist: [...waitlist, user.uid] }
+          updatedEventData = { ...eventData, waitlist: [...waitlist, user.uid], attendeeNotes: newAttendeeNotes, attendeeAnswers: newAttendeeAnswers, attendeePickup: newAttendeePickup }
         } else {
           // Join players
           transaction.update(eventRef, {
             players: FieldValue.arrayUnion(user.uid),
-            currentPlayers: players.length + 1
+            currentPlayers: players.length + 1,
+            attendeeNotes: newAttendeeNotes,
+            attendeeAnswers: newAttendeeAnswers,
+            attendeePickup: newAttendeePickup
           })
-          updatedEventData = { ...eventData, players: [...players, user.uid], currentPlayers: players.length + 1 }
+          updatedEventData = { ...eventData, players: [...players, user.uid], currentPlayers: players.length + 1, attendeeNotes: newAttendeeNotes, attendeeAnswers: newAttendeeAnswers, attendeePickup: newAttendeePickup }
           joinedPlayers = true;
         }
-      } else {
-        // action === "leave"
-        if (!players.includes(user.uid) && !waitlist.includes(user.uid)) {
+      } else if (action === "leave" || action === "remove") {
+        const actingUserId = action === "remove" ? targetUserId! : user.uid;
+
+        if (action === "remove" && eventData.createdBy !== user.uid) {
+          throw new Error("UNAUTHORIZED_REMOVE");
+        }
+
+        if (!players.includes(actingUserId) && !waitlist.includes(actingUserId)) {
           throw new Error("NOT_JOINED")
         }
 
-        if (waitlist.includes(user.uid)) {
+        const newAttendeeNotes = { ...attendeeNotes };
+        delete newAttendeeNotes[actingUserId];
+        const newAttendeeAnswers = { ...attendeeAnswers };
+        delete newAttendeeAnswers[actingUserId];
+        const newAttendeePickup = { ...attendeePickup };
+        delete newAttendeePickup[actingUserId];
+
+        if (waitlist.includes(actingUserId)) {
           // Leave waitlist
           transaction.update(eventRef, {
-            waitlist: FieldValue.arrayRemove(user.uid)
+            waitlist: FieldValue.arrayRemove(actingUserId),
+            attendeeNotes: newAttendeeNotes,
+            attendeeAnswers: newAttendeeAnswers,
+            attendeePickup: newAttendeePickup
           })
-          updatedEventData = { ...eventData, waitlist: waitlist.filter((uid: string) => uid !== user.uid) }
-        } else if (players.includes(user.uid)) {
+          updatedEventData = { ...eventData, waitlist: waitlist.filter((uid: string) => uid !== actingUserId), attendeeNotes: newAttendeeNotes, attendeeAnswers: newAttendeeAnswers, attendeePickup: newAttendeePickup }
+        } else if (players.includes(actingUserId)) {
           // Leave players
-          const newPlayers = players.filter((uid: string) => uid !== user.uid)
+          const newPlayers = players.filter((uid: string) => uid !== actingUserId)
           let newWaitlist = [...waitlist]
 
           if (newWaitlist.length > 0) {
@@ -95,16 +144,22 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             transaction.update(eventRef, {
               players: newPlayers,
               waitlist: newWaitlist,
+              attendeeNotes: newAttendeeNotes,
+              attendeeAnswers: newAttendeeAnswers,
+              attendeePickup: newAttendeePickup
               // currentPlayers remains the same since we swapped one for one
             })
-            updatedEventData = { ...eventData, players: newPlayers, waitlist: newWaitlist }
+            updatedEventData = { ...eventData, players: newPlayers, waitlist: newWaitlist, attendeeNotes: newAttendeeNotes, attendeeAnswers: newAttendeeAnswers, attendeePickup: newAttendeePickup }
           } else {
             // Just normal leave
             transaction.update(eventRef, {
-              players: FieldValue.arrayRemove(user.uid),
-              currentPlayers: newPlayers.length
+              players: FieldValue.arrayRemove(actingUserId),
+              currentPlayers: newPlayers.length,
+              attendeeNotes: newAttendeeNotes,
+              attendeeAnswers: newAttendeeAnswers,
+              attendeePickup: newAttendeePickup
             })
-            updatedEventData = { ...eventData, players: newPlayers, currentPlayers: newPlayers.length }
+            updatedEventData = { ...eventData, players: newPlayers, currentPlayers: newPlayers.length, attendeeNotes: newAttendeeNotes, attendeeAnswers: newAttendeeAnswers, attendeePickup: newAttendeePickup }
           }
         }
       }

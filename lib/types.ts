@@ -25,11 +25,26 @@ export interface GameEvent {
   createdBy: string;
   organizerName: string;
   organizerPhotoURL?: string;
+  pinnedMessage?: string;
   players: string[];
   waitlist?: string[];
+  attendeeNotes?: Record<string, string>;
+  attendeeAnswers?: Record<string, Record<string, string>>;
+  attendeePickup?: Record<string, string>;
+  questions?: string[];
+  pickupPoints?: { id: string; location: string; time: string }[];
+  stayUntil?: string;
+  transitTips?: string;
   playerDetails?: Player[];
   checkedInPlayers?: string[];
   distance?: number;
   isBoosted?: boolean;
   isPrivate?: boolean;
+  scheduledMessages?: {
+    id: string;
+    message: string;
+    scheduledFor: string; // ISO String
+    sent: boolean;
+    isAnnouncement: boolean; // if true, pin it when sent
+  }[];
 }

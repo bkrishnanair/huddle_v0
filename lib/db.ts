@@ -164,16 +164,26 @@ export const leaveEvent = async (eventId: string, userId: string) => {
   }
 }
 
-export const sendMessage = async (eventId: string, userId: string, displayName: string, message: string) => {
+export const sendMessage = async (eventId: string, userId: string, authDisplayName: string, message: string) => {
   try {
     const { getFirebaseAdminDb, Timestamp } = await import("@/lib/firebase-admin");
     const adminDb = getFirebaseAdminDb();
     if (!adminDb) throw new Error("Firebase Admin not initialized");
 
+    let finalDisplayName = authDisplayName;
+
+    // Fallback: Check the users collection. Essential for Guests who don't have a token displayName.
+    if (!finalDisplayName || finalDisplayName === "Anonymous") {
+      const userDoc = await adminDb.collection("users").doc(userId).get();
+      if (userDoc.exists) {
+        finalDisplayName = userDoc.data()?.name || "Anonymous";
+      }
+    }
+
     const chatRef = adminDb.collection("events").doc(eventId).collection("chat");
     await chatRef.add({
       userId,
-      displayName,
+      userName: finalDisplayName, // Store as userName to match client expectations
       message,
       timestamp: Timestamp.now(),
     });

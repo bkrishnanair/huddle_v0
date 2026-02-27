@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Rocket, Loader2 } from "lucide-react"
+import { Rocket, Loader2, Plus, Trash2 } from "lucide-react"
 import LocationSearchInput from "./location-search"
 import { toast } from "sonner"
 
@@ -22,13 +22,14 @@ interface CreateEventModalProps {
   onEventCreated: (event: any) => void
   userLocation: { lat: number; lng: number } | null
   initialData?: any
+  isEditMode?: boolean
 }
 
 const CATEGORIES = [
   "Sports", "Music", "Community", "Learning", "Food & Drink", "Tech", "Arts & Culture", "Outdoors"
 ]
 
-export default function CreateEventModal({ isOpen, onClose, onEventCreated, userLocation, initialData }: CreateEventModalProps) {
+export default function CreateEventModal({ isOpen, onClose, onEventCreated, userLocation, initialData, isEditMode = false }: CreateEventModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: "", category: "", tags: [], location: "",
@@ -38,6 +39,14 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   const [suggestions, setSuggestions] = useState([])
   const [boostEvent, setBoostEvent] = useState(false)
   const [isPrivate, setIsPrivate] = useState(false)
+
+  // Advanced Logistics State
+  const [askRide, setAskRide] = useState(false)
+  const [askDiet, setAskDiet] = useState(false)
+  const [pickupPoints, setPickupPoints] = useState<{ id: string; location: string; time: string }[]>([])
+  const [stayUntil, setStayUntil] = useState("")
+  const [transitTips, setTransitTips] = useState("")
+
   const [mapCenter, setMapCenter] = useState(userLocation || { lat: 37.7749, lng: -122.4194 })
   const [markerPosition, setMarkerPosition] = useState(userLocation || { lat: 37.7749, lng: -122.4194 })
 
@@ -55,10 +64,16 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
           location: typeof initialData.location === 'string' ? initialData.location : (initialData.location?.name || ""),
           description: String(initialData.description || ""),
           maxPlayers: Number(initialData.maxPlayers || 10),
-          date: "", // Explicitly blank for new events
-          time: "", // Explicitly blank for new events
+          date: isEditMode && initialData.date ? initialData.date : "",
+          time: isEditMode && initialData.time ? initialData.time : "",
         })
         setIsPrivate(!!initialData.isPrivate)
+        setAskRide(initialData.questions?.includes("Need a ride?") || false)
+        setAskDiet(initialData.questions?.includes("Dietary restrictions?") || false)
+        setPickupPoints(initialData.pickupPoints || [])
+        setStayUntil(initialData.stayUntil || "")
+        setTransitTips(initialData.transitTips || "")
+
         if (initialData.geopoint) {
           const loc = {
             lat: Number(initialData.geopoint.latitude) || 37.7749,
@@ -78,6 +93,12 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         })
         setIsPrivate(false)
         setBoostEvent(false)
+        setAskRide(false)
+        setAskDiet(false)
+        setPickupPoints([])
+        setStayUntil("")
+        setTransitTips("")
+
         if (userLocation) {
           setMapCenter(userLocation)
           setMarkerPosition(userLocation)
@@ -121,25 +142,38 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
       const currentUser = getAuth().currentUser
       const idToken = currentUser ? await currentUser.getIdToken() : ""
 
-      const response = await fetch("/api/events", {
-        method: "POST",
+      const configuredQuestions = [];
+      if (askRide) configuredQuestions.push("Need a ride?");
+      if (askDiet) configuredQuestions.push("Dietary restrictions?");
+
+      const payload = {
+        ...formData,
+        geopoint: { latitude: markerPosition.lat, longitude: markerPosition.lng },
+        isBoosted: boostEvent,
+        isPrivate: isPrivate,
+        questions: configuredQuestions,
+        pickupPoints,
+        stayUntil,
+        transitTips
+      }
+
+      const endpoint = isEditMode && initialData?.id ? `/api/events/${initialData.id}` : "/api/events"
+      const method = isEditMode ? "PUT" : "POST"
+
+      const response = await fetch(endpoint, {
+        method,
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${idToken}`
         },
-        body: JSON.stringify({
-          ...formData,
-          geopoint: { latitude: markerPosition.lat, longitude: markerPosition.lng },
-          isBoosted: boostEvent,
-          isPrivate: isPrivate
-        }),
+        body: JSON.stringify(payload),
         credentials: 'include'
       })
 
       if (response.ok) {
         const data = await response.json()
-        toast.success("Event created successfully!")
-        onEventCreated(data.event)
+        toast.success(isEditMode ? "Event updated successfully!" : "Event created successfully!")
+        onEventCreated(isEditMode ? data.event : data.event || payload)
         onClose()
       } else {
         const errorData = await response.json()
@@ -233,7 +267,68 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
               </Select>
             </div>
 
-            <div className="space-y-4 pt-4 border-t border-border">
+            <div className="space-y-4 pt-6 border-t border-white/10">
+              <h3 className="font-black text-sm uppercase tracking-widest text-primary/80 mb-2">Advanced Logistics (Optional)</h3>
+
+              <div className="space-y-2 pb-2">
+                <Label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Requested Attendee Info</Label>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5">
+                  <span className="text-sm font-medium text-slate-200">"Do you need a ride?"</span>
+                  <Switch checked={askRide} onCheckedChange={setAskRide} />
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5">
+                  <span className="text-sm font-medium text-slate-200">"Any dietary restrictions?"</span>
+                  <Switch checked={askDiet} onCheckedChange={setAskDiet} />
+                </div>
+              </div>
+
+              <div className="space-y-3 pb-2 pt-2 border-t border-white/5">
+                <Label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Pickup Points</Label>
+                {pickupPoints.map((pt, i) => (
+                  <div key={pt.id} className="flex items-center gap-2 bg-slate-900/50 p-2 rounded-lg border border-white/5">
+                    <Input
+                      placeholder="Location (e.g. GH Lobby)"
+                      value={pt.location}
+                      onChange={(e) => setPickupPoints(prev => prev.map(p => p.id === pt.id ? { ...p, location: e.target.value } : p))}
+                      className="h-8 bg-transparent border-none text-xs"
+                    />
+                    <Input
+                      type="time"
+                      value={pt.time}
+                      onChange={(e) => setPickupPoints(prev => prev.map(p => p.id === pt.id ? { ...p, time: e.target.value } : p))}
+                      className="h-8 w-24 bg-transparent border-none text-xs"
+                      style={{ colorScheme: "dark" }}
+                    />
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-red-400 shrink-0" onClick={() => setPickupPoints(prev => prev.filter(p => p.id !== pt.id))}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 text-xs border-dashed border-white/20 text-slate-400 hover:text-white"
+                  onClick={() => setPickupPoints(prev => [...prev, { id: Math.random().toString(36).substr(2, 9), location: "", time: "" }])}
+                >
+                  <Plus className="w-3 h-3 mr-2" /> Add Pickup Point
+                </Button>
+              </div>
+
+              <div className="space-y-3 pb-2 pt-2 border-t border-white/5">
+                <Label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Schedule & Transit</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="stayUntil" className="text-xs text-slate-500">Stay Until (Optional Note)</Label>
+                  <Input id="stayUntil" placeholder="e.g. Please stay until 9pm" value={stayUntil} onChange={(e) => setStayUntil(e.target.value)} className="h-9" />
+                </div>
+                <div className="space-y-1 mt-2">
+                  <Label htmlFor="transitTips" className="text-xs text-slate-500">Transit Tips</Label>
+                  <Input id="transitTips" placeholder="e.g. 116 Purple to stop 16/17" value={transitTips} onChange={(e) => setTransitTips(e.target.value)} className="h-9" />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-6 border-t border-border mt-6">
               <div className="flex items-center justify-between p-4 rounded-lg bg-white/5">
                 <div>
                   <Label htmlFor="private" className="font-bold flex items-center gap-2">
