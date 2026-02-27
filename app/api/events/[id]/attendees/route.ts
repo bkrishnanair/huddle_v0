@@ -42,7 +42,8 @@ export async function GET(
 
         // Fetch users using whereIn. Note: whereIn supports max 10 items per array in Firestore.
         // If there are more than 10 players, we need to batch the queries.
-        const attendees: { id: string, name: string, loyaltyCount: number }[] = [];
+        const attendees: { id: string, name: string, loyaltyCount: number, note?: string }[] = [];
+        const attendeeNotes = eventData?.attendeeNotes || {};
 
         // Chunk the uids into sizes of 10
         const chunkSize = 10;
@@ -63,7 +64,8 @@ export async function GET(
                 attendees.push({
                     id: doc.id,
                     name: userData.name || userData.displayName || "Unknown User",
-                    loyaltyCount: countSnapshot.data().count
+                    loyaltyCount: countSnapshot.data().count,
+                    note: attendeeNotes[doc.id] || undefined
                 });
             }
         }
