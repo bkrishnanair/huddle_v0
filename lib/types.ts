@@ -4,6 +4,16 @@ export interface Player {
   photoURL?: string;
 }
 
+export interface UserProfile {
+  uid: string;
+  email: string;
+  displayName?: string;
+  bio?: string;
+  photoURL?: string;
+  savedQuestions?: string[];
+  savedTransitTips?: string[];
+}
+
 export interface GameEvent {
   id: string;
   name: string;

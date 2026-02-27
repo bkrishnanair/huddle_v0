@@ -68,11 +68,15 @@ All API routes are located in the `app/api/` directory and are secured with Zod 
 | Endpoint | Method | Description | Status |
 | :--- | :--- | :--- | :--- |
 | `/api/events` | `GET` | Fetches nearby events with geospatial filtering and viewport optimization | ✅ Working |
-| `/api/events` | `POST` | **Auth.** Creates single/recurring events with Zod validation | ✅ Working |
+| `/api/events` | `POST` | **Auth.** Creates events with advanced logistics support (Questions, Pickups) | ✅ Working |
+| `/api/events/[id]` | `PUT` | **Auth.** Edit event details (Creator only) | ✅ Working |
 | `/api/events/[id]` | `DELETE` | **Auth.** Securely delete event (Creator only) | ✅ Working |
 | `/api/events/[id]/details` | `GET` | Fetches detail info & player profiles (Publicly accessible) | ✅ Working |
-| `/api/events/[id]/rsvp` | `POST` | **Auth.** Join/Unjoin events. Admin Transaction protected. | ✅ Working |
-| `/api/users/[id]/profile`| `GET` | **Auth.** Secure user profile access (self-only) + Past Events history | ✅ Working |
+| `/api/events/[id]/rsvp` | `POST` | **Auth/Guest.** Join/Unjoin events. Admin Transaction + Logistics answers. | ✅ Working |
+| `/api/events/[id]/chat` | `POST` | **Auth.** Pin messages (Organizer only) | ✅ Working |
+| `/api/events/[id]/chat/schedule` | `POST` | **Auth.** Queue messages for future broadcast (Organizer only) | ✅ Working |
+| `/api/cron/scheduled-messages` | `GET` | **System.** Vercel Cron endpoint to process and send queued messages | ✅ Working |
+| `/api/users/[id]/profile`| `GET/PUT` | **Auth.** Profile access + Past Events history + Preset saves | ✅ Working |
 | `/login` | `PAGE` | Dedicated auth entry point for guest redirects | ✅ Working |
 
 ## 6. Key Architecture Implementations
@@ -92,6 +96,8 @@ All API routes are located in the `app/api/` directory and are secured with Zod 
 *   **POI-Free Map Styling:** Leveraged the `styles` property of the Google Map component to inject absolute POI visibility overrides. This programmatic "decluttering" removes commercial noise (restaurants/shops) without requiring separate Map styles in the Google Cloud Console.
 *   **Haversine Distance Math:** The "Within Range" discover filter implements a client-side Haversine formula to compute exact distances from `userLocation`. This allows for highly accurate mile-based filtering even when backend queries are geohash-bounded.
 *   **Infrastructure Seeding:** The `scripts/` directory contains Node.js utilities (`seed_umd.ts`, `seed_top20.ts`) that utilize the `Firebase Admin SDK` to bypass security rules and populate the production database with realistic, landmark-specific mock data for development.
+*   **Vercel Cron Automation:** Implemented a `/api/cron/scheduled-messages` endpoint triggered by `vercel.json` configurations. This provides a serverless "sweep" every 10 minutes to process `scheduledMessages` arrays within events, pushing due messages to the chat and updating pinned states.
+*   **Transactional Logistics & RSVPs:** Expanded the RSVP transaction to handle complex payloads including custom answers and pickup selections. This ensures that user logistics data remains consistent with the roster count during high-concurrency "Join" bursts.
 *   **Mobile-Optimized Layouts:** Standardized `pb-28` padding across all scrollable views and implemented `overflow-x-auto` on filter groups. This ensures a 100% collision-free experience with the floating bottom navigation bar on small devices.
 
 ## 7. Local Development Setup

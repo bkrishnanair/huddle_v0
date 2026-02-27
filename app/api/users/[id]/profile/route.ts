@@ -53,6 +53,8 @@ export async function GET(
       photoURL: userData?.photoURL || null,
       createdAt: userData?.createdAt || null,
       fcmTokens: userData?.fcmTokens || [],
+      savedQuestions: userData?.savedQuestions || [],
+      savedTransitTips: userData?.savedTransitTips || [],
     }
 
     const stats = await getEventCountsForUser(requestedUserId);
@@ -80,5 +82,47 @@ export async function GET(
   } catch (error) {
     console.error(`Error fetching profile for user:`, error)
     return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 })
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: requestedUserId } = await params;
+    const currentUser = await getServerCurrentUser()
+    if (!currentUser) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 })
+    }
+
+    if (currentUser.uid !== requestedUserId) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 })
+    }
+
+    if (!adminDb) {
+      return NextResponse.json({ error: "Database service unavailable" }, { status: 503 })
+    }
+
+    const body = await request.json();
+
+    // Whitelist allowed fields for update
+    const updates: Record<string, any> = {};
+    if (Array.isArray(body.savedQuestions)) updates.savedQuestions = body.savedQuestions;
+    if (Array.isArray(body.savedTransitTips)) updates.savedTransitTips = body.savedTransitTips;
+    if (body.displayName !== undefined) updates.displayName = body.displayName;
+    if (body.bio !== undefined) updates.bio = body.bio;
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+    }
+
+    const userRef = adminDb.collection("users").doc(requestedUserId);
+    await userRef.set(updates, { merge: true });
+
+    return NextResponse.json({ success: true, updates });
+  } catch (error) {
+    console.error(`Error updating profile:`, error)
+    return NextResponse.json({ error: "Failed to update profile" }, { status: 500 })
   }
 }
