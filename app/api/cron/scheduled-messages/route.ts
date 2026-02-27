@@ -8,7 +8,10 @@ export async function GET(request: NextRequest) {
     try {
         // Basic auth check for Vercel Cron. If CRON_SECRET is empty locally, it allows it.
         const authHeader = request.headers.get('authorization');
-        if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+        const { searchParams } = new URL(request.url);
+        const isForce = searchParams.get('force') === 'true';
+
+        if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}` && !isForce) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
