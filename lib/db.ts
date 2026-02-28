@@ -172,11 +172,12 @@ export const sendMessage = async (eventId: string, userId: string, authDisplayNa
 
     let finalDisplayName = authDisplayName;
 
-    // Fallback: Check the users collection. Essential for Guests who don't have a token displayName.
+    // Fallback: Check the users collection. Essential for users who haven't updated their Firebase Auth profile but have a Huddle profile.
     if (!finalDisplayName || finalDisplayName === "Anonymous") {
       const userDoc = await adminDb.collection("users").doc(userId).get();
       if (userDoc.exists) {
-        finalDisplayName = userDoc.data()?.name || "Anonymous";
+        const userData = userDoc.data();
+        finalDisplayName = userData?.displayName || userData?.name || "Anonymous";
       }
     }
 
@@ -208,25 +209,90 @@ export const getChatMessages = async (eventId: string) => {
   }
 }
 
-export const checkInPlayer = async (eventId: string, playerId: string, organizerId: string) => {
+export const setCheckInStatus = async (eventId: string, organizerId: string, isOpen: boolean) => {
   try {
-    const eventRef = doc(db, "events", eventId)
-    const eventSnap = await getDoc(eventRef)
+    const { getFirebaseAdminDb } = await import("@/lib/firebase-admin");
+    const adminDb = getFirebaseAdminDb();
+    if (!adminDb) throw new Error("Firebase Admin not initialized");
 
-    if (!eventSnap.exists()) throw new Error("Event not found")
-    if (eventSnap.get("createdBy") !== organizerId) {
-      throw new Error("Only the event organizer can check in players")
+    const eventRef = adminDb.collection("events").doc(eventId);
+    const eventSnap = await eventRef.get();
+
+    if (!eventSnap.exists) throw new Error("Event not found");
+    if (eventSnap.data()?.createdBy !== organizerId) {
+      throw new Error("Only the event organizer can change check-in status");
     }
 
-    await updateDoc(eventRef, {
-      [`checkIns.${playerId}`]: true
-    })
+    await eventRef.update({
+      checkInOpen: isOpen
+    });
 
-    const updatedSnap = await getDoc(eventRef)
-    return { id: updatedSnap.id, ...updatedSnap.data() }
+    const updatedSnap = await eventRef.get();
+    return { id: updatedSnap.id, ...updatedSnap.data() };
   } catch (error) {
-    console.error("Error checking in player:", error)
-    throw (error instanceof Error ? error : new Error("Failed to check in player"))
+    console.error("Error toggling check-in status:", error);
+    throw (error instanceof Error ? error : new Error("Failed to toggle check-in status"));
+  }
+}
+
+export const attendeeSelfCheckIn = async (eventId: string, playerId: string) => {
+  try {
+    const { getFirebaseAdminDb } = await import("@/lib/firebase-admin");
+    const adminDb = getFirebaseAdminDb();
+    if (!adminDb) throw new Error("Firebase Admin not initialized");
+
+    const eventRef = adminDb.collection("events").doc(eventId);
+    const eventSnap = await eventRef.get();
+
+    if (!eventSnap.exists) throw new Error("Event not found");
+    const eventData = eventSnap.data();
+
+    // Organizer can always manually check someone in, but self-check-in requires checkInOpen
+    // This method is primarily for self-check-in.
+    if (!eventData?.checkInOpen) {
+      throw new Error("Check-in is not currently open for this event.");
+    }
+
+    if (!eventData?.players?.includes(playerId)) {
+      throw new Error("You must be on the RSVP list to check in.");
+    }
+
+    await eventRef.update({
+      [`checkIns.${playerId}`]: true
+    });
+
+    const updatedSnap = await eventRef.get();
+    return { id: updatedSnap.id, ...updatedSnap.data() };
+  } catch (error) {
+    console.error("Error during self check-in:", error);
+    throw (error instanceof Error ? error : new Error("Failed to self check-in"));
+  }
+}
+
+// Keep the manual check-in for Organizers
+export const checkInPlayer = async (eventId: string, playerId: string, organizerId: string, status: boolean = true) => {
+  try {
+    const { getFirebaseAdminDb } = await import("@/lib/firebase-admin");
+    const adminDb = getFirebaseAdminDb();
+    if (!adminDb) throw new Error("Firebase Admin not initialized");
+
+    const eventRef = adminDb.collection("events").doc(eventId);
+    const eventSnap = await eventRef.get();
+
+    if (!eventSnap.exists) throw new Error("Event not found");
+    if (eventSnap.data()?.createdBy !== organizerId) {
+      throw new Error("Only the event organizer can check in players");
+    }
+
+    await eventRef.update({
+      [`checkIns.${playerId}`]: status
+    });
+
+    const updatedSnap = await eventRef.get();
+    return { id: updatedSnap.id, ...updatedSnap.data() };
+  } catch (error) {
+    console.error("Error toggling check-in:", error);
+    throw (error instanceof Error ? error : new Error("Failed to toggle check-in status"));
   }
 }
 
@@ -284,6 +350,34 @@ export const getUserJoinedEvents = async (userId: string) => {
   }
 }
 
+export const getUserHistoryEvents = async (userId: string) => {
+  if (!userId) return []
+  try {
+    const today = new Date().toISOString().split('T')[0];
+
+    // Fetch both and merge
+    const [organized, joined] = await Promise.all([
+      getUserOrganizedEvents(userId),
+      getUserJoinedEvents(userId)
+    ]);
+
+    // Deduplicate (since organizer is sometimes also in players)
+    const eventMap = new Map();
+    [...organized, ...joined].forEach((ev: any) => {
+      // Filter out only past events
+      if (ev.date < today) {
+        eventMap.set(ev.id, ev);
+      }
+    });
+
+    // Return sorted by date descending (newest past events first)
+    return Array.from(eventMap.values()).sort((a: any, b: any) => b.date.localeCompare(a.date));
+  } catch (error) {
+    console.error("Error fetching history events:", error);
+    throw new Error("Failed to fetch history events.");
+  }
+}
+
 export const getEventCountsForUser = async (userId: string) => {
   if (!userId) return { organized: 0, joined: 0, upcoming: 0 };
   try {
@@ -314,5 +408,124 @@ export const getEventCountsForUser = async (userId: string) => {
   } catch (error) {
     console.error("Error fetching event counts for user:", error);
     return { organized: 0, joined: 0, upcoming: 0 };
+  }
+};
+
+export const createNotification = async ({
+  userId,
+  type,
+  message,
+  eventId
+}: {
+  userId: string;
+  type: "waitlist_promo" | "event_update" | "event_announcement" | "general" | "rsvp_update";
+  message: string;
+  eventId?: string;
+}) => {
+  try {
+    const { getFirebaseAdminDb, Timestamp } = await import("@/lib/firebase-admin");
+    const adminDb = getFirebaseAdminDb();
+    if (!adminDb) throw new Error("Firebase Admin not initialized");
+
+    const userRef = adminDb.collection("users").doc(userId);
+    const userSnap = await userRef.get();
+
+    if (userSnap.exists) {
+      const userData = userSnap.data();
+
+      // Determine if we should notify based on type and preferences
+      let shouldNotify = true;
+      if (type === "event_announcement" || type === "event_update") {
+        if (userData?.notifyAnnouncements === false) shouldNotify = false;
+      } else if (type === "waitlist_promo") {
+        if (userData?.notifyPromotions === false) shouldNotify = false;
+      } else if (type === "rsvp_update") {
+        if (userData?.notifyReminders === false) shouldNotify = false; // Using reminder setting for RSVP updates broadly
+      }
+
+      if (!shouldNotify) {
+        console.log(`Notification of type ${type} skipped for user ${userId} due to preferences.`);
+        return;
+      }
+    }
+
+    const notificationsRef = userRef.collection("notifications");
+
+    await notificationsRef.add({
+      userId,
+      type,
+      message,
+      eventId: eventId || null,
+      read: false,
+      createdAt: Timestamp.now().toDate().toISOString()
+    });
+  } catch (error) {
+    console.error("Error creating notification:", error);
+    // Don't throw for notifications to prevent blocking the main user action
+  }
+};
+
+export const reportItem = async ({
+  reporterId,
+  targetId,
+  itemType, // "user", "event", "photo"
+  reason,
+  details
+}: {
+  reporterId: string;
+  targetId: string;
+  itemType: "user" | "event" | "photo";
+  reason: string;
+  details?: string;
+}) => {
+  try {
+    const { getFirebaseAdminDb, Timestamp } = await import("@/lib/firebase-admin");
+    const adminDb = getFirebaseAdminDb();
+    if (!adminDb) throw new Error("Firebase Admin not initialized");
+
+    const reportsRef = adminDb.collection("reports");
+    await reportsRef.add({
+      reporterId,
+      targetId,
+      itemType,
+      reason,
+      details: details || null,
+      status: "pending", // pending, reviewed, dismissed
+      createdAt: Timestamp.now()
+    });
+  } catch (error) {
+    console.error("Error creating report:", error);
+    throw new Error("Failed to submit report");
+  }
+};
+
+export const toggleUserBlock = async (organizerId: string, targetUserId: string, block: boolean) => {
+  try {
+    const { getFirebaseAdminDb } = await import("@/lib/firebase-admin");
+    const { FieldValue } = await import("firebase-admin/firestore");
+    const adminDb = getFirebaseAdminDb();
+    if (!adminDb) throw new Error("Firebase Admin not initialized");
+
+    const userRef = adminDb.collection("users").doc(organizerId);
+
+    // Ensure document exists
+    const docSnap = await userRef.get();
+    if (!docSnap.exists) {
+      // Create user doc if it somehow doesn't exist
+      await userRef.set({ blockedUsers: [] }, { merge: true });
+    }
+
+    if (block) {
+      await userRef.update({
+        blockedUsers: FieldValue.arrayUnion(targetUserId)
+      });
+    } else {
+      await userRef.update({
+        blockedUsers: FieldValue.arrayRemove(targetUserId)
+      });
+    }
+  } catch (error) {
+    console.error("Error toggling user block:", error);
+    throw new Error("Failed to update block list");
   }
 };

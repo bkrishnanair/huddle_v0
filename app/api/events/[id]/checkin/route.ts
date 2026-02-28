@@ -20,7 +20,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: "Player ID is required" }, { status: 400 })
     }
 
-    const updatedEvent = await checkInPlayer(id, playerId, user.uid)
+    const { status = true } = body
+    const updatedEvent = await checkInPlayer(id, playerId, user.uid, status)
 
     return NextResponse.json({ event: updatedEvent })
   } catch (error) {

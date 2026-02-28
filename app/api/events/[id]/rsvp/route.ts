@@ -66,6 +66,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           throw new Error("ALREADY_JOINED")
         }
 
+        // Check if user is blocked by the organizer
+        const organizerId = eventData.createdBy;
+        if (organizerId) {
+          const organizerDoc = await transaction.get(adminDb.collection("users").doc(organizerId));
+          if (organizerDoc.exists) {
+            const organizerData = organizerDoc.data();
+            if (organizerData?.blockedUsers?.includes(user.uid)) {
+              throw new Error("UNAUTHORIZED_BLOCK");
+            }
+          }
+        }
+
         // Process Note if provided
         const newAttendeeNotes = { ...attendeeNotes };
         if (note && note.trim().length > 0) {
@@ -137,8 +149,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
           if (newWaitlist.length > 0) {
             // Pop the first user from waitlist and push to players
-            const nextUser = newWaitlist.shift()
-            newPlayers.push(nextUser)
+            const promotedUserId = newWaitlist.shift()
+
+            if (promotedUserId) {
+              newPlayers.push(promotedUserId)
+
+              // Emit notification for waitlist promotion
+              try {
+                const { createNotification } = await import("@/lib/db")
+                await createNotification({
+                  userId: promotedUserId,
+                  type: "waitlist_promo",
+                  message: `You've been promoted from the waitlist for "${eventData.title || eventData.name}"!`,
+                  eventId: id
+                })
+              } catch (e) {
+                console.error("Failed to emit waitlist promo notification", e)
+              }
+            }
 
             // Overwrite arrays because we are doing both remove and push on different lists
             transaction.update(eventRef, {
@@ -189,6 +217,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: "You have already joined or waitlisted for this event" }, { status: 400 })
     } else if (error.message === "NOT_JOINED") {
       return NextResponse.json({ error: "You are not currently joined to this event" }, { status: 400 })
+    } else if (error.message === "UNAUTHORIZED_BLOCK") {
+      return NextResponse.json({ error: "You are not permitted to join this event." }, { status: 403 })
     }
 
     if (error instanceof z.ZodError) {

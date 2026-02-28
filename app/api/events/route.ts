@@ -105,6 +105,7 @@ export async function POST(request: NextRequest) {
       players: [user.uid],
       currentPlayers: 1,
       createdAt: Timestamp.now(),
+      checkInOpen: false,
     }
 
     const docRef = await adminDb.collection("events").add(newEvent)

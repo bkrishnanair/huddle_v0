@@ -225,43 +225,62 @@ export default function EventChat({ eventId, organizerId, pinnedMessage }: Event
           </div>
         ) : (
           <div className="space-y-3">
-            {messages.map((message) => (
-              <div key={message.id} className={`flex ${message.userId === user?.uid ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`relative group max-w-xs lg:max-w-md px-3 py-2 rounded-2xl ${message.userId === user?.uid
-                    ? "bg-primary text-primary-foreground shadow-[0_0_15px_rgba(234,88,12,0.2)]"
-                    : "bg-white/10 text-slate-100 border border-white/5"
-                    }`}
-                >
-                  {user?.uid === organizerId && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute -right-8 top-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity rounded-full hover:bg-white/10"
-                        >
-                          <MoreVertical className="h-3.5 w-3.5 text-slate-400" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="glass-surface border-white/10 w-32">
-                        <DropdownMenuItem onClick={() => handlePinMessage(message.message)} className="text-xs font-bold text-slate-300 focus:bg-white/10 cursor-pointer">
-                          <Pin className="mr-2 h-3.5 w-3.5 text-amber-500" />
-                          Pin Message
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+            {messages.map((message) => {
+              const isCurrentUser = message.userId === user?.uid;
+              const isMsgOrganizer = message.userId === organizerId;
+              // Fallback for field naming consistency
+              const senderName = message.userName || (message as any).displayName || "Huddle User";
+
+              return (
+                <div key={message.id} className={`flex flex-col ${isCurrentUser ? "items-end" : "items-start"}`}>
+                  {!isCurrentUser && (
+                    <div className="flex items-center gap-1.5 mb-1 ml-2">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-primary">
+                        {senderName}
+                      </span>
+                      {isMsgOrganizer && (
+                        <span className="text-[8px] bg-primary/20 text-primary px-1 rounded-sm border border-primary/20 font-black uppercase tracking-tighter">
+                          Organizer
+                        </span>
+                      )}
+                    </div>
                   )}
-                  {message.userId !== user?.uid && (
-                    <p className="text-[10px] font-bold uppercase tracking-wider mb-1 text-primary/80">{message.userName}</p>
-                  )}
-                  <p className="text-sm leading-relaxed">{message.message}</p>
-                  <p className={`text-[9px] mt-1 text-right font-medium ${message.userId === user?.uid ? "text-primary-foreground/70" : "text-slate-400"}`}>
-                    {formatTime(message.timestamp)}
-                  </p>
+
+                  <div
+                    className={`relative group max-w-[85%] px-4 py-2.5 rounded-2xl ${isCurrentUser
+                        ? "bg-primary text-white shadow-lg shadow-primary/10 rounded-tr-none"
+                        : "bg-white/10 text-slate-100 border border-white/5 rounded-tl-none"
+                      }`}
+                  >
+                    {isOrganizer && !isCurrentUser && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="absolute -right-8 top-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity rounded-full hover:bg-white/10"
+                          >
+                            <MoreVertical className="h-3.5 w-3.5 text-slate-400" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="glass-surface border-white/10 w-32">
+                          <DropdownMenuItem onClick={() => handlePinMessage(message.message)} className="text-xs font-bold text-slate-300 focus:bg-white/10 cursor-pointer">
+                            <Pin className="mr-2 h-3.5 w-3.5 text-amber-500" />
+                            Pin Message
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                    <p className="text-sm leading-relaxed antialiased font-medium">{message.message}</p>
+                    <div className="flex items-center justify-end gap-1 mt-1 opacity-60">
+                      <p className={`text-[9px] font-bold uppercase tracking-tighter ${isCurrentUser ? "text-white" : "text-slate-400"}`}>
+                        {formatTime(message.timestamp)}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             <div ref={messagesEndRef} />
           </div>
         )}

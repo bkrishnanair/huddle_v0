@@ -76,6 +76,7 @@ All API routes are located in the `app/api/` directory and are secured with Zod 
 | `/api/events/[id]/chat` | `POST` | **Auth.** Pin messages (Organizer only) | ✅ Working |
 | `/api/events/[id]/chat/schedule` | `POST` | **Auth.** Queue messages for future broadcast (Organizer only) | ✅ Working |
 | `/api/cron/scheduled-messages` | `GET` | **System.** Vercel Cron endpoint to process and send queued messages | ✅ Working |
+| `/api/events/[id]/checkin` | `POST` | **Auth.** Toggle attendee check-in status (Organizer only) | ✅ Working |
 | `/api/users/[id]/profile`| `GET/PUT` | **Auth.** Profile access + Past Events history + Preset saves | ✅ Working |
 | `/login` | `PAGE` | Dedicated auth entry point for guest redirects | ✅ Working |
 
@@ -98,6 +99,10 @@ All API routes are located in the `app/api/` directory and are secured with Zod 
 *   **Infrastructure Seeding:** The `scripts/` directory contains Node.js utilities (`seed_umd.ts`, `seed_top20.ts`) that utilize the `Firebase Admin SDK` to bypass security rules and populate the production database with realistic, landmark-specific mock data for development.
 *   **Vercel Cron Automation:** Implemented a `/api/cron/scheduled-messages` endpoint triggered by `vercel.json` configurations. This provides a serverless "sweep" every 10 minutes to process `scheduledMessages` arrays within events, pushing due messages to the chat and updating pinned states.
 *   **Transactional Logistics & RSVPs:** Expanded the RSVP transaction to handle complex payloads including custom answers and pickup selections. This ensures that user logistics data remains consistent with the roster count during high-concurrency "Join" bursts.
+*   **Geospatial Conflict Resolution:** `CreateEventModal` now performs an asynchronous lookup against the organizer's active roster to detect temporal overlaps. This prevents double-booking resources or venues by surfacing `ConflictWarning` banners during the draft phase.
+*   **Calendar RFC Integration:** Built a standard-compliant `lib/calendar.ts` utility that generates `.ics` files and Google Calendar deep links by parsing event ISO strings and geocoordinates into valid URI components.
+*   **Check-In State Management:** Added a dynamic `checkIns` Record to the `GameEvent` schema. Organizers use `checkInPlayer()` (Admin SDK) to persist attendance data, which is then used by the CSV exporter to differentiate between "RSVP'd" and "Attended" for post-event analytics.
+*   **Drawer Height Normalization:** To prevent viewport clipping on diverse screen ratios (especially iOS Safari), the `EventDetailsDrawer` enforces a `max-h-[96vh]` constraint. Main content blocks are wrapped in scrollable flex-containers to maintain 100% button visibility.
 *   **Mobile-Optimized Layouts:** Standardized `pb-28` padding across all scrollable views and implemented `overflow-x-auto` on filter groups. This ensures a 100% collision-free experience with the floating bottom navigation bar on small devices.
 
 ## 7. Local Development Setup
