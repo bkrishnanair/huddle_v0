@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     const userRef = adminDb.collection("users").doc(decodedToken.uid)
     const userDoc = await userRef.get()
 
-    let userProfile = null
+    let userProfile: any = null
     if (userDoc.exists) {
       userProfile = { id: userDoc.id, ...userDoc.data() }
       console.log("✅ User profile found:", userProfile.name || userProfile.email)

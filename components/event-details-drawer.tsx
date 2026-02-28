@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { GameEvent } from "@/lib/types"
-import { Users, Calendar, Clock, MapPin, Loader2, Share, Trash2, Download, Copy, MessageCircle, AlertTriangle, Info } from "lucide-react"
+import { Users, Calendar, Clock, MapPin, Loader2, Share, Trash2, Download, Copy, MessageCircle, AlertTriangle, Info, CalendarPlus, CheckCircle2 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import EventChat from "./event-chat"
@@ -35,6 +35,10 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { format, parseISO } from "date-fns"
 import CreateEventModal from "./create-event-modal"
+import { generateGoogleCalendarUrl, downloadIcsFile } from "@/lib/calendar"
+import { ReportModal } from "./modals/report-modal"
+import { ShieldAlert, Ban, ImageIcon } from "lucide-react"
+import EventGallery from "./events/event-gallery"
 
 interface EventDetailsDrawerProps {
   event: GameEvent
@@ -48,7 +52,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
   const router = useRouter()
   const [event, setEvent] = useState<GameEvent | null>(initialEvent)
   const [isLoading, setIsLoading] = useState(false)
-  const [attendees, setAttendees] = useState<{ id: string, name: string, loyaltyCount?: number, note?: string }[]>([])
+  const [attendees, setAttendees] = useState<{ id: string, name: string, loyaltyCount?: number, note?: string, reliabilityScore?: number | null }[]>([])
   const [isFetchingAttendees, setIsFetchingAttendees] = useState(false)
   const [isCloning, setIsCloning] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -57,6 +61,11 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
   const [rsvpNote, setRsvpNote] = useState("")
   const [rsvpAnswers, setRsvpAnswers] = useState<Record<string, string>>({})
   const [rsvpPickupId, setRsvpPickupId] = useState("")
+
+  // Reporting State
+  const [reportTarget, setReportTarget] = useState<string | null>(null)
+  const [reportType, setReportType] = useState<"user" | "event" | "photo">("event")
+  const [reportName, setReportName] = useState("")
 
   const isOrganizer = user && event?.createdBy === user.uid
 
@@ -110,14 +119,18 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
     const questions = event?.questions || [];
     const hasPickup = !!(event?.pickupPoints?.length);
 
-    const headers = ["Name", "Note"];
+    const headers = ["Name", "Note", "Checked In"];
     if (hasPickup) headers.push("Pickup Point");
     questions.forEach(q => headers.push(q));
 
     const csvContent = "data:text/csv;charset=utf-8,"
       + headers.join(",") + "\n"
       + attendees.map(a => {
-        const row = [`"${a.name.replace(/"/g, '""')}"`, `"${(a.note || "").replace(/"/g, '""')}"`];
+        const row = [
+          `"${a.name.replace(/"/g, '""')}"`,
+          `"${(a.note || "").replace(/"/g, '""')}"`,
+          `"${event?.checkIns?.[a.id] ? "Yes" : "No"}"`
+        ];
 
         if (hasPickup) {
           const pickupId = event?.attendeePickup?.[a.id];
@@ -236,6 +249,132 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
     }
   };
 
+  const handleCheckIn = async (targetUserId: string, currentStatus: boolean) => {
+    if (!event) return;
+    setIsLoading(true);
+    try {
+      const idToken = await user?.getIdToken();
+      const response = await fetch(`/api/events/${event.id}/check-in`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ action: "organizer_check_in", targetUserId, status: !currentStatus }),
+        credentials: "include"
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        onEventUpdated(data.event);
+        toast.success(`Attendee ${!currentStatus ? 'checked in' : 'unchecked'}.`);
+      } else {
+        const data = await response.json();
+        toast.error(data.error || "Failed to update check-in status.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Unexpected error saving check-in.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBlockAttendee = async (targetUserId: string, targetName: string) => {
+    if (!event) return;
+    if (!confirm(`Are you sure you want to block ${targetName}? They will not be able to join any of your future events.`)) return;
+    setIsLoading(true);
+
+    try {
+      const idToken = await user?.getIdToken();
+      const response = await fetch(`/api/users/block`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ targetUserId, block: true }),
+        credentials: "include"
+      });
+
+      if (response.ok) {
+        toast.success(`Blocked ${targetName}.`);
+        // Provide immediate visual feedback by removing them from this event too
+        await handleRemoveAttendee(targetUserId);
+      } else {
+        const data = await response.json();
+        toast.error(data.error || "Failed to block user.");
+      }
+    } catch (err) {
+      toast.error("Unexpected error blocking user.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleToggleCheckInOpen = async () => {
+    if (!event) return;
+    setIsLoading(true);
+    try {
+      const idToken = await user?.getIdToken();
+      const newStatus = !event.checkInOpen;
+      const response = await fetch(`/api/events/${event.id}/check-in`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ action: newStatus ? "open" : "close" }),
+        credentials: "include"
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        onEventUpdated(data.event);
+        toast.success(`Check-in is now ${newStatus ? 'open' : 'closed'}.`);
+      } else {
+        const data = await response.json();
+        toast.error(data.error || "Failed to update check-in status.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Unexpected error updating check-in state.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSelfCheckIn = async () => {
+    if (!event) return;
+    setIsLoading(true);
+    try {
+      const idToken = await user?.getIdToken();
+      const response = await fetch(`/api/events/${event.id}/check-in`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ action: "self_check_in" }),
+        credentials: "include"
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        onEventUpdated(data.event);
+        toast.success("Successfully checked in! 🎉");
+      } else {
+        const data = await response.json();
+        toast.error(data.error || "Failed to check in.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Unexpected error during check-in.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleRSVPClick = () => {
     if (loading) return;
     if (!user || (!hasJoined && !isWaitlisted)) {
@@ -325,8 +464,9 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
 
   return (
     <Drawer open={isOpen} onOpenChange={onClose}>
-      <DrawerContent className="glass-surface border-white/15 text-foreground max-w-2xl mx-auto rounded-t-[2rem]">
-        <DrawerHeader className="pb-2">
+      <DrawerContent className="glass-surface border-white/15 text-foreground max-w-2xl mx-auto rounded-t-[2rem] max-h-[96vh] flex flex-col focus:outline-none">
+        <div className="mx-auto mt-4 h-1.5 w-12 rounded-full bg-white/20 shrink-0" />
+        <DrawerHeader className="pb-2 pt-2 shrink-0">
           <div className="flex justify-between items-start gap-4">
             <div className="flex-1">
               <DrawerTitle className="text-2xl font-black text-white tracking-tight leading-tight flex items-center gap-2">
@@ -348,7 +488,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
 
         <Tabs defaultValue="details" className="w-full flex-1 flex flex-col min-h-0">
           <div className="px-5 mb-3">
-            <TabsList className="grid w-full grid-cols-2 bg-slate-900/50 border border-white/5 rounded-xl p-1 h-10">
+            <TabsList className="grid w-full grid-cols-3 bg-slate-900/50 border border-white/5 rounded-xl p-1 h-10">
               <TabsTrigger value="details" className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white text-xs font-bold transition-all rounded-lg">Details</TabsTrigger>
               <TabsTrigger
                 value="chat"
@@ -356,7 +496,14 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                 className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white text-xs font-bold transition-all rounded-lg flex items-center gap-2"
               >
                 <MessageCircle className="w-3.5 h-3.5" />
-                Discussion
+                Chat
+              </TabsTrigger>
+              <TabsTrigger
+                value="gallery"
+                className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white text-xs font-bold transition-all rounded-lg flex items-center gap-2"
+              >
+                <ImageIcon className="w-3.5 h-3.5" />
+                Gallery
               </TabsTrigger>
             </TabsList>
           </div>
@@ -386,6 +533,29 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                   </div>
                 ))}
               </div>
+
+              {/* Add to Calendar Sync */}
+              {(hasJoined || isOrganizer) && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 text-[10px] font-bold text-slate-300"
+                    onClick={() => window.open(generateGoogleCalendarUrl(event), '_blank')}
+                  >
+                    <CalendarPlus className="w-3.5 h-3.5 mr-2 text-blue-400" />
+                    Google Calendar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 text-[10px] font-bold text-slate-300"
+                    onClick={() => downloadIcsFile(event)}
+                  >
+                    Apple / Outlook (.ics)
+                  </Button>
+                </div>
+              )}
 
               {/* Capacity Meter */}
               <div className="bg-slate-900/40 p-4 rounded-xl border border-white/5 space-y-2">
@@ -473,16 +643,27 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                     <h3 className="font-black text-[10px] uppercase tracking-widest text-primary/80 flex items-center gap-2">
                       Organizer Roster
                     </h3>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={downloadCSV}
-                      disabled={isFetchingAttendees || attendees.length === 0}
-                      className="h-6 text-[9px] font-black uppercase tracking-wider text-slate-500 hover:text-primary transition-all p-0"
-                    >
-                      <Download className="w-3 h-3 mr-1" />
-                      Export CSV
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant={event.checkInOpen ? "destructive" : "default"}
+                        size="sm"
+                        onClick={handleToggleCheckInOpen}
+                        disabled={isLoading}
+                        className="h-6 text-[9px] font-black uppercase tracking-wider px-2"
+                      >
+                        {event.checkInOpen ? "Close Check-In" : "Open Check-In"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={downloadCSV}
+                        disabled={isFetchingAttendees || attendees.length === 0}
+                        className="h-6 text-[9px] font-black uppercase tracking-wider text-slate-500 hover:text-primary transition-all p-0"
+                      >
+                        <Download className="w-3 h-3 mr-1" />
+                        Export
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="bg-slate-900/30 rounded-xl border border-white/5 overflow-hidden">
@@ -500,17 +681,63 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                                     🔥 Tier {a.loyaltyCount}
                                   </span>
                                 )}
+                                {event?.checkIns?.[a.id] && (
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 ml-1" />
+                                )}
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleRemoveAttendee(a.id)}
-                                disabled={isLoading}
-                                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-slate-500 hover:text-red-400 hover:bg-red-400/10"
-                                title="Remove Attendee"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </Button>
+                              {a.reliabilityScore !== undefined && a.reliabilityScore !== null && (
+                                <div className="mt-1 flex items-center">
+                                  <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border ${a.reliabilityScore < 50 ? 'bg-red-500/20 text-red-500 border-red-500/20' : a.reliabilityScore === 100 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20' : 'bg-slate-800 text-slate-400 border-white/5'}`}>
+                                    {a.reliabilityScore}% Show
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex bg-slate-900/50 rounded-lg p-0.5 border border-white/5 opacity-0 group-hover:opacity-100 transition-opacity mt-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleCheckIn(a.id, !!event?.checkIns?.[a.id])}
+                                  disabled={isLoading}
+                                  className={`h-6 w-6 transition-colors ${event?.checkIns?.[a.id] ? 'text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20 hover:text-emerald-300' : 'text-slate-500 hover:text-emerald-400 hover:bg-emerald-400/10'}`}
+                                  title={event?.checkIns?.[a.id] ? "Checked In" : "Check In Attendee"}
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleRemoveAttendee(a.id)}
+                                  disabled={isLoading}
+                                  className="h-6 w-6 text-slate-500 hover:text-red-400 hover:bg-red-400/10"
+                                  title="Remove Attendee"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    setReportTarget(a.id);
+                                    setReportType("user");
+                                    setReportName(a.name);
+                                  }}
+                                  disabled={isLoading}
+                                  className="h-6 w-6 text-slate-500 hover:text-amber-400 hover:bg-amber-400/10"
+                                  title="Report Attendee"
+                                >
+                                  <ShieldAlert className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleBlockAttendee(a.id, a.name)}
+                                  disabled={isLoading}
+                                  className="h-6 w-6 text-slate-500 hover:text-red-500 hover:bg-red-500/10"
+                                  title="Block User from Future Events"
+                                >
+                                  <Ban className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
                             </div>
                             {a.note && (
                               <p className="text-[10px] text-slate-500 italic mt-1 pl-1 border-l-2 border-primary/20">
@@ -540,20 +767,48 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
               </div>
             </div>
           </TabsContent>
+
+          <TabsContent value="gallery" className="flex-1 flex flex-col min-h-0 mt-0 pb-4 overflow-y-auto no-scrollbar">
+            <div className="px-5">
+              <EventGallery
+                eventId={event.id as string}
+                isOrganizer={isOrganizer || false}
+                hasJoined={hasJoined || false}
+                eventDate={event.date}
+              />
+            </div>
+          </TabsContent>
         </Tabs>
-        <DrawerFooter className="flex flex-col gap-2 p-5 pt-1 bg-slate-950/20 border-t border-white/5">
+        <DrawerFooter className="flex flex-col gap-2 p-5 pt-3 mb-6 bg-slate-950/20 border-t border-white/5 shrink-0">
           {/* Main Action Button */}
           {!isOrganizer && (
-            <Button
-              size="lg"
-              onClick={handleRSVPClick}
-              disabled={isLoading || loading}
-              variant={getButtonVariant()}
-              className="h-12 rounded-xl text-sm font-black uppercase tracking-widest shadow-lg transition-all active:scale-95"
-            >
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {getButtonText()}
-            </Button>
+            <div className="flex flex-col gap-2">
+              {event.checkInOpen && hasJoined && !event.checkIns?.[user?.uid || ''] && (
+                <Button
+                  size="lg"
+                  onClick={handleSelfCheckIn}
+                  disabled={isLoading}
+                  className="h-12 rounded-xl text-sm font-black uppercase tracking-widest shadow-[0_0_15px_rgba(52,211,153,0.3)] bg-emerald-500 hover:bg-emerald-400 text-slate-900 transition-all active:scale-95 animate-pulse-subtle"
+                >
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "I'm Here (Check-In)"}
+                </Button>
+              )}
+              {event.checkIns?.[user?.uid || ''] && hasJoined && (
+                <div className="h-12 rounded-xl text-sm font-black flex items-center justify-center gap-2 uppercase tracking-widest border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
+                  <CheckCircle2 className="w-4 h-4" /> Checked In
+                </div>
+              )}
+              <Button
+                size="lg"
+                onClick={handleRSVPClick}
+                disabled={isLoading || loading}
+                variant={getButtonVariant()}
+                className="h-12 rounded-xl text-sm font-black uppercase tracking-widest shadow-lg transition-all active:scale-95"
+              >
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {getButtonText()}
+              </Button>
+            </div>
           )}
 
           {/* Organizer Secondary Actions */}
@@ -593,10 +848,23 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
               variant="outline"
               onClick={handleShare}
               className="col-span-1 h-10 rounded-xl border-white/10 bg-white/5 hover:bg-white/10"
+              title="Share Event"
             >
               <Share className="w-4 h-4" />
             </Button>
-            <DrawerClose asChild className="col-span-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setReportTarget(event.id);
+                setReportType("event");
+                setReportName(event.title || "");
+              }}
+              className="col-span-1 h-10 rounded-xl border-white/10 bg-white/5 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 text-slate-500"
+              title="Report Event"
+            >
+              <ShieldAlert className="w-4 h-4" />
+            </Button>
+            <DrawerClose asChild className="col-span-1">
               <Button variant="outline" className="h-10 rounded-xl border-white/10 bg-white/10 hover:bg-white/20 text-white font-bold text-xs tracking-tight">
                 Close
               </Button>
@@ -732,6 +1000,15 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* REPORT MODAL */}
+      <ReportModal
+        isOpen={!!reportTarget}
+        onClose={() => setReportTarget(null)}
+        targetId={reportTarget || ""}
+        itemType={reportType}
+        targetName={reportName}
+      />
     </Drawer>
   )
 }

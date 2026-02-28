@@ -59,6 +59,8 @@ export default function ProfilePage() {
   const [userProfile, setUserProfile] = useState<any>(null)
   const [userStats, setUserStats] = useState({ organized: 0, joined: 0, upcoming: 0 })
   const [pastEvents, setPastEvents] = useState<any[]>([])
+  const [reliabilityScore, setReliabilityScore] = useState<number | null>(null)
+  const [totalTracked, setTotalTracked] = useState(0)
   const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null)
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
   const [loading, setLoading] = useState(true)
@@ -94,6 +96,8 @@ export default function ProfilePage() {
         const data = await res.json()
         setUserProfile(data.profile)
         setUserStats(data.stats || { organized: 0, joined: 0, upcoming: 0 })
+        setReliabilityScore(data.reliabilityScore)
+        setTotalTracked(data.totalTracked || 0)
 
         const eventsRes = await fetch(`/api/events/past?userId=${user.uid}`, {
           headers: {
@@ -229,7 +233,7 @@ export default function ProfilePage() {
                   <CardTitle className="flex items-center justify-between text-xl font-bold w-full">
                     <div className="flex items-center gap-2">
                       <Star className="w-6 h-6 text-primary" />
-                      Karma Score
+                      Reliability Score
                     </div>
                     <TooltipProvider delayDuration={100}>
                       <Tooltip>
@@ -237,18 +241,27 @@ export default function ProfilePage() {
                           <Info className="w-5 h-5 text-slate-400 hover:text-white transition-colors cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-xs bg-slate-900 border-white/10 text-slate-200">
-                          <p>Karma is earned by organizing successful events and receiving positive feedback from attendees.</p>
+                          <p>Based on your attendance at past events where organizers tracked check-ins.</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-end gap-2">
-                    <span className="text-5xl font-extrabold text-slate-50 tracking-tighter">750</span>
-                    <span className="text-slate-500 font-bold mb-1 uppercase tracking-widest text-sm">/ 1000</span>
-                  </div>
-                  <p className="text-slate-400 mt-4">Top 5% in your local community.</p>
+                  {reliabilityScore !== null ? (
+                    <>
+                      <div className="flex items-end gap-2">
+                        <span className="text-5xl font-extrabold text-slate-50 tracking-tighter">{reliabilityScore}%</span>
+                        <span className="text-slate-500 font-bold mb-1 uppercase tracking-widest text-sm">Attendance</span>
+                      </div>
+                      <p className="text-slate-400 mt-4">Based on {totalTracked} tracked {totalTracked === 1 ? 'event' : 'events'}.</p>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-4 opacity-50">
+                      <span className="text-2xl font-bold text-slate-400 tracking-tight">No Data Yet</span>
+                      <p className="text-slate-500 text-sm mt-2 text-center">Attend events that use check-in to build reliability.</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>

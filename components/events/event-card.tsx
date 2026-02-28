@@ -2,9 +2,12 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, MapPin, Users } from "lucide-react";
+import { Clock, MapPin, Users, CalendarPlus } from "lucide-react";
 import { GameEvent } from "@/lib/types";
 import { formatDistanceToNow } from 'date-fns';
+
+import { generateGoogleCalendarUrl, downloadIcsFile } from "@/lib/calendar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 import Link from "next/link";
 
@@ -80,6 +83,23 @@ export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = fal
                 Map
               </Link>
             </Button>
+          )}
+          {onUnjoin && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon" variant="outline" className="h-9 w-9 bg-white/5 border-white/20 text-white hover:bg-white/10 shrink-0">
+                  <CalendarPlus className="w-4 h-4 text-primary" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 bg-slate-900 border-white/10 text-slate-200">
+                <DropdownMenuItem onClick={() => window.open(generateGoogleCalendarUrl(event), '_blank')} className="cursor-pointer hover:bg-white/10 text-xs font-bold">
+                  Google Calendar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => downloadIcsFile(event)} className="cursor-pointer hover:bg-white/10 text-xs font-bold">
+                  Apple / Outlook (.ics)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           {onUnjoin && (
             <Button

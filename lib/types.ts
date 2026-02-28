@@ -47,6 +47,7 @@ export interface GameEvent {
   transitTips?: string;
   playerDetails?: Player[];
   checkedInPlayers?: string[];
+  checkIns?: Record<string, boolean>;
   distance?: number;
   isBoosted?: boolean;
   isPrivate?: boolean;
@@ -57,4 +58,15 @@ export interface GameEvent {
     sent: boolean;
     isAnnouncement: boolean; // if true, pin it when sent
   }[];
+  checkInOpen?: boolean;
+}
+
+export interface AppNotification {
+  id: string;
+  userId: string;
+  type: "waitlist_promo" | "event_update" | "event_announcement" | "general" | "rsvp_update";
+  message: string;
+  eventId?: string;
+  read: boolean;
+  createdAt: string; // ISO String
 }

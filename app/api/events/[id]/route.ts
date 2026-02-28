@@ -118,6 +118,28 @@ export async function PUT(
 
         await eventRef.update(updates)
 
+        // Notify players about the update
+        if (eventData.players && Array.isArray(eventData.players)) {
+            try {
+                const { createNotification } = await import("@/lib/db");
+
+                // Do not notify the organizer about their own edits
+                const playersToNotify = eventData.players.filter((pId: string) => pId !== user.uid);
+
+                // Run notifications concurrently, but don't block the response
+                Promise.all(playersToNotify.map((pId: string) =>
+                    createNotification({
+                        userId: pId,
+                        type: "event_update",
+                        message: `The details for "${updates.name || eventData.title || eventData.name}" have been updated by the organizer.`,
+                        eventId: eventId
+                    })
+                )).catch(e => console.error("Error creating edit notifications in background:", e));
+            } catch (e) {
+                console.error("Failed to initialize edit notifications:", e);
+            }
+        }
+
         return NextResponse.json({ message: "Event updated successfully", event: { ...eventData, ...updates } }, { status: 200 })
 
     } catch (error) {

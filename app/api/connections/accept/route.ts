@@ -16,6 +16,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 })
     }
 
+    if (!db) {
+      return NextResponse.json({ error: "Database not initialized" }, { status: 500 })
+    }
+
     const body = await request.json()
     const validationResult = acceptSchema.safeParse(body)
 
@@ -35,7 +39,7 @@ export async function POST(request: NextRequest) {
       .doc(user.uid)
       .collection("connections")
       .doc(requesterId)
-    
+
     const requesterConnectionRef = db
       .collection("users")
       .doc(requesterId)
@@ -49,13 +53,13 @@ export async function POST(request: NextRequest) {
       if (!connectionDoc.exists || connectionDoc.data()?.status !== "pending") {
         throw new Error("No pending connection request found from this user.")
       }
-      
+
       // Update the current user's connection doc: pending -> accepted
       transaction.update(currentUserConnectionRef, {
         status: "accepted",
         acceptedAt: new Date(),
       })
-      
+
       // Create the corresponding connection doc for the requester: accepted
       transaction.set(requesterConnectionRef, {
         status: "accepted",
@@ -67,7 +71,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error("Error accepting connection request:", error)
     if (error.message.includes("No pending connection request")) {
-        return NextResponse.json({ error: error.message }, { status: 404 })
+      return NextResponse.json({ error: error.message }, { status: 404 })
     }
     return NextResponse.json({ error: "Failed to accept connection request" }, { status: 500 })
   }

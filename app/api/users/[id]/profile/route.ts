@@ -55,6 +55,9 @@ export async function GET(
       fcmTokens: userData?.fcmTokens || [],
       savedQuestions: userData?.savedQuestions || [],
       savedTransitTips: userData?.savedTransitTips || [],
+      notifyAnnouncements: userData?.notifyAnnouncements ?? true,
+      notifyPromotions: userData?.notifyPromotions ?? true,
+      notifyReminders: userData?.notifyReminders ?? true,
     }
 
     const stats = await getEventCountsForUser(requestedUserId);
@@ -78,7 +81,24 @@ export async function GET(
         return dateB - dateA; // Most recent past events first
       });
 
-    return NextResponse.json({ profile, stats, pastEvents })
+    // Calculate Reliability Score from past events
+    let attended = 0;
+    let noShows = 0;
+    pastEvents.forEach((ev: any) => {
+      // Only count events where Check-In was used by the organizer at all
+      if (ev.checkInOpen || (ev.checkIns && Object.keys(ev.checkIns).length > 0)) {
+        if (ev.checkIns && ev.checkIns[requestedUserId]) {
+          attended++;
+        } else {
+          noShows++;
+        }
+      }
+    });
+
+    const totalTracked = attended + noShows;
+    const reliabilityScore = totalTracked > 0 ? Math.round((attended / totalTracked) * 100) : null;
+
+    return NextResponse.json({ profile, stats, pastEvents, reliabilityScore, totalTracked })
   } catch (error) {
     console.error(`Error fetching profile for user:`, error)
     return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 })
@@ -112,6 +132,9 @@ export async function PUT(
     if (Array.isArray(body.savedTransitTips)) updates.savedTransitTips = body.savedTransitTips;
     if (body.displayName !== undefined) updates.displayName = body.displayName;
     if (body.bio !== undefined) updates.bio = body.bio;
+    if (body.notifyAnnouncements !== undefined) updates.notifyAnnouncements = body.notifyAnnouncements;
+    if (body.notifyPromotions !== undefined) updates.notifyPromotions = body.notifyPromotions;
+    if (body.notifyReminders !== undefined) updates.notifyReminders = body.notifyReminders;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
