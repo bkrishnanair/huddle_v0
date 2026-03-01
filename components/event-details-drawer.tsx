@@ -768,7 +768,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
             </div>
           </TabsContent>
 
-          <TabsContent value="gallery" className="flex-1 min-h-[40vh] flex flex-col overflow-y-auto outline-none mt-0 pb-4 data-[state=inactive]:hidden">
+          <TabsContent value="gallery" className="flex-1 min-h-[40vh] flex flex-col overflow-y-auto no-scrollbar outline-none mt-0 pb-4 data-[state=inactive]:hidden">
             <div className="px-5">
               <EventGallery
                 eventId={event.id as string}
@@ -839,15 +839,26 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
             <Button
               variant="outline"
               onClick={() => setIsCloning(true)}
+<<<<<<< HEAD
               className="col-span-2 h-10 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold"
             >
               <Copy className="mr-2 h-3.5 w-3.5" />
               Clone
+=======
+              className="col-span-3 h-10 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold"
+            >
+              <Copy className="mr-2 h-3.5 w-3.5" />
+              Duplicate
+>>>>>>> main
             </Button>
             <Button
               variant="outline"
               onClick={handleShare}
+<<<<<<< HEAD
               className="col-span-2 h-10 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold"
+=======
+              className="col-span-1 h-10 rounded-xl border-white/10 bg-white/5 hover:bg-white/10"
+>>>>>>> main
               title="Share Event"
             >
               <Share className="w-3.5 h-3.5 mr-2" />
