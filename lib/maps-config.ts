@@ -23,5 +23,5 @@ export async function getGoogleMapsConfig() {
 }
 
 export function validateApiKey(apiKey: string): boolean {
-  return apiKey && apiKey.startsWith("AIza") && apiKey.length === 39
+  return Boolean(apiKey && apiKey.startsWith("AIza") && apiKey.length === 39)
 }

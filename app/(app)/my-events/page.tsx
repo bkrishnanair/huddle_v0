@@ -61,6 +61,12 @@ export default function MyEventsPage() {
             >
               Joined
             </TabsTrigger>
+            <TabsTrigger
+              value="history"
+              className="px-8 h-10 rounded-xl font-bold text-slate-400 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all"
+            >
+              History
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -69,6 +75,9 @@ export default function MyEventsPage() {
         </TabsContent>
         <TabsContent value="joined" className="mt-0 outline-none">
           <EventList userId={user.uid} eventType="joined" />
+        </TabsContent>
+        <TabsContent value="history" className="mt-0 outline-none">
+          <EventList userId={user.uid} eventType="history" />
         </TabsContent>
       </Tabs>
 

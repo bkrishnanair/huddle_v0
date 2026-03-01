@@ -9,7 +9,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-0",
     name: "UMD Hackathon Brainstorm",
     category: "Learning",
-    date: "2026-02-22",
+    date: "2026-03-15",
     time: "13:00",
     location: "Iribe Center",
     geopoint: {
@@ -27,7 +27,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-1",
     name: "Pickup Basketball 5v5",
     category: "Sports",
-    date: "2026-02-21",
+    date: "2026-03-03",
     time: "17:30",
     location: "Eppley Recreation Center",
     geopoint: {
@@ -45,7 +45,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-2",
     name: "Late Night Study Session",
     category: "Learning",
-    date: "2026-02-22",
+    date: "2026-03-15",
     time: "18:30",
     location: "McKeldin Library",
     geopoint: {
@@ -63,7 +63,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-3",
     name: "Terps Game Watch Party",
     category: "Community",
-    date: "2026-02-21",
+    date: "2026-03-03",
     time: "10:00",
     location: "Looney's Pub",
     geopoint: {
@@ -81,7 +81,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-4",
     name: "Midnight Soccer",
     category: "Sports",
-    date: "2026-02-23",
+    date: "2026-03-30",
     time: "20:30",
     location: "Engineering Field",
     geopoint: {
@@ -99,7 +99,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-5",
     name: "Smash Bros Tournament",
     category: "Gaming",
-    date: "2026-02-21",
+    date: "2026-03-03",
     time: "11:00",
     location: "Stamp Student Union",
     geopoint: {
@@ -117,7 +117,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-6",
     name: "Resume Review Workshop",
     category: "Learning",
-    date: "2026-02-22",
+    date: "2026-03-15",
     time: "10:00",
     location: "Career Center",
     geopoint: {
@@ -135,7 +135,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-7",
     name: "Photography Walk",
     category: "Arts & Culture",
-    date: "2026-02-22",
+    date: "2026-03-15",
     time: "15:00",
     location: "McKeldin Mall",
     geopoint: {
@@ -153,7 +153,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-8",
     name: "Acoustic Jam Session",
     category: "Music",
-    date: "2026-02-21",
+    date: "2026-03-03",
     time: "15:30",
     location: "Washington Quad",
     geopoint: {
@@ -171,7 +171,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-9",
     name: "Volleyball 6v6",
     category: "Sports",
-    date: "2026-02-22",
+    date: "2026-03-15",
     time: "17:00",
     location: "La Plata Beach",
     geopoint: {
@@ -189,7 +189,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-10",
     name: "Startup Pitch Practice",
     category: "Business",
-    date: "2026-02-21",
+    date: "2026-03-03",
     time: "11:30",
     location: "Startup Shell",
     geopoint: {
@@ -207,7 +207,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-11",
     name: "Yoga on the Mall",
     category: "Outdoors",
-    date: "2026-02-21",
+    date: "2026-03-03",
     time: "14:00",
     location: "McKeldin Mall",
     geopoint: {
@@ -225,7 +225,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-12",
     name: "Coffee & Code",
     category: "Learning",
-    date: "2026-02-23",
+    date: "2026-03-30",
     time: "18:00",
     location: "Casey's Coffee",
     geopoint: {
@@ -243,7 +243,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-13",
     name: "D&D One Shot",
     category: "Gaming",
-    date: "2026-02-21",
+    date: "2026-03-03",
     time: "13:00",
     location: "Board and Brew",
     geopoint: {
@@ -261,7 +261,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-14",
     name: "Ultimate Frisbee Pickup",
     category: "Sports",
-    date: "2026-02-22",
+    date: "2026-03-15",
     time: "18:00",
     location: "Fraternity Row Field",
     geopoint: {
@@ -279,7 +279,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-15",
     name: "Calculus 2 Group Tutoring",
     category: "Learning",
-    date: "2026-02-21",
+    date: "2026-03-03",
     time: "12:30",
     location: "Math Building",
     geopoint: {
@@ -297,7 +297,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-16",
     name: "Open Mic Night",
     category: "Music",
-    date: "2026-02-21",
+    date: "2026-03-03",
     time: "21:00",
     location: "TerpZone",
     geopoint: {
@@ -315,7 +315,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-17",
     name: "Spikeball Tournament",
     category: "Sports",
-    date: "2026-02-22",
+    date: "2026-03-15",
     time: "20:30",
     location: "Engineering Field",
     geopoint: {
@@ -333,7 +333,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-18",
     name: "Machine Learning Reading Group",
     category: "Learning",
-    date: "2026-02-21",
+    date: "2026-03-03",
     time: "16:30",
     location: "Iribe Center",
     geopoint: {
@@ -351,7 +351,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-19",
     name: "Board Game Night",
     category: "Community",
-    date: "2026-02-23",
+    date: "2026-03-30",
     time: "21:30",
     location: "Stamp Student Union",
     geopoint: {
@@ -369,7 +369,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-20",
     name: "Run Club: 5k Pace",
     category: "Outdoors",
-    date: "2026-02-23",
+    date: "2026-03-30",
     time: "16:30",
     location: "Xfinity Center",
     geopoint: {
@@ -387,7 +387,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-21",
     name: "Thrifting Trip Group",
     category: "Community",
-    date: "2026-02-21",
+    date: "2026-03-03",
     time: "20:00",
     location: "Route 1",
     geopoint: {
@@ -405,7 +405,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-22",
     name: "Tennis Beginners",
     category: "Sports",
-    date: "2026-02-21",
+    date: "2026-03-03",
     time: "21:30",
     location: "Eppley Tennis Courts",
     geopoint: {
@@ -423,7 +423,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-23",
     name: "Physics 161 Study Group",
     category: "Learning",
-    date: "2026-02-21",
+    date: "2026-03-03",
     time: "20:00",
     location: "Toll Physics Building",
     geopoint: {
@@ -441,7 +441,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-24",
     name: "Meditation Circle",
     category: "Outdoors",
-    date: "2026-02-22",
+    date: "2026-03-15",
     time: "15:00",
     location: "Memorial Chapel Garden",
     geopoint: {
@@ -459,7 +459,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-25",
     name: "Flag Football",
     category: "Sports",
-    date: "2026-02-23",
+    date: "2026-03-30",
     time: "15:00",
     location: "Washington Quad",
     geopoint: {
@@ -477,7 +477,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-26",
     name: "Debate Prep",
     category: "Learning",
-    date: "2026-02-21",
+    date: "2026-03-03",
     time: "15:30",
     location: "Skinner Building",
     geopoint: {
@@ -495,7 +495,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-27",
     name: "Food Truck Meetup",
     category: "Food & Drink",
-    date: "2026-02-22",
+    date: "2026-03-15",
     time: "15:30",
     location: "Lot 1",
     geopoint: {
@@ -513,7 +513,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-28",
     name: "Sketching at the Stamp",
     category: "Arts & Culture",
-    date: "2026-02-23",
+    date: "2026-03-30",
     time: "20:00",
     location: "Stamp Student Union",
     geopoint: {
@@ -531,7 +531,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-29",
     name: "Pickleball Doubles",
     category: "Sports",
-    date: "2026-02-23",
+    date: "2026-03-30",
     time: "10:00",
     location: "Eppley Recreation Center",
     geopoint: {
@@ -549,7 +549,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-30",
     name: "Blockchain Talk",
     category: "Learning",
-    date: "2026-02-21",
+    date: "2026-03-03",
     time: "16:00",
     location: "Van Munching Hall",
     geopoint: {
@@ -567,7 +567,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-31",
     name: "Dog Walking Pack",
     category: "Outdoors",
-    date: "2026-02-23",
+    date: "2026-03-30",
     time: "15:30",
     location: "Lake Artemesia",
     geopoint: {
@@ -585,7 +585,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-32",
     name: "C++ Debugging Help",
     category: "Learning",
-    date: "2026-02-21",
+    date: "2026-03-03",
     time: "12:30",
     location: "Iribe Ground Floor",
     geopoint: {
@@ -603,7 +603,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-33",
     name: "Trivia Night",
     category: "Community",
-    date: "2026-02-22",
+    date: "2026-03-15",
     time: "20:00",
     location: "Looney's Pub",
     geopoint: {
@@ -621,7 +621,7 @@ export const MOCK_EVENTS = [
     id: "mock-event-34",
     name: "Sunrise Cycling",
     category: "Outdoors",
-    date: "2026-02-23",
+    date: "2026-03-30",
     time: "15:00",
     location: "Paint Branch Trail",
     geopoint: {

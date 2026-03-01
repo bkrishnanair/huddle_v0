@@ -4,6 +4,16 @@ export interface Player {
   photoURL?: string;
 }
 
+export interface UserProfile {
+  uid: string;
+  email: string;
+  displayName?: string;
+  bio?: string;
+  photoURL?: string;
+  savedQuestions?: string[];
+  savedTransitTips?: string[];
+}
+
 export interface GameEvent {
   id: string;
   name: string;
@@ -25,11 +35,38 @@ export interface GameEvent {
   createdBy: string;
   organizerName: string;
   organizerPhotoURL?: string;
+  pinnedMessage?: string;
   players: string[];
   waitlist?: string[];
+  attendeeNotes?: Record<string, string>;
+  attendeeAnswers?: Record<string, Record<string, string>>;
+  attendeePickup?: Record<string, string>;
+  questions?: string[];
+  pickupPoints?: { id: string; location: string; time: string }[];
+  stayUntil?: string;
+  transitTips?: string;
   playerDetails?: Player[];
   checkedInPlayers?: string[];
+  checkIns?: Record<string, boolean>;
   distance?: number;
   isBoosted?: boolean;
   isPrivate?: boolean;
+  scheduledMessages?: {
+    id: string;
+    message: string;
+    scheduledFor: string; // ISO String
+    sent: boolean;
+    isAnnouncement: boolean; // if true, pin it when sent
+  }[];
+  checkInOpen?: boolean;
+}
+
+export interface AppNotification {
+  id: string;
+  userId: string;
+  type: "waitlist_promo" | "event_update" | "event_announcement" | "general" | "rsvp_update";
+  message: string;
+  eventId?: string;
+  read: boolean;
+  createdAt: string; // ISO String
 }

@@ -23,6 +23,14 @@ const eventSchema = z.object({
     latitude: z.number(),
     longitude: z.number(),
   }),
+  questions: z.array(z.string()).optional(),
+  pickupPoints: z.array(z.object({
+    id: z.string(),
+    location: z.string(),
+    time: z.string(),
+  })).optional(),
+  stayUntil: z.string().optional(),
+  transitTips: z.string().optional(),
 })
 
 
@@ -97,6 +105,7 @@ export async function POST(request: NextRequest) {
       players: [user.uid],
       currentPlayers: 1,
       createdAt: Timestamp.now(),
+      checkInOpen: false,
     }
 
     const docRef = await adminDb.collection("events").add(newEvent)

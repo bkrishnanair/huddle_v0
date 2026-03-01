@@ -4,6 +4,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getServerCurrentUser } from "@/lib/auth-server"
 import { getFirebaseAdminDb } from "@/lib/firebase-admin"
 import { FieldPath } from "firebase-admin/firestore"
+import { getUserJoinedEvents } from "@/lib/db"
 
 export async function GET(
     request: NextRequest,
@@ -42,7 +43,8 @@ export async function GET(
 
         // Fetch users using whereIn. Note: whereIn supports max 10 items per array in Firestore.
         // If there are more than 10 players, we need to batch the queries.
-        const attendees: { id: string, name: string, loyaltyCount: number }[] = [];
+        const attendees: { id: string, name: string, loyaltyCount: number, note?: string, reliabilityScore?: number | null }[] = [];
+        const attendeeNotes = eventData?.attendeeNotes || {};
 
         // Chunk the uids into sizes of 10
         const chunkSize = 10;
@@ -60,10 +62,41 @@ export async function GET(
                     .count()
                     .get();
 
+                // Calculate Reliability Score
+                const joinedEvents = await getUserJoinedEvents(doc.id);
+                const now = Date.now();
+                const pastEvents = joinedEvents.filter((ev: any) => {
+                    if (!ev.date || ev.date.includes('/')) return false;
+                    try {
+                        const eventDateTime = new Date(`${ev.date}T${ev.time || '00:00'}`);
+                        return !isNaN(eventDateTime.getTime()) && eventDateTime.getTime() < now;
+                    } catch (e) {
+                        return false;
+                    }
+                });
+
+                let attended = 0;
+                let noShows = 0;
+                pastEvents.forEach((ev: any) => {
+                    if (ev.checkInOpen || (ev.checkIns && Object.keys(ev.checkIns).length > 0)) {
+                        if (ev.checkIns && ev.checkIns[doc.id]) {
+                            attended++;
+                        } else {
+                            noShows++;
+                        }
+                    }
+                });
+
+                const totalTracked = attended + noShows;
+                const reliabilityScore = totalTracked > 0 ? Math.round((attended / totalTracked) * 100) : null;
+
+
                 attendees.push({
                     id: doc.id,
                     name: userData.name || userData.displayName || "Unknown User",
-                    loyaltyCount: countSnapshot.data().count
+                    loyaltyCount: countSnapshot.data().count,
+                    note: attendeeNotes[doc.id] || undefined,
+                    reliabilityScore
                 });
             }
         }

@@ -2,6 +2,7 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore, doc, getDoc } from "firebase/firestore";
+import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 console.log("FIREBASE KEY CHECK:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
 // Your Firebase config object, pulled from environment variables.
@@ -9,7 +10,7 @@ const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET?.replace("gs://", ""),
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
@@ -33,6 +34,7 @@ if (missingConfig.length > 0) {
 let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
+let storage: FirebaseStorage;
 
 try {
   if (getApps().length) {
@@ -47,23 +49,30 @@ try {
 
   auth = getAuth(app);
   db = getFirestore(app);
+  storage = getStorage(app);
 } catch (error) {
   console.error("🚨 Failed to initialize Firebase:", error);
   // Export as null or handle accordingly in components
 }
 
-export { app, auth, db };
+export { app, auth, db, storage };
 
 export const checkFirebaseHealth = async () => {
   const health = {
     app: true,
     auth: true,
     db: true,
+    storage: true,
     error: null,
     timestamp: new Date().toISOString(),
   };
 
   try {
+    // 0. Storage Config Check
+    if (!firebaseConfig.storageBucket) {
+      health.storage = false;
+      throw new Error("Missing storageBucket in environment variables.");
+    }
     // 1. App Health (already initialized, so if we're here, it's ok)
     health.app = !!getApp();
 

@@ -32,3 +32,31 @@ This document cleanly separates the core value propositions and technical featur
 *   **👤 Glassmorphic Social Profiles**: Tap on a user's face to see their "Premium" dark-mode profile featuring their Bio, custom "Interests" tags, and a public history of what events they've hosted and attended.
 *   **🏆 Karma Score**: Users earn a gamified "Karma Score" calculated by their active participation and dependability in the ecosystem.
 *   **📱 Native Mobile UX**: Scrollable horizontal filter chips and dedicated bottom-padding ensures nothing gets cut off by the floating glass navigation bar when using Huddle on your phone.
+
+
+Phase 1 — Conversion & Reliability (DONE on feature/guest-rsvp)
+
+Guest RSVP (Anonymous): Join with name (+ optional note) without signup.
+Organizer Notes CRM: Notes visible inline in Organizer roster & CSV.
+Real‑time Event CRM: onSnapshot() live roster + capacity meter.
+Organizer Controls: Kick attendee → auto‑promote from waitlist; edit event (PUT /api/events/[id]).
+Pinned Announcements: Organizer can pin messages; proper guest display names.
+Auto‑refresh UI: Key views re-render on data change.
+
+Phase 2 — Organizer Ops & Logistics Toolkit (Sprint A, DONE on feature/guest-rsvp)
+
+RSVP Questions (Presets): Ride? Dietary? (forced answers at RSVP).
+Pickup Points & Times: Organizer defines; attendee must select at RSVP.
+“Limited Seating” Badges: Feed cards + drawer when ≤3 seats left.
+Logistics Summary: Grouped counts (rides/pickups) + CSV columns.
+Scheduled Messages (Cron): /api/cron/scheduled-messages posts timed announcements to chat.
+
+Phase 3 — Growth, Quality & Comms (DONE on feature/guest-rsvp)
+
+1. Organizer Presets: Save/Load questions and transit tips from profile.
+2. Scheduled Messages Builder: UI for relative timed broadcasts (-24h, -2h, etc).
+3. Conflict Detection: Real-time warning for overlapping organized events (+/- 1.5h).
+4. Calendar Integration: "Add to Calendar" buttons (Google & ICS) for attendees.
+5. Live Check-ins: Mark attendance in-app; status reflected in CSV export.
+6. Attendance History: New tab in My Events for past activity tracking.
+7. Responsive Drawer Fix: Capped height (96vh) and scrollable containers for all screen sizes.

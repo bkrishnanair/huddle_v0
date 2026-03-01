@@ -40,11 +40,11 @@ service cloud.firestore {
       allow update: if request.auth != null && (
         // Event organizer can update any field
         request.auth.uid == resource.data.createdBy ||
-        // Regular players can only update players and currentPlayers (for RSVP)
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['players', 'currentPlayers'])) ||
+        // Regular players can only update players, currentPlayers (for RSVP), and gallery (for photos)
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['players', 'currentPlayers', 'gallery'])) ||
         // Only organizer can update checkedInPlayers array
         (request.auth.uid == resource.data.createdBy && 
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['checkedInPlayers']))
+         request.resource.data.diff(resource.data).affectedKeys().hasExactly(['checkedInPlayers', 'gallery'].concat(resource.data.keys())))
       );
       
       // Only the event creator can delete events

@@ -11,7 +11,7 @@ import EventDetailsDrawer from "@/components/event-details-drawer"
 
 interface EventListProps {
   userId: string
-  eventType: "organized" | "joined"
+  eventType: "organized" | "joined" | "history"
 }
 
 export function EventList({ userId, eventType }: EventListProps) {
@@ -146,9 +146,11 @@ export function EventList({ userId, eventType }: EventListProps) {
     return (
       <div className="text-center py-8 glass-surface rounded-lg p-4">
         <p className="text-slate-400">
-          {eventType === "organized"
-            ? "You haven't organized any events yet."
-            : "You haven't joined any events yet."}
+          {eventType === "history"
+            ? "No past events to show."
+            : eventType === "organized"
+              ? "You haven't organized any events yet."
+              : "You haven't joined any events yet."}
         </p>
       </div>
     )

@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { type NextRequest, NextResponse } from "next/server";
 import { getServerCurrentUser } from "@/lib/auth-server";
-import { getUserOrganizedEvents, getUserJoinedEvents } from "@/lib/db";
+import { getUserOrganizedEvents, getUserJoinedEvents, getUserHistoryEvents } from "@/lib/db";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -25,6 +25,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       events = await getUserOrganizedEvents(id);
     } else if (eventType === 'joined') {
       events = await getUserJoinedEvents(id);
+    } else if (eventType === 'history') {
+      events = await getUserHistoryEvents(id);
     } else {
       return NextResponse.json({ error: "Invalid event type specified" }, { status: 400 });
     }

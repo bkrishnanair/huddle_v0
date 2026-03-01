@@ -5,9 +5,10 @@ import { db } from "@/lib/db";
 import { doc, getDoc } from "firebase/firestore";
 import { getEventCountsForUser } from "@/lib/db"; // Assuming this function exists
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const userId = params.id;
+        const { id } = await params;
+        const userId = id;
         if (!userId) {
             return NextResponse.json({ error: "User ID is required" }, { status: 400 });
         }
@@ -32,7 +33,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
         return NextResponse.json({ profile: publicProfile, stats });
 
     } catch (error) {
-        console.error(`Error fetching public profile for user ${params.id}:`, error);
+        console.error(`Error fetching public profile:`, error);
         return NextResponse.json({ error: "Failed to fetch public profile" }, { status: 500 });
     }
 }

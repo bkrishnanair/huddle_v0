@@ -2,16 +2,53 @@ import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, Timestamp, GeoPoint } from 'firebase-admin/firestore';
 import * as geofire from 'geofire-common';
+import * as fs from 'fs';
+import * as path from 'path';
 
-const projectId = process.env.FIREBASE_PROJECT_ID;
-const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+// Manual env loading for scripts
+function loadEnv() {
+    const envPath = path.resolve(process.cwd(), '.env.local');
+    if (fs.existsSync(envPath)) {
+        const envContent = fs.readFileSync(envPath, 'utf8');
+        envContent.split('\n').forEach(line => {
+            if (line.trim() && !line.startsWith('#')) {
+                const [key, ...value] = line.split('=');
+                if (key && value) {
+                    process.env[key.trim()] = value.join('=').trim().replace(/^"(.*)"$/, '$1');
+                }
+            }
+        });
+    }
+}
+
+loadEnv();
 
 if (!getApps().length) {
+    const projectId = process.env.FIREBASE_PROJECT_ID;
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+
+    console.log("Seed Script Config:", {
+        projectId: projectId ? "SET" : "MISSING",
+        clientEmail: clientEmail ? "SET" : "MISSING",
+        privateKey: privateKey ? "SET" : "MISSING"
+    });
+
+    if (!projectId) {
+        console.error("FIREBASE_PROJECT_ID not set! Check .env.local");
+        process.exit(1);
+    }
+
     initializeApp({
-        credential: cert({ projectId, clientEmail, privateKey })
+        credential: cert({
+            projectId,
+            clientEmail,
+            privateKey
+        } as any)
     });
 }
+
+
 
 const db = getFirestore();
 const auth = getAuth();
@@ -49,14 +86,24 @@ async function seed() {
 
         console.log(`Authenticated as ${userName} (${uid})`);
 
+        // Cleanup: Remove existing seed events from this user to prevent duplicates
+        const existingEvents = await db.collection('events').where('createdBy', '==', uid).get();
+        if (!existingEvents.empty) {
+            console.log(`Cleaning up ${existingEvents.size} existing seed events...`);
+            const batch = db.batch();
+            existingEvents.docs.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+        }
+
         for (const loc of umdLocations) {
             // Adding some minor random variance to coordinates to spread them out slightly even if at same building
             const lat = loc.lat + (Math.random() * 0.001 - 0.0005);
             const lng = loc.lng + (Math.random() * 0.001 - 0.0005);
             const geohash = geofire.geohashForLocation([lat, lng]);
 
-            // Future dates only
-            const dateStr = new Date(Date.now() + Math.random() * 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            // Spread events between March 3rd and March 30th, 2026
+            const marchDay = Math.floor(Math.random() * (30 - 3 + 1)) + 3;
+            const dateStr = `2026-03-${marchDay.toString().padStart(2, '0')}`;
             const timeStr = `${Math.floor(Math.random() * 12 + 10).toString().padStart(2, '0')}:00`;
 
             const eventData = {
