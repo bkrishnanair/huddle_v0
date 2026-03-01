@@ -50,10 +50,9 @@ const mockEvents = events.map((ev, i) => {
   const lat = randRange(38.980, 38.995);
   const lng = randRange(-76.945, -76.925);
 
-  // Create a realistic date in the next 1-3 days
-  const futureDate = new Date();
-  futureDate.setDate(futureDate.getDate() + Math.floor(Math.random() * 3));
-  const dateStr = futureDate.toISOString().split('T')[0];
+  // Create a realistic date between March 3rd and March 30th, 2026
+  const marchDay = Math.floor(Math.random() * (30 - 3 + 1)) + 3;
+  const dateStr = `2026-03-${marchDay.toString().padStart(2, '0')}`;
 
   // Create a realistic time between 10 AM and 10 PM
   const hour = Math.floor(randRange(10, 22));

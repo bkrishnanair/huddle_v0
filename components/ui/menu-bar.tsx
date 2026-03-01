@@ -96,12 +96,11 @@ export function MenuBar() {
       whileHover="hover"
     >
       <motion.div
-        className={`absolute -inset-2 bg-gradient-radial from-transparent ${
-          isDarkTheme
+        className={`absolute -inset-2 bg-gradient-radial from-transparent ${isDarkTheme
             ? "via-blue-400/30 via-30% via-purple-400/30 via-60% via-red-400/30 via-90%"
             : "via-blue-400/20 via-30% via-purple-400/20 via-60% via-red-400/20 via-90%"
-        } to-transparent rounded-3xl z-0 pointer-events-none`}
-        variants={navGlowVariants}
+          } to-transparent rounded-3xl z-0 pointer-events-none`}
+        variants={navGlowVariants as any}
       />
       <ul className="flex items-center gap-2 relative z-10">
         {menuItems.map((item, index) => (
@@ -114,7 +113,7 @@ export function MenuBar() {
             >
               <motion.div
                 className="absolute inset-0 z-0 pointer-events-none"
-                variants={glowVariants}
+                variants={glowVariants as any}
                 style={{
                   background: item.gradient,
                   opacity: 0,
@@ -124,8 +123,8 @@ export function MenuBar() {
               <motion.a
                 href={item.href}
                 className="flex items-center gap-2 px-4 py-2 relative z-10 bg-transparent text-muted-foreground group-hover:text-foreground transition-colors rounded-xl"
-                variants={itemVariants}
-                transition={sharedTransition}
+                variants={itemVariants as any}
+                transition={sharedTransition as any}
                 style={{ transformStyle: "preserve-3d", transformOrigin: "center bottom" }}
               >
                 <span className={`transition-colors duration-300 group-hover:${item.iconColor} text-foreground`}>
@@ -136,8 +135,8 @@ export function MenuBar() {
               <motion.a
                 href={item.href}
                 className="flex items-center gap-2 px-4 py-2 absolute inset-0 z-10 bg-transparent text-muted-foreground group-hover:text-foreground transition-colors rounded-xl"
-                variants={backVariants}
-                transition={sharedTransition}
+                variants={backVariants as any}
+                transition={sharedTransition as any}
                 style={{ transformStyle: "preserve-3d", transformOrigin: "center top", rotateX: 90 }}
               >
                 <span className={`transition-colors duration-300 group-hover:${item.iconColor} text-foreground`}>
