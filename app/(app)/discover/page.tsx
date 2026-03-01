@@ -286,7 +286,7 @@ export default function DiscoverPage() {
                 {/* Filter Cluster */}
                 <div className="flex flex-col gap-3 w-full">
                     {/* Category Group */}
-                    <div className="flex items-center gap-2 p-1.5 glass-surface border border-white/10 rounded-full shadow-2xl max-w-full overflow-x-auto no-scrollbar">
+                    <div className="flex items-center gap-2 p-1.5 glass-surface border border-white/10 rounded-full shadow-2xl max-w-max overflow-x-auto no-scrollbar">
                         {CATEGORY_FILTERS.map(category => (
                             <div key={category} className="shrink-0">
                                 <Chip
@@ -300,7 +300,7 @@ export default function DiscoverPage() {
                     </div>
 
                     {/* Time Group */}
-                    <div className="flex items-center gap-2 p-1.5 glass-surface border border-white/10 rounded-full shadow-2xl max-w-full overflow-x-auto no-scrollbar">
+                    <div className="flex items-center gap-2 p-1.5 glass-surface border border-white/10 rounded-full shadow-2xl max-w-max overflow-x-auto no-scrollbar">
                         {["All", "Next 2 Hrs", "Today", "This Weekend"].map(time => (
                             <div key={time} className="shrink-0">
                                 <Chip
@@ -314,7 +314,7 @@ export default function DiscoverPage() {
                     </div>
 
                     {/* Range Group */}
-                    <div className="flex items-center gap-3 p-1.5 glass-surface border border-white/10 rounded-full shadow-2xl max-w-full overflow-x-auto no-scrollbar px-4">
+                    <div className="flex items-center gap-3 p-1.5 glass-surface border border-white/10 rounded-full shadow-2xl max-w-max overflow-x-auto no-scrollbar px-4">
                         <span className="text-sm font-bold text-slate-500 uppercase tracking-widest mr-1 shrink-0">Range:</span>
                         {["All", "5 Miles", "10 Miles", "25 Miles"].map(range => (
                             <div key={range} className="shrink-0">
