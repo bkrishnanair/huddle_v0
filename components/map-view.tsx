@@ -684,14 +684,14 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                 }
               }}
               size="lg"
-              className="absolute bottom-60 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-110 transition-transform z-10"
+              className="absolute bottom-44 md:bottom-28 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-110 transition-transform z-10"
             >
               <Plus className="w-6 h-6" />
             </Button>
           )}
 
           {viewMode === 'map' && (
-            <Button onClick={handleRecenter} variant="default" size="lg" className="absolute bottom-44 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-orange-600 hover:scale-110 transition-all z-10">
+            <Button onClick={handleRecenter} variant="default" size="lg" className="absolute bottom-28 md:bottom-12 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-orange-600 hover:scale-110 transition-all z-10">
               <LocateFixed className="w-6 h-6" />
             </Button>
           )}

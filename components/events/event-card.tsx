@@ -59,7 +59,7 @@ export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = fal
           </div>
           <div className="flex items-center">
             <MapPin className="w-4 h-4 mr-2 text-emerald-400" />
-            <span>{event.distance ? `${event.distance} miles away` : event.venue}</span>
+            <span className="truncate">{event.distance ? `${event.distance.toFixed(1)} miles away` : (event.venue || event.location || 'Location TBD')}</span>
           </div>
         </div>
       </CardContent>
