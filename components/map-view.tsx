@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Chip } from "@/components/ui/chip"
-import { Plus, MapPin, LocateFixed, AlertCircle, Loader2, Star, Calendar, Clock, Map as MapIcon, List } from "lucide-react"
+import { Plus, MapPin, LocateFixed, AlertCircle, Loader2, Star, Calendar, Clock, Map as MapIcon, List, Sun, Moon } from "lucide-react"
 import EventDetailsDrawer from "./event-details-drawer"
 import CreateEventModal from "./create-event-modal"
 import { EventCard } from "@/components/events/event-card"
@@ -21,21 +21,19 @@ interface MapViewProps {
   intent?: string
 }
 
-const MapRenderer = ({ onMapLoad, children, styles }: { onMapLoad: (map: google.maps.Map) => void, children: React.ReactNode, styles?: google.maps.MapTypeStyle[] }) => {
+const MapRenderer = ({ onMapLoad, children, styles, isDarkMode }: { onMapLoad: (map: google.maps.Map) => void, children: React.ReactNode, styles?: google.maps.MapTypeStyle[], isDarkMode: boolean }) => {
   const map = useMap();
   useEffect(() => {
     if (map) {
-      if (styles) {
-        map.setOptions({
-          styles: styles,
-          backgroundColor: '#010b13',
-          // @ts-ignore - for newer Maps API features
-          colorScheme: 'DARK'
-        });
-      }
+      map.setOptions({
+        styles: styles || [],
+        backgroundColor: isDarkMode ? '#010b13' : '#ffffff',
+        // @ts-ignore - for newer Maps API features
+        colorScheme: isDarkMode ? 'DARK' : 'LIGHT'
+      });
       onMapLoad(map);
     }
-  }, [map, onMapLoad, styles]);
+  }, [map, onMapLoad, styles, isDarkMode]);
 
 
   useEffect(() => {
@@ -215,14 +213,28 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [hasCenteredDefault, setHasCenteredDefault] = useState(!!initialCenter);
+  const [isDarkMode, setIsDarkMode] = useState(true);
+
+  // Use useMemo to select the style object
+  const activeMapStyle = useMemo(() => {
+    return isDarkMode ? DARK_MAP_STYLE : []; // Empty array defaults to standard light theme
+  }, [isDarkMode]);
 
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID;
 
   useEffect(() => {
-    // Check if the prompt was previously dismissed and ensure we aren't deep linking
-    if (sessionStorage.getItem('huddlePromptDismissed') !== 'true' && !eventId) {
-      setShowLocationPrompt(true);
+    // Show prompt if we aren't deep linking
+    if (!eventId) {
+      let isDismissed = false;
+      try {
+        isDismissed = sessionStorage.getItem('huddlePromptDismissed') === 'true';
+      } catch (e) {
+        console.warn("Storage restricted", e);
+      }
+      if (!isDismissed) {
+        setShowLocationPrompt(true);
+      }
     }
 
     // Unauthenticated Host Flow
@@ -379,26 +391,39 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
   const dismissPrompt = useCallback(() => {
     setShowLocationPrompt(false);
-    sessionStorage.setItem('huddlePromptDismissed', 'true');
+    try {
+      sessionStorage.setItem('huddlePromptDismissed', 'true');
+    } catch (e) {
+      console.warn("sessionStorage not available", e);
+    }
   }, []);
 
   const handleRecenter = useCallback(() => {
     dismissPrompt();
+    toast.info("Locating you...");
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const loc = { lat: position.coords.latitude, lng: position.coords.longitude };
           setUserLocation(loc);
-          // Only pan if we aren't currently auto-focusing a deep link
-          if (map && !isProcessingDeepLink.current) {
+          if (map) {
             map.panTo(loc);
-            map.setZoom(15);
+            map.setZoom(16);
           }
         },
         (error) => {
-          console.error("Error getting location:", error);
-        }
+          const errMsg = error.message || String(error);
+          console.error("Error getting location:", errMsg);
+          if (errMsg.toLowerCase().includes("secure origin")) {
+            toast.error("Location requires HTTPS or localhost. If testing on mobile, use local ngrok or search manually.");
+          } else {
+            toast.error("Unable to get location. Please enable location permissions.");
+          }
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
+    } else {
+      toast.error("Geolocation is not supported by your browser.");
     }
   }, [map, dismissPrompt]);
 
@@ -452,6 +477,39 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
     });
   }, [events, activeCategory, activeTime]);
 
+  // Shared Helper
+  const isEventOngoing = (event: GameEvent) => {
+    if (!event.date || !event.time) return false;
+    try {
+      const startDateTime = new Date(`${event.date}T${event.time}`);
+      if (isNaN(startDateTime.getTime())) return false;
+      const now = new Date();
+      if (now < startDateTime) return false;
+
+      let endDateTime;
+      if (event.endTime) {
+        endDateTime = new Date(`${event.date}T${event.endTime}`);
+      } else {
+        endDateTime = new Date(startDateTime.getTime() + 2 * 60 * 60 * 1000);
+      }
+      return now <= endDateTime;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const getDisplayDate = (dateStr: string) => {
+    if (!dateStr || dateStr.includes('/')) return dateStr;
+    try {
+      const d = new Date(`${dateStr}T12:00:00`);
+      if (isNaN(d.getTime())) return dateStr;
+      if (isToday(d)) return "Today";
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } catch {
+      return dateStr;
+    }
+  }
+
   if (!mapsApiKey) {
     return (
       <div className="min-h-screen liquid-gradient flex items-center justify-center p-4 text-center">
@@ -476,15 +534,22 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
               className="w-full h-full"
               disableDefaultUI={true}
               mapId={mapId}
-              styles={DARK_MAP_STYLE}
+              styles={activeMapStyle}
               // @ts-ignore
-              colorScheme="DARK"
+              colorScheme={isDarkMode ? "DARK" : "LIGHT"}
               gestureHandling={'greedy'}
             >
-              <MapRenderer onMapLoad={setMap} styles={DARK_MAP_STYLE}>
+              <MapRenderer onMapLoad={setMap} styles={activeMapStyle} isDarkMode={isDarkMode}>
                 {map && (
                   <>
-                    {userLocation && <AdvancedMarker position={userLocation} />}
+                    {userLocation && (
+                      <AdvancedMarker position={userLocation}>
+                        <div className="relative flex items-center justify-center">
+                          <div className="absolute w-8 h-8 bg-blue-500/30 rounded-full animate-ping" />
+                          <div className="relative w-4 h-4 bg-blue-500 border-2 border-white rounded-full shadow-lg" />
+                        </div>
+                      </AdvancedMarker>
+                    )}
                     {!userLocation && (
                       <AdvancedMarker position={{ lat: 38.9897, lng: -76.9378 }}>
                         <div className="flex flex-col items-center">
@@ -518,20 +583,24 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                             `}>
                               <span className="text-[11px] font-black text-white whitespace-nowrap leading-none mb-1">{event.name}</span>
                               <div className="flex items-center gap-2">
-                                <span className="text-[9px] text-slate-300 font-bold leading-none">{event.time}</span>
-                                {isHovered && (
-                                  <span className="text-[8px] bg-primary/20 text-primary px-1 rounded font-black">OPEN</span>
+                                <span className="text-[9px] text-slate-300 font-bold leading-none">
+                                  {getDisplayDate(event.date)} • {event.time}{event.endTime ? ` - ${event.endTime}` : ''}
+                                </span>
+                                {isEventOngoing(event) && (
+                                  <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 rounded font-black flex items-center gap-1 animate-pulse border border-emerald-500/30">
+                                    <span className="w-1 h-1 rounded-full bg-emerald-400" /> LIVE
+                                  </span>
                                 )}
                               </div>
                             </div>
 
                             {/* Teardrop Pin */}
                             <div className="relative group">
-                              {/* Pulse effect for hovered pins */}
-                              {isHovered && (
+                              {/* Pulse effect for hovered OR ongoing pins */}
+                              {(isHovered || isEventOngoing(event)) && (
                                 <div
-                                  className="absolute inset-0 rounded-full animate-ping opacity-40"
-                                  style={{ backgroundColor: categoryColor }}
+                                  className={`absolute ${isEventOngoing(event) && !isHovered ? '-inset-1 animate-[ping_2.5s_cubic-bezier(0,0,0.2,1)_infinite] opacity-60' : 'inset-0 animate-ping opacity-40'} rounded-full`}
+                                  style={{ backgroundColor: isEventOngoing(event) && !isHovered ? '#10b981' : categoryColor }}
                                 />
                               )}
 
@@ -539,11 +608,11 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                                 className={`
                                   relative w-10 h-10 flex items-center justify-center
                                   rounded-full rounded-br-none rotate-45
-                                  border-2 border-white shadow-xl transition-all duration-300
+                                  border-2 ${isEventOngoing(event) ? 'border-emerald-400' : 'border-white'} transition-all duration-300
                                 `}
                                 style={{
                                   background: `linear-gradient(135deg, ${categoryColor}, ${categoryColor}dd)`,
-                                  boxShadow: isHovered ? `0 0 25px ${categoryColor}aa` : `0 4px 10px rgba(0,0,0,0.4)`
+                                  boxShadow: isHovered ? `0 0 25px ${categoryColor}aa` : (isEventOngoing(event) ? `0 0 15px rgba(16, 185, 129, 0.6), 0 4px 10px rgba(0,0,0,0.4)` : `0 4px 10px rgba(0,0,0,0.4)`)
                                 }}
                               >
                                 <div className="-rotate-45 text-xl filter drop-shadow-sm brightness-110">
@@ -683,16 +752,45 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                   setShowCreateModal(true);
                 }
               }}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                if (!user) {
+                  toast.error("Please sign in to host an event.");
+                  setTimeout(() => {
+                    router.push('/login?return_to=/map?intent=create');
+                  }, 1500)
+                } else {
+                  setShowCreateModal(true);
+                }
+              }}
               size="lg"
-              className="absolute bottom-44 md:bottom-28 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-110 transition-transform z-10"
+              className="absolute bottom-44 md:bottom-28 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-110 transition-transform z-[99999] pointer-events-auto cursor-pointer"
             >
               <Plus className="w-6 h-6" />
             </Button>
           )}
 
           {viewMode === 'map' && (
-            <Button onClick={handleRecenter} variant="default" size="lg" className="absolute bottom-28 md:bottom-12 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-orange-600 hover:scale-110 transition-all z-10">
+            <Button
+              onClick={handleRecenter}
+              onTouchEnd={(e) => { e.preventDefault(); handleRecenter(); }}
+              variant="default"
+              size="lg"
+              className="absolute bottom-28 md:bottom-12 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-orange-600 hover:scale-110 transition-all z-[99999] pointer-events-auto cursor-pointer"
+            >
               <LocateFixed className="w-6 h-6" />
+            </Button>
+          )}
+
+          {viewMode === 'map' && (
+            <Button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              onTouchEnd={(e) => { e.preventDefault(); setIsDarkMode(!isDarkMode); }}
+              variant="default"
+              size="lg"
+              className="absolute bottom-60 md:bottom-44 right-6 h-14 w-14 rounded-full bg-slate-900 text-white shadow-lg border border-white/20 hover:scale-110 transition-all z-[99999] pointer-events-auto cursor-pointer"
+            >
+              {isDarkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
             </Button>
           )}
         </div>
