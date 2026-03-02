@@ -30,6 +30,7 @@ export interface GameEvent {
   description?: string;
   date: string;
   time: string;
+  endTime?: string;
   maxPlayers: number;
   currentPlayers: number;
   createdBy: string;

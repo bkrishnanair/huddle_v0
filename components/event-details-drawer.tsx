@@ -464,7 +464,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
 
   return (
     <Drawer open={isOpen} onOpenChange={onClose}>
-      <DrawerContent className="glass-surface border-white/15 text-foreground max-w-2xl mx-auto rounded-t-[2rem] max-h-[96vh] flex flex-col focus:outline-none">
+      <DrawerContent className="glass-surface border-white/15 text-foreground max-w-2xl mx-auto rounded-t-[2rem] max-h-[92vh] flex flex-col focus:outline-none">
         <div className="mx-auto mt-4 h-1.5 w-12 rounded-full bg-white/20 shrink-0" />
         <DrawerHeader className="pb-2 pt-2 shrink-0">
           <div className="flex justify-between items-start gap-4">
@@ -486,7 +486,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
           </div>
         </DrawerHeader>
 
-        <Tabs defaultValue="details" className="w-full flex-1 flex flex-col min-h-0">
+        <Tabs defaultValue="details" className="flex-1 w-full h-full flex flex-col min-h-0 overflow-hidden">
           <div className="px-5 mb-3">
             <TabsList className="grid w-full grid-cols-3 bg-slate-900/50 border border-white/5 rounded-xl p-1 h-10">
               <TabsTrigger value="details" className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white text-xs font-bold transition-all rounded-lg">Details</TabsTrigger>
@@ -508,7 +508,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
             </TabsList>
           </div>
 
-          <TabsContent value="details" className="flex-1 overflow-y-auto no-scrollbar pb-4 mt-0">
+          <TabsContent value="details" className="flex-1 h-full overflow-y-auto outline-none pb-4 mt-0 data-[state=inactive]:hidden">
             <div className="px-5 space-y-4">
               {/* Info Grid - Modern Compact */}
               <div className="grid grid-cols-2 gap-2">
@@ -756,7 +756,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
             </div>
           </TabsContent>
 
-          <TabsContent value="chat" className="flex-1 flex flex-col min-h-[300px] h-full mt-0 pb-2">
+          <TabsContent value="chat" className="flex-1 min-h-[50vh] flex flex-col overflow-hidden outline-none mt-0 pb-2 data-[state=inactive]:hidden">
             <div className="flex-1 overflow-hidden px-5">
               <div className="h-full rounded-2xl overflow-hidden border border-white/5 shadow-2xl">
                 <EventChat
@@ -768,7 +768,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
             </div>
           </TabsContent>
 
-          <TabsContent value="gallery" className="flex-1 flex flex-col min-h-0 mt-0 pb-4 overflow-y-auto no-scrollbar">
+          <TabsContent value="gallery" className="flex-1 min-h-[40vh] flex flex-col overflow-y-auto no-scrollbar outline-none mt-0 pb-4 data-[state=inactive]:hidden">
             <div className="px-5">
               <EventGallery
                 eventId={event.id as string}
@@ -779,7 +779,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
             </div>
           </TabsContent>
         </Tabs>
-        <DrawerFooter className="flex flex-col gap-2 p-5 pt-3 mb-6 bg-slate-950/20 border-t border-white/5 shrink-0">
+        <DrawerFooter className="flex flex-col gap-2 p-5 pt-3 mb-2 bg-slate-950/20 border-t border-white/5 shrink-0">
           {/* Main Action Button */}
           {!isOrganizer && (
             <div className="flex flex-col gap-2">
@@ -839,18 +839,19 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
             <Button
               variant="outline"
               onClick={() => setIsCloning(true)}
-              className="col-span-3 h-10 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold"
+              className="col-span-2 h-10 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold"
             >
               <Copy className="mr-2 h-3.5 w-3.5" />
-              Duplicate
+              Clone
             </Button>
             <Button
               variant="outline"
               onClick={handleShare}
-              className="col-span-1 h-10 rounded-xl border-white/10 bg-white/5 hover:bg-white/10"
+              className="col-span-2 h-10 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold"
               title="Share Event"
             >
-              <Share className="w-4 h-4" />
+              <Share className="w-3.5 h-3.5 mr-2" />
+              Share
             </Button>
             <Button
               variant="outline"

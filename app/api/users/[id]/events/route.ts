@@ -21,6 +21,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     let events;
+
     if (eventType === 'organized') {
       events = await getUserOrganizedEvents(id);
     } else if (eventType === 'joined') {
