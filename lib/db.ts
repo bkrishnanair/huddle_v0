@@ -298,21 +298,27 @@ export const checkInPlayer = async (eventId: string, playerId: string, organizer
 
 export const getEventWithPlayerDetails = async (eventId: string) => {
   try {
-    const event = await getEvent(eventId) as any
-    if (!event) return null
+    const { getFirebaseAdminDb } = await import("@/lib/firebase-admin");
+    const adminDb = getFirebaseAdminDb();
+    if (!adminDb) throw new Error("Firebase Admin not initialized");
 
-    const playerIds = event.players || []
+    const eventSnap = await adminDb.collection("events").doc(eventId).get();
+    if (!eventSnap.exists) return null;
+
+    const event = { id: eventSnap.id, ...eventSnap.data() } as any;
+
+    const playerIds = event.players || [];
     const playerDetails = await Promise.all(
       playerIds.map(async (uid: string) => {
-        const profile = await getUser(uid)
-        return { uid, ...profile }
+        const userSnap = await adminDb.collection("users").doc(uid).get();
+        return { uid, ...(userSnap.exists ? userSnap.data() : {}) };
       })
-    )
+    );
 
-    return { ...event, playerDetails }
+    return { ...event, playerDetails };
   } catch (error) {
-    console.error("Error fetching event with player details:", error)
-    throw new Error("Failed to retrieve event details.")
+    console.error("Error fetching event with player details:", error);
+    throw new Error("Failed to retrieve event details.");
   }
 }
 

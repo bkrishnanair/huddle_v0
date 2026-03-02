@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button"
 import CreateEventModal from "@/components/create-event-modal"
 import { EventList } from "@/components/profile/event-list"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus } from "lucide-react"
+import { Search, Plus } from "lucide-react"
+import { Input } from "@/components/ui/input"
 
 export default function MyEventsPage() {
   const { user, loading } = useAuth()
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0) // State to trigger re-fetch
+  const [searchQuery, setSearchQuery] = useState("")
 
   if (loading) {
     return (
@@ -47,37 +49,40 @@ export default function MyEventsPage() {
       </header>
 
       <Tabs defaultValue="joined" key={refreshKey} className="space-y-8">
-        <div className="max-w-max">
-          <TabsList className="h-12 p-1 glass-surface border border-white/10 rounded-2xl shadow-2xl flex items-center bg-transparent">
-            <TabsTrigger
-              value="joined"
-              className="px-8 h-10 rounded-xl font-bold text-slate-400 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all"
-            >
-              Joined
-            </TabsTrigger>
-            <TabsTrigger
-              value="organized"
-              className="px-8 h-10 rounded-xl font-bold text-slate-400 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all"
-            >
-              Hosted
-            </TabsTrigger>
-            <TabsTrigger
-              value="history"
-              className="px-8 h-10 rounded-xl font-bold text-slate-400 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all"
-            >
-              History
-            </TabsTrigger>
-          </TabsList>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="max-w-max">
+            <TabsList className="h-12 p-1 glass-surface border border-white/10 rounded-2xl shadow-2xl flex items-center bg-transparent">
+              <TabsTrigger
+                value="joined"
+                className="px-8 h-10 rounded-xl font-bold text-slate-400 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all"
+              >
+                Joined
+              </TabsTrigger>
+              <TabsTrigger
+                value="organized"
+                className="px-8 h-10 rounded-xl font-bold text-slate-400 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all"
+              >
+                Hosted
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          <div className="relative w-full md:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Search your events..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 bg-slate-900/50 border-white/10 text-slate-200 placeholder:text-slate-500 rounded-xl h-10"
+            />
+          </div>
         </div>
 
         <TabsContent value="organized" className="mt-0 outline-none">
-          <EventList userId={user.uid} eventType="organized" />
+          <EventList userId={user.uid} eventType="organized" searchQuery={searchQuery} />
         </TabsContent>
         <TabsContent value="joined" className="mt-0 outline-none">
-          <EventList userId={user.uid} eventType="joined" />
-        </TabsContent>
-        <TabsContent value="history" className="mt-0 outline-none">
-          <EventList userId={user.uid} eventType="history" />
+          <EventList userId={user.uid} eventType="joined" searchQuery={searchQuery} />
         </TabsContent>
       </Tabs>
 

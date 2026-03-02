@@ -36,12 +36,43 @@ export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = fal
     }
   };
 
+  const isEventOngoing = () => {
+    if (!event.date || !event.time) return false;
+    try {
+      const startDateTime = new Date(`${event.date}T${event.time}`);
+      if (isNaN(startDateTime.getTime())) return false;
+
+      const now = new Date();
+      if (now < startDateTime) return false;
+
+      let endDateTime;
+      if (event.endTime) {
+        endDateTime = new Date(`${event.date}T${event.endTime}`);
+      } else {
+        // Default to 2 hours duration
+        endDateTime = new Date(startDateTime.getTime() + 2 * 60 * 60 * 1000);
+      }
+
+      return now <= endDateTime;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  const ongoing = isEventOngoing();
+
   return (
     <Card className="glass-surface border-white/15 overflow-hidden flex flex-col">
       <CardContent className="p-4 flex-grow">
         <div className="flex justify-between items-start mb-3">
           <div className="flex items-center gap-2 pr-2 overflow-hidden">
             <h3 className="font-bold text-lg text-slate-50 truncate">{event.name}</h3>
+            {ongoing && (
+              <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 whitespace-nowrap text-[9px] font-black uppercase tracking-wider px-1.5 shadow-sm animate-pulse">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-ping"></span>
+                Ongoing
+              </Badge>
+            )}
             {event.maxPlayers - event.currentPlayers > 0 && event.maxPlayers - event.currentPlayers <= 3 && (
               <Badge variant="destructive" className="bg-red-500/20 text-red-400 border border-red-500/30 whitespace-nowrap text-[9px] font-black uppercase tracking-wider px-1.5 shadow-sm">
                 Limited Seating

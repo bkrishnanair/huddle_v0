@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { GameEvent } from "@/lib/types"
 import { EventCard } from "@/components/events/event-card"
 import { Loader2, AlertCircle } from "lucide-react"
@@ -12,9 +12,10 @@ import EventDetailsDrawer from "@/components/event-details-drawer"
 interface EventListProps {
   userId: string
   eventType: "organized" | "joined" | "history"
+  searchQuery?: string
 }
 
-export function EventList({ userId, eventType }: EventListProps) {
+export function EventList({ userId, eventType, searchQuery = "" }: EventListProps) {
   const { user } = useAuth()
   const router = useRouter()
   const [events, setEvents] = useState<GameEvent[]>([])
@@ -22,6 +23,7 @@ export function EventList({ userId, eventType }: EventListProps) {
   const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [timeFilter, setTimeFilter] = useState<"upcoming" | "past">("upcoming")
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
@@ -124,6 +126,49 @@ export function EventList({ userId, eventType }: EventListProps) {
     }
   }
 
+  const processedEvents = useMemo(() => {
+    let filtered = events;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(e =>
+        e.name?.toLowerCase().includes(q) ||
+        e.description?.toLowerCase().includes(q) ||
+        e.location?.toLowerCase().includes(q)
+      );
+    }
+
+    const parseDateTime = (ev: GameEvent) => {
+      if (!ev.date) return 0;
+      try {
+        const timePart = ev.time || '00:00:00';
+        const d = ev.date.includes('/') ? new Date(ev.date) : new Date(`${ev.date}T${timePart}`);
+        return isNaN(d.getTime()) ? 0 : d.getTime();
+      } catch { return 0; }
+    };
+
+    // Sort soonest first by default
+    filtered.sort((a, b) => parseDateTime(a) - parseDateTime(b));
+    if (eventType === "history") {
+      // History should show most recent past first
+      filtered.sort((a, b) => parseDateTime(b) - parseDateTime(a));
+    }
+
+    return filtered;
+  }, [events, searchQuery, eventType]);
+
+  const isUpcoming = (ev: GameEvent) => {
+    if (!ev.date) return true;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let d;
+    if (ev.date.includes('/')) {
+      d = new Date(ev.date);
+    } else {
+      d = new Date(`${ev.date}T00:00:00`);
+    }
+    return d >= today;
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-8">
@@ -142,15 +187,17 @@ export function EventList({ userId, eventType }: EventListProps) {
     )
   }
 
-  if (events.length === 0) {
+  if (processedEvents.length === 0) {
     return (
       <div className="text-center py-8 glass-surface rounded-lg p-4">
         <p className="text-slate-400">
-          {eventType === "history"
-            ? "No past events to show."
-            : eventType === "organized"
-              ? "You haven't organized any events yet."
-              : "You haven't joined any events yet."}
+          {searchQuery
+            ? "No events match your search."
+            : eventType === "history"
+              ? "No past events to show."
+              : eventType === "organized"
+                ? "You haven't organized any events yet."
+                : "You haven't joined any events yet."}
         </p>
       </div>
     )
@@ -158,17 +205,73 @@ export function EventList({ userId, eventType }: EventListProps) {
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {events.map((event) => (
-          <EventCard
-            key={event.id}
-            event={event}
-            onSelectEvent={setSelectedEvent}
-            onUnjoin={eventType === "joined" ? () => handleUnjoin(event.id) : undefined}
-            showMapButton={true}
-          />
-        ))}
-      </div>
+      {eventType === "organized" || eventType === "joined" ? (
+        <div className="space-y-6">
+          <div className="flex bg-slate-800/50 p-1 rounded-xl w-fit">
+            <button
+              onClick={() => setTimeFilter("upcoming")}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${timeFilter === "upcoming" ? "bg-primary text-primary-foreground shadow-md" : "text-slate-400 hover:text-slate-200"}`}
+            >
+              Upcoming ({processedEvents.filter(isUpcoming).length})
+            </button>
+            <button
+              onClick={() => setTimeFilter("past")}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${timeFilter === "past" ? "bg-primary text-primary-foreground shadow-md" : "text-slate-400 hover:text-slate-200"}`}
+            >
+              Past ({processedEvents.filter(e => !isUpcoming(e)).length})
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            {timeFilter === "upcoming" && (
+              processedEvents.filter(isUpcoming).length === 0 ? (
+                <p className="text-slate-400 text-sm glass-surface p-4 rounded-xl text-center">No upcoming events.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {processedEvents.filter(isUpcoming).map((event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      onSelectEvent={setSelectedEvent}
+                      onUnjoin={eventType === "joined" ? () => handleUnjoin(event.id) : undefined}
+                      showMapButton={true}
+                    />
+                  ))}
+                </div>
+              )
+            )}
+
+            {timeFilter === "past" && (
+              processedEvents.filter(e => !isUpcoming(e)).length === 0 ? (
+                <p className="text-slate-400 text-sm glass-surface p-4 rounded-xl text-center">No past events yet.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {processedEvents.filter(e => !isUpcoming(e)).reverse().map((event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      onSelectEvent={setSelectedEvent}
+                      onUnjoin={eventType === "joined" ? () => handleUnjoin(event.id) : undefined}
+                      showMapButton={true}
+                    />
+                  ))}
+                </div>
+              )
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {processedEvents.map((event) => (
+            <EventCard
+              key={event.id}
+              event={event}
+              onSelectEvent={setSelectedEvent}
+              showMapButton={true}
+            />
+          ))}
+        </div>
+      )}
 
       {selectedEvent && (
         <EventDetailsDrawer

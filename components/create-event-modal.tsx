@@ -34,7 +34,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: "", category: "", tags: [], location: "",
-    date: "", time: "", maxPlayers: 10, description: "",
+    date: "", time: "", endTime: "", maxPlayers: 10, description: "",
   })
   const [isAiLoading, setIsAiLoading] = useState(false)
   const [suggestions, setSuggestions] = useState([])
@@ -71,10 +71,12 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
       if (initialData) {
         let defaultDate = "";
         let defaultTime = "";
+        let defaultEndTime = "";
 
         if (isEditMode) {
           defaultDate = initialData.date || "";
           defaultTime = initialData.time || "";
+          defaultEndTime = initialData.endTime || "";
         } else {
           // CLONE MODE: auto-shift by +7 days
           if (initialData.date && typeof initialData.date === 'string') {
@@ -88,6 +90,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
             } catch (e) { }
           }
           defaultTime = initialData.time || "";
+          defaultEndTime = initialData.endTime || "";
         }
 
         setFormData({
@@ -99,6 +102,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
           maxPlayers: Number(initialData.maxPlayers || 10),
           date: defaultDate,
           time: defaultTime,
+          endTime: defaultEndTime,
         })
         setIsPrivate(!!initialData.isPrivate)
         setAskRide(initialData.questions?.includes("Need a ride?") || false)
@@ -124,7 +128,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         // Reset form for fresh creation
         setFormData({
           name: "", category: "", tags: [], location: "",
-          date: "", time: "", maxPlayers: 10, description: "",
+          date: "", time: "", endTime: "", maxPlayers: 10, description: "",
         })
         setIsPrivate(false)
         setBoostEvent(false)
@@ -387,14 +391,18 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="date">Date</Label>
-                <Input id="date" type="date" value={formData.date} onChange={(e) => handleInputChange("date", e.target.value)} style={{ colorScheme: "dark" }} required />
+                <Input id="date" type="date" value={formData.date} onChange={(e) => handleInputChange("date", e.target.value)} style={{ colorScheme: "dark" }} className="w-full" required />
               </div>
               <div>
-                <Label htmlFor="time">Time</Label>
-                <Input id="time" type="time" value={formData.time} onChange={(e) => handleInputChange("time", e.target.value)} style={{ colorScheme: "dark" }} required />
+                <Label htmlFor="time">Start Time</Label>
+                <Input id="time" type="time" value={formData.time} onChange={(e) => handleInputChange("time", e.target.value)} style={{ colorScheme: "dark" }} className="w-full" required />
+              </div>
+              <div>
+                <Label htmlFor="endTime" className="text-slate-400 whitespace-nowrap">End Time <span className="text-[10px] font-normal">(Opt)</span></Label>
+                <Input id="endTime" type="time" value={formData.endTime} onChange={(e) => handleInputChange("endTime", e.target.value)} style={{ colorScheme: "dark" }} className="w-full" />
               </div>
             </div>
 
@@ -407,10 +415,15 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
 
             <div>
               <Label htmlFor="maxPlayers">Number of Attendees</Label>
-              <Select value={String(formData.maxPlayers)} onValueChange={(v) => handleInputChange("maxPlayers", Number(v))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{Array.from({ length: 49 }, (_, i) => i + 2).map(n => <SelectItem key={n} value={String(n)}>{n} attendees</SelectItem>)}</SelectContent>
-              </Select>
+              <Input
+                id="maxPlayers"
+                type="number"
+                min={2}
+                max={1000}
+                value={formData.maxPlayers}
+                onChange={(e) => handleInputChange("maxPlayers", parseInt(e.target.value) || 2)}
+                required
+              />
             </div>
 
             <div className="space-y-4 pt-6 border-t border-white/10">
