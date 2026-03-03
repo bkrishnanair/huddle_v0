@@ -21,30 +21,19 @@ interface MapViewProps {
   intent?: string
 }
 
-<<<<<<< HEAD
 const MapRenderer = ({ onMapLoad, children, isDarkMode }: { onMapLoad: (map: google.maps.Map) => void, children: React.ReactNode, isDarkMode: boolean }) => {
-=======
-const MapRenderer = ({ onMapLoad, children, styles, isDarkMode }: { onMapLoad: (map: google.maps.Map) => void, children: React.ReactNode, styles?: google.maps.MapTypeStyle[], isDarkMode: boolean }) => {
->>>>>>> origin/main
   const map = useMap();
   useEffect(() => {
     if (map) {
       map.setOptions({
-<<<<<<< HEAD
-=======
-        styles: styles || [],
->>>>>>> origin/main
+
         backgroundColor: isDarkMode ? '#010b13' : '#ffffff',
         // @ts-ignore - for newer Maps API features
         colorScheme: isDarkMode ? 'DARK' : 'LIGHT'
       });
       onMapLoad(map);
     }
-<<<<<<< HEAD
   }, [map, onMapLoad, isDarkMode]);
-=======
-  }, [map, onMapLoad, styles, isDarkMode]);
->>>>>>> origin/main
 
 
   useEffect(() => {
@@ -119,17 +108,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [hasCenteredDefault, setHasCenteredDefault] = useState(!!initialCenter);
   const [isDarkMode, setIsDarkMode] = useState(true);
-<<<<<<< HEAD
   const [userProfile, setUserProfile] = useState<any>(null);
-
-
-=======
-
-  // Use useMemo to select the style object
-  const activeMapStyle = useMemo(() => {
-    return isDarkMode ? DARK_MAP_STYLE : []; // Empty array defaults to standard light theme
-  }, [isDarkMode]);
->>>>>>> origin/main
 
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID;
@@ -746,11 +725,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           }
         }}
         size="lg"
-<<<<<<< HEAD
         className="absolute bottom-44 md:bottom-28 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-110 transition-transform z-40 pointer-events-auto cursor-pointer"
-=======
-              className="absolute bottom-44 md:bottom-28 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-110 transition-transform z-[99999] pointer-events-auto cursor-pointer"
->>>>>>> origin/main
       >
         <Plus className="w-6 h-6" />
       </Button>
@@ -764,11 +739,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
         onTouchEnd={(e) => { e.preventDefault(); handleRecenter(); }}
         variant="default"
         size="lg"
-<<<<<<< HEAD
         className="absolute bottom-28 md:bottom-12 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-orange-600 hover:scale-110 transition-all z-40 pointer-events-auto cursor-pointer"
-=======
-              className="absolute bottom-28 md:bottom-12 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-orange-600 hover:scale-110 transition-all z-[99999] pointer-events-auto cursor-pointer"
->>>>>>> origin/main
       >
         <LocateFixed className="w-6 h-6" />
       </Button>
@@ -782,11 +753,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
         onTouchEnd={(e) => { e.preventDefault(); setIsDarkMode(!isDarkMode); }}
         variant="default"
         size="lg"
-<<<<<<< HEAD
         className="absolute bottom-60 md:bottom-44 right-6 h-14 w-14 rounded-full bg-slate-900 text-white shadow-lg border border-white/20 hover:scale-110 transition-all z-40 pointer-events-auto cursor-pointer"
-=======
-              className="absolute bottom-60 md:bottom-44 right-6 h-14 w-14 rounded-full bg-slate-900 text-white shadow-lg border border-white/20 hover:scale-110 transition-all z-[99999] pointer-events-auto cursor-pointer"
->>>>>>> origin/main
       >
         {isDarkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
       </Button>
