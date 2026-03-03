@@ -26,7 +26,7 @@ This document cleanly separates the core value propositions and technical featur
 *   **📍 Interactive "Video Game" Map**: A high-performance, decluttered Google Map filled with responsive, custom teardrop pins. Hover over a pin to see micro-animations and category-specific emojis (🏀, 💻, 🍕). Click a pin to summon the Event Details.
 *   **🔍 Unified Global Search**: A powerful Discover page that filters across Event Name, Event Category (Tech, Outdoors, Music, etc.), AND Location in real-time.
 *   **🕙 Intelligent Discovery Filters**: 
-    *   **Time-Based**: Tap chips for "Next 2 Hrs", "Today", or "This Weekend".
+    *   **Time-Based**: Tap chips for "Live" (happening right now), "Today", "This Week", or "This Weekend".
     *   **Distance-Based**: Adjust a slider from 5 to 50 miles away—powered by precise client-side Haversine math calculating exactly how far the event is from your actual current latitude/longitude.
 *   **👥 One-Tap RSVPs**: Join an event with a single tap. See exactly how many slots are open. Unjoin with the same ease.
 *   **👤 Glassmorphic Social Profiles**: Tap on a user's face to see their "Premium" dark-mode profile featuring their Bio, custom "Interests" tags, and a public history of what events they've hosted and attended.
@@ -59,4 +59,5 @@ Phase 3 — Growth, Quality & Comms (DONE on feature/guest-rsvp)
 4. Calendar Integration: "Add to Calendar" buttons (Google & ICS) for attendees.
 5. Live Check-ins: Mark attendance in-app; status reflected in CSV export.
 6. Attendance History: New tab in My Events for past activity tracking.
-7. Responsive Drawer Fix: Capped height (96vh) and scrollable containers for all screen sizes.
+7. Responsive Drawer Fix: Z-index layering overhauled so the Event Drawer rests exactly above the Map but safely behind the floating Bottom Navigation bar for continuous deep-linking.
+8. Cloud Map Styles: Map UI aesthetics strictly bound to Google Cloud Console IDs, effortlessly suppressing Point of Interest (POI) clutter.

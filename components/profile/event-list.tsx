@@ -13,9 +13,10 @@ interface EventListProps {
   userId: string
   eventType: "organized" | "joined" | "history"
   searchQuery?: string
+  filterDate?: string
 }
 
-export function EventList({ userId, eventType, searchQuery = "" }: EventListProps) {
+export function EventList({ userId, eventType, searchQuery = "", filterDate = "" }: EventListProps) {
   const { user } = useAuth()
   const router = useRouter()
   const [events, setEvents] = useState<GameEvent[]>([])
@@ -137,6 +138,10 @@ export function EventList({ userId, eventType, searchQuery = "" }: EventListProp
       );
     }
 
+    if (filterDate) {
+      filtered = filtered.filter(e => e.date === filterDate);
+    }
+
     const parseDateTime = (ev: GameEvent) => {
       if (!ev.date) return 0;
       try {
@@ -157,16 +162,27 @@ export function EventList({ userId, eventType, searchQuery = "" }: EventListProp
   }, [events, searchQuery, eventType]);
 
   const isUpcoming = (ev: GameEvent) => {
+    if (ev.status === 'past') return false;
     if (!ev.date) return true;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    let d;
-    if (ev.date.includes('/')) {
-      d = new Date(ev.date);
-    } else {
-      d = new Date(`${ev.date}T00:00:00`);
+
+    try {
+      const timePart = ev.time || '00:00';
+      const startDateTime = ev.date.includes('/') ? new Date(ev.date) : new Date(`${ev.date}T${timePart}`);
+      if (isNaN(startDateTime.getTime())) return true;
+
+      const now = new Date();
+
+      let endDateTime;
+      if (ev.endTime) {
+        endDateTime = new Date(`${ev.date}T${ev.endTime}`);
+      } else {
+        endDateTime = new Date(startDateTime.getTime() + 3 * 60 * 60 * 1000);
+      }
+
+      return now <= endDateTime;
+    } catch {
+      return true;
     }
-    return d >= today;
   };
 
   if (isLoading) {
