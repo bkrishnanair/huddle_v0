@@ -34,7 +34,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: "", category: "", tags: [], location: "",
-    date: "", time: "", endTime: "", maxPlayers: 10, description: "",
+    date: "", endDate: "", time: "", endTime: "", maxPlayers: 10, description: "", icon: ""
   })
   const [isAiLoading, setIsAiLoading] = useState(false)
   const [suggestions, setSuggestions] = useState([])
@@ -61,6 +61,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
 
   const [mapCenter, setMapCenter] = useState(userLocation || { lat: 37.7749, lng: -122.4194 })
   const [markerPosition, setMarkerPosition] = useState(userLocation || { lat: 37.7749, lng: -122.4194 })
+  const [isFullscreenMap, setIsFullscreenMap] = useState(false)
 
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   // Use the styled map ID for dark mode consistency
@@ -101,8 +102,10 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
           description: String(initialData.description || ""),
           maxPlayers: Number(initialData.maxPlayers || 10),
           date: defaultDate,
+          endDate: String(initialData.endDate || ""),
           time: defaultTime,
           endTime: defaultEndTime,
+          icon: String(initialData.icon || ""),
         })
         setIsPrivate(!!initialData.isPrivate)
         setAskRide(initialData.questions?.includes("Need a ride?") || false)
@@ -128,7 +131,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         // Reset form for fresh creation
         setFormData({
           name: "", category: "", tags: [], location: "",
-          date: "", time: "", endTime: "", maxPlayers: 10, description: "",
+          date: "", endDate: "", time: "", endTime: "", maxPlayers: 10, description: "", icon: ""
         })
         setIsPrivate(false)
         setBoostEvent(false)
@@ -359,20 +362,32 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
               <Input id="description" placeholder="A short and friendly description" value={formData.description} onChange={(e) => handleInputChange("description", e.target.value)} />
             </div>
 
-            <div>
-              <Label htmlFor="category">Category</Label>
-              <Select required value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
-                <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
-                <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="category">Category</Label>
+                <Select required value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
+                  <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
+                  <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="icon">Emoji Icon (Optional)</Label>
+                <Input
+                  id="icon"
+                  placeholder="e.g. 🏏"
+                  value={formData.icon || ""}
+                  maxLength={2}
+                  onChange={(e) => handleInputChange("icon", e.target.value)}
+                />
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="location-search">Location</Label>
+            <div className={isFullscreenMap ? "fixed inset-0 z-[100] bg-slate-950 p-4 pt-10 flex flex-col" : ""}>
+              <Label htmlFor="location-search" className={isFullscreenMap ? "text-white mb-2" : ""}>Location</Label>
               {mapsApiKey ? (
                 <APIProvider apiKey={mapsApiKey}>
                   <LocationSearchInput onPlaceSelect={handlePlaceSelect} insideModal={true} />
-                  <div className="h-48 w-full rounded-lg overflow-hidden relative mt-2 border border-border">
+                  <div className={`${isFullscreenMap ? "flex-1 mt-4" : "h-48 mt-2"} w-full rounded-lg overflow-hidden relative border border-border`}>
                     <Map
                       center={mapCenter}
                       defaultZoom={15}
@@ -382,7 +397,25 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                     >
                       <AdvancedMarker position={markerPosition} draggable={true} onDragEnd={(e) => setMarkerPosition({ lat: e.latLng!.lat(), lng: e.latLng!.lng() })} />
                     </Map>
+
+                    {/* Fullscreen Map Toggle Button */}
+                    <div className="absolute top-2 right-2 flex flex-col gap-2 z-10 pointer-events-auto">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="icon"
+                        onClick={(e) => { e.preventDefault(); setIsFullscreenMap(!isFullscreenMap); }}
+                        className="bg-slate-900/80 hover:bg-slate-800 text-white backdrop-blur-md border border-white/20 shadow-xl h-10 w-10 text-xs"
+                      >
+                        {isFullscreenMap ? "Minimize" : "Expand"}
+                      </Button>
+                    </div>
                   </div>
+                  {isFullscreenMap && (
+                    <Button type="button" onClick={() => setIsFullscreenMap(false)} className="mt-4 w-full h-12 bg-primary hover:bg-orange-600 text-white font-bold rounded-xl shadow-lg border border-orange-500/50">
+                      Confirm Location Pin
+                    </Button>
+                  )}
                 </APIProvider>
               ) : (
                 <div className="h-48 w-full rounded-lg mt-2 border border-border flex items-center justify-center text-center bg-slate-800/50">
@@ -391,18 +424,28 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="date">Date</Label>
-                <Input id="date" type="date" value={formData.date} onChange={(e) => handleInputChange("date", e.target.value)} style={{ colorScheme: "dark" }} className="w-full" required />
+            <div className={`space-y-3 ${isFullscreenMap ? 'hidden' : ''}`}>
+              {/* Row 1: Start Date + End Date */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="date">Start Date <span className="text-primary text-xs">*</span></Label>
+                  <Input id="date" type="date" value={formData.date} onChange={(e) => handleInputChange("date", e.target.value)} style={{ colorScheme: "white" }} className="w-full pr-3 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:brightness-150 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-90" required />
+                </div>
+                <div>
+                  <Label htmlFor="endDate" className="text-slate-400">End Date <span className="text-[10px] font-normal">(Opt)</span></Label>
+                  <Input id="endDate" type="date" value={formData.endDate} onChange={(e) => handleInputChange("endDate", e.target.value)} style={{ colorScheme: "white" }} className="w-full pr-3 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:brightness-150 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-90" />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="time">Start Time</Label>
-                <Input id="time" type="time" value={formData.time} onChange={(e) => handleInputChange("time", e.target.value)} style={{ colorScheme: "dark" }} className="w-full" required />
-              </div>
-              <div>
-                <Label htmlFor="endTime" className="text-slate-400 whitespace-nowrap">End Time <span className="text-[10px] font-normal">(Opt)</span></Label>
-                <Input id="endTime" type="time" value={formData.endTime} onChange={(e) => handleInputChange("endTime", e.target.value)} style={{ colorScheme: "dark" }} className="w-full" />
+              {/* Row 2: Start Time + End Time */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="time">Start Time <span className="text-primary text-xs">*</span></Label>
+                  <Input id="time" type="time" value={formData.time} onChange={(e) => handleInputChange("time", e.target.value)} style={{ colorScheme: "white" }} className="w-full pr-3 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:brightness-150 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-90" required />
+                </div>
+                <div>
+                  <Label htmlFor="endTime" className="text-slate-400">End Time <span className="text-[10px] font-normal">(Opt)</span></Label>
+                  <Input id="endTime" type="time" value={formData.endTime} onChange={(e) => handleInputChange("endTime", e.target.value)} style={{ colorScheme: "white" }} className="w-full pr-3 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:brightness-150 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-90" />
+                </div>
               </div>
             </div>
 

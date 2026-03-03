@@ -11,7 +11,7 @@ import { EventCard } from "@/components/events/event-card"
 import { APIProvider, Map, AdvancedMarker, Pin, useMap, InfoWindow } from "@vis.gl/react-google-maps"
 import { GameEvent } from "@/lib/types"
 import LocationSearchInput from "./location-search"
-import { isToday, isWeekend, isBefore, addHours, isFuture } from "date-fns"
+import { isToday, isWeekend, isBefore, addHours, isFuture, addDays } from "date-fns"
 import { toast } from "sonner"
 
 interface MapViewProps {
@@ -21,19 +21,18 @@ interface MapViewProps {
   intent?: string
 }
 
-const MapRenderer = ({ onMapLoad, children, styles, isDarkMode }: { onMapLoad: (map: google.maps.Map) => void, children: React.ReactNode, styles?: google.maps.MapTypeStyle[], isDarkMode: boolean }) => {
+const MapRenderer = ({ onMapLoad, children, isDarkMode }: { onMapLoad: (map: google.maps.Map) => void, children: React.ReactNode, isDarkMode: boolean }) => {
   const map = useMap();
   useEffect(() => {
     if (map) {
       map.setOptions({
-        styles: styles || [],
         backgroundColor: isDarkMode ? '#010b13' : '#ffffff',
         // @ts-ignore - for newer Maps API features
         colorScheme: isDarkMode ? 'DARK' : 'LIGHT'
       });
       onMapLoad(map);
     }
-  }, [map, onMapLoad, styles, isDarkMode]);
+  }, [map, onMapLoad, isDarkMode]);
 
 
   useEffect(() => {
@@ -59,18 +58,13 @@ const MapRenderer = ({ onMapLoad, children, styles, isDarkMode }: { onMapLoad: (
         map.panBy(e.deltaX, e.deltaY);
       }
     };
-
-    // Use capture to intercept before Google's internal listeners zoom the map
-    mapDiv.addEventListener("wheel", handleWheel, { passive: false, capture: true });
-
-    return () => {
-      mapDiv.removeEventListener("wheel", handleWheel, { capture: true } as EventListenerOptions);
-      clearTimeout(panTimeout);
-    };
   }, [map]);
 
   return <>{children}</>;
-}
+};
+
+const CATEGORIES = ['All', 'Joined', 'Recommended', 'Sports', 'Music', 'Community', 'Learning', 'Food & Drink', 'Tech', 'Arts & Culture', 'Outdoors']
+const TIMES = ['All', 'Live', 'This Week', 'Today', 'This Weekend']
 
 const getCategoryColor = (category: string): string => {
   const colors: { [key: string]: string } = {
@@ -96,107 +90,6 @@ const getCategoryIcon = (category: string): string => {
   return icons[category] || icons.default
 }
 
-const DARK_MAP_STYLE = [
-  { elementType: "geometry", stylers: [{ color: "#010b13" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#010b13" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-  {
-    featureType: "administrative.locality",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#d59563" }],
-  },
-  {
-    featureType: "poi",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#d59563" }],
-  },
-  {
-    featureType: "poi.park",
-    elementType: "geometry",
-    stylers: [{ color: "#002020" }],
-  },
-  {
-    featureType: "poi.park",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#6b9a76" }],
-  },
-  {
-    featureType: "road",
-    elementType: "geometry",
-    stylers: [{ color: "#0b2233" }],
-  },
-  {
-    featureType: "road",
-    elementType: "geometry.stroke",
-    stylers: [{ color: "#feffff" }, { visibility: "off" }],
-  },
-  {
-    featureType: "road",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#9ca5b3" }],
-  },
-  {
-    featureType: "road.highway",
-    elementType: "geometry",
-    stylers: [{ color: "#14334a" }],
-  },
-  {
-    featureType: "road.highway",
-    elementType: "geometry.stroke",
-    stylers: [{ color: "#1f2835" }],
-  },
-  {
-    featureType: "road.highway",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#f3d19c" }],
-  },
-  {
-    featureType: "transit",
-    elementType: "geometry",
-    stylers: [{ color: "#2f3948" }],
-  },
-  {
-    featureType: "transit.station",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#d59563" }],
-  },
-  {
-    featureType: "water",
-    elementType: "geometry",
-    stylers: [{ color: "#010103" }],
-  },
-  {
-    featureType: "water",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#515c6d" }],
-  },
-  {
-    featureType: "water",
-    elementType: "labels.text.stroke",
-    stylers: [{ color: "#17263c" }],
-  },
-  {
-    featureType: "poi.business",
-    stylers: [{ visibility: "off" }],
-  },
-  {
-    featureType: "poi.medical",
-    stylers: [{ visibility: "off" }],
-  },
-  {
-    featureType: "poi.school",
-    stylers: [{ visibility: "off" }],
-  },
-  {
-    featureType: "poi.government",
-    stylers: [{ visibility: "off" }],
-  },
-  {
-    featureType: "poi.place_of_worship",
-    stylers: [{ visibility: "off" }],
-  },
-];
-
 export default function MapView({ user, eventId, initialCenter, intent }: MapViewProps) {
   const router = useRouter()
   const isProcessingDeepLink = useRef(!!eventId)
@@ -214,11 +107,9 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [hasCenteredDefault, setHasCenteredDefault] = useState(!!initialCenter);
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
-  // Use useMemo to select the style object
-  const activeMapStyle = useMemo(() => {
-    return isDarkMode ? DARK_MAP_STYLE : []; // Empty array defaults to standard light theme
-  }, [isDarkMode]);
+
 
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID;
@@ -253,6 +144,21 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
     if (!map) return;
     const bounds = map.getBounds();
     if (!bounds) return;
+
+    if (user?.uid && !userProfile) {
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch(`/api/users/${user.uid}/profile`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.profile) setUserProfile(data.profile);
+        }
+      } catch (err) {
+        console.error("Error fetching user profile for map", err);
+      }
+    }
 
     // Fallback radius if geometry library is not loaded yet
     let radius = 50000;
@@ -427,10 +333,42 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
     }
   }, [map, dismissPrompt]);
 
+  // Shared Helper — must be defined before filteredEvents useMemo that references it
+  const isEventOngoing = (event: GameEvent) => {
+    if (event.status === 'past') return false;
+    if (!event.date || !event.time) return false;
+    try {
+      const startDateTime = new Date(`${event.date}T${event.time}`);
+      if (isNaN(startDateTime.getTime())) return false;
+      const now = new Date();
+      if (now < startDateTime) return false;
+
+      let endDateTime;
+      if (event.endTime) {
+        endDateTime = new Date(`${event.date}T${event.endTime}`);
+      } else {
+        endDateTime = new Date(startDateTime.getTime() + 3 * 60 * 60 * 1000);
+      }
+      return now <= endDateTime;
+    } catch (e) {
+      return false;
+    }
+  };
+
   const filteredEvents = useMemo(() => {
     let result = events;
 
-    if (activeCategory !== 'All') {
+    if (activeCategory === 'Joined') {
+      result = result.filter(event => event.players?.includes(user?.uid))
+    } else if (activeCategory === 'Recommended') {
+      const interests = userProfile?.favoriteSports || [];
+      if (interests.length === 0) {
+        toast.error("Add interests to your profile to see recommended events!");
+        // We will default to showing all if they have no interests, but ping the warning.
+      } else {
+        result = result.filter(event => interests.includes(event.category));
+      }
+    } else if (activeCategory !== 'All') {
       result = result.filter(event => event.category === activeCategory);
     }
 
@@ -443,8 +381,13 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
           if (isNaN(eventDateTime.getTime())) return true;
 
-          if (activeTime === 'Next 2 Hrs') {
-            return isBefore(eventDateTime, addHours(now, 2)) && isFuture(eventDateTime);
+          if (activeTime === 'Live') {
+            const isStartingSoon = isBefore(eventDateTime, addHours(now, 1)) && isFuture(eventDateTime);
+            return isEventOngoing(event) || isStartingSoon;
+          }
+          if (activeTime === 'This Week') {
+            const thisWeekEnd = addDays(now, 7);
+            return isBefore(eventDateTime, thisWeekEnd) && isFuture(eventDateTime);
           }
           if (activeTime === 'Today') {
             return isToday(eventDateTime);
@@ -460,11 +403,18 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
     }
 
     const sorted = result.filter(event => {
+      if (event.status === 'past') return false;
       if (!event.date || event.date.includes('/')) return true;
       try {
-        const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
-        if (!isNaN(eventDateTime.getTime())) {
-          return isFuture(addHours(eventDateTime, 1));
+        const startDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
+        if (!isNaN(startDateTime.getTime())) {
+          let endDateTime;
+          if (event.endTime) {
+            endDateTime = new Date(`${event.date}T${event.endTime}`);
+          } else {
+            endDateTime = new Date(startDateTime.getTime() + 3 * 60 * 60 * 1000);
+          }
+          return new Date() <= endDateTime;
         }
       } catch (e) { }
       return true;
@@ -477,26 +427,6 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
     });
   }, [events, activeCategory, activeTime]);
 
-  // Shared Helper
-  const isEventOngoing = (event: GameEvent) => {
-    if (!event.date || !event.time) return false;
-    try {
-      const startDateTime = new Date(`${event.date}T${event.time}`);
-      if (isNaN(startDateTime.getTime())) return false;
-      const now = new Date();
-      if (now < startDateTime) return false;
-
-      let endDateTime;
-      if (event.endTime) {
-        endDateTime = new Date(`${event.date}T${event.endTime}`);
-      } else {
-        endDateTime = new Date(startDateTime.getTime() + 2 * 60 * 60 * 1000);
-      }
-      return now <= endDateTime;
-    } catch (e) {
-      return false;
-    }
-  };
 
   const getDisplayDate = (dateStr: string) => {
     if (!dateStr || dateStr.includes('/')) return dateStr;
@@ -534,12 +464,11 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
               className="w-full h-full"
               disableDefaultUI={true}
               mapId={mapId}
-              styles={activeMapStyle}
               // @ts-ignore
               colorScheme={isDarkMode ? "DARK" : "LIGHT"}
               gestureHandling={'greedy'}
             >
-              <MapRenderer onMapLoad={setMap} styles={activeMapStyle} isDarkMode={isDarkMode}>
+              <MapRenderer onMapLoad={setMap} isDarkMode={isDarkMode}>
                 {map && (
                   <>
                     {userLocation && (
@@ -564,6 +493,18 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                       const isHovered = hoveredEvent?.id === event.id;
                       const showDetails = isHovered || currentZoom >= 16;
                       const categoryColor = getCategoryColor(event.category);
+
+                      let isFutureEvent = false;
+                      if (!event.date || event.date.includes('/')) {
+                        isFutureEvent = false;
+                      } else {
+                        try {
+                          const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
+                          isFutureEvent = !isToday(eventDateTime) && eventDateTime > new Date();
+                        } catch (e) {
+                          isFutureEvent = false;
+                        }
+                      }
 
                       return (
                         <AdvancedMarker
@@ -609,6 +550,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                                   relative w-10 h-10 flex items-center justify-center
                                   rounded-full rounded-br-none rotate-45
                                   border-2 ${isEventOngoing(event) ? 'border-emerald-400' : 'border-white'} transition-all duration-300
+                                  ${isFutureEvent ? 'opacity-70 saturate-50' : 'opacity-100'}
                                 `}
                                 style={{
                                   background: `linear-gradient(135deg, ${categoryColor}, ${categoryColor}dd)`,
@@ -616,7 +558,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                                 }}
                               >
                                 <div className="-rotate-45 text-xl filter drop-shadow-sm brightness-110">
-                                  {getCategoryIcon(event.category)}
+                                  {event.icon || getCategoryIcon(event.category)}
                                 </div>
                               </div>
                             </div>
@@ -659,23 +601,28 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             <div className="flex flex-col gap-2 pointer-events-auto">
               {/* Category Chips */}
               <div className="flex items-center space-x-2 p-1.5 glass-surface border border-white/10 rounded-full overflow-x-auto no-scrollbar max-w-max shadow-xl">
-                <Chip isActive={activeCategory === 'All'} onClick={() => setActiveCategory('All')}>All</Chip>
-                <Chip isActive={activeCategory === 'Sports'} onClick={() => setActiveCategory('Sports')}>Sports</Chip>
-                <Chip isActive={activeCategory === 'Music'} onClick={() => setActiveCategory('Music')}>Music</Chip>
-                <Chip isActive={activeCategory === 'Community'} onClick={() => setActiveCategory('Community')}>Community</Chip>
-                <Chip isActive={activeCategory === 'Learning'} onClick={() => setActiveCategory('Learning')}>Learning</Chip>
-                <Chip isActive={activeCategory === 'Food & Drink'} onClick={() => setActiveCategory('Food & Drink')}>Food & Drink</Chip>
-                <Chip isActive={activeCategory === 'Tech'} onClick={() => setActiveCategory('Tech')}>Tech</Chip>
-                <Chip isActive={activeCategory === 'Arts & Culture'} onClick={() => setActiveCategory('Arts & Culture')}>Arts & Culture</Chip>
-                <Chip isActive={activeCategory === 'Outdoors'} onClick={() => setActiveCategory('Outdoors')}>Outdoors</Chip>
+                {CATEGORIES.map(category => (
+                  <Chip
+                    key={category}
+                    isActive={activeCategory === category}
+                    onClick={() => setActiveCategory(category)}
+                  >
+                    {category}
+                  </Chip>
+                ))}
               </div>
 
               {/* Time Filter Chips */}
               <div className="flex items-center space-x-2 p-1.5 glass-surface border border-white/10 rounded-full overflow-x-auto no-scrollbar max-w-max shadow-xl">
-                <Chip isActive={activeTime === 'All'} onClick={() => setActiveTime('All')}>All</Chip>
-                <Chip isActive={activeTime === 'Next 2 Hrs'} onClick={() => setActiveTime('Next 2 Hrs')}>Next 2 Hrs</Chip>
-                <Chip isActive={activeTime === 'Today'} onClick={() => setActiveTime('Today')}>Today</Chip>
-                <Chip isActive={activeTime === 'This Weekend'} onClick={() => setActiveTime('This Weekend')}>This Weekend</Chip>
+                {TIMES.map(time => (
+                  <Chip
+                    key={time}
+                    isActive={activeTime === time}
+                    onClick={() => setActiveTime(time)}
+                  >
+                    {time}
+                  </Chip>
+                ))}
               </div>
             </div>
 
@@ -764,7 +711,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                 }
               }}
               size="lg"
-              className="absolute bottom-44 md:bottom-28 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-110 transition-transform z-[99999] pointer-events-auto cursor-pointer"
+              className="absolute bottom-44 md:bottom-28 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-110 transition-transform z-40 pointer-events-auto cursor-pointer"
             >
               <Plus className="w-6 h-6" />
             </Button>
@@ -776,7 +723,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
               onTouchEnd={(e) => { e.preventDefault(); handleRecenter(); }}
               variant="default"
               size="lg"
-              className="absolute bottom-28 md:bottom-12 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-orange-600 hover:scale-110 transition-all z-[99999] pointer-events-auto cursor-pointer"
+              className="absolute bottom-28 md:bottom-12 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-orange-600 hover:scale-110 transition-all z-40 pointer-events-auto cursor-pointer"
             >
               <LocateFixed className="w-6 h-6" />
             </Button>
@@ -788,7 +735,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
               onTouchEnd={(e) => { e.preventDefault(); setIsDarkMode(!isDarkMode); }}
               variant="default"
               size="lg"
-              className="absolute bottom-60 md:bottom-44 right-6 h-14 w-14 rounded-full bg-slate-900 text-white shadow-lg border border-white/20 hover:scale-110 transition-all z-[99999] pointer-events-auto cursor-pointer"
+              className="absolute bottom-60 md:bottom-44 right-6 h-14 w-14 rounded-full bg-slate-900 text-white shadow-lg border border-white/20 hover:scale-110 transition-all z-40 pointer-events-auto cursor-pointer"
             >
               {isDarkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
             </Button>

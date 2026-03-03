@@ -56,6 +56,12 @@ The `Map` component only fires its fetch function when the map *stops* moving (`
 ### Advanced Marker UX
 We use `@vis.gl/react-google-maps` `<AdvancedMarker>` tags to inject Tailwind-styled React HTML directly onto the map canvas. This enables emojis, gradients, and CSS-based micro-animations (like `animate-pulse` for boosted events).
 
+### Cloud Console Map IDs
+Rather than bloating the JavaScript bundle with extensive local JSON styling arrays, Map themes (like hiding Points of Interest or rendering dark mode) are managed dynamically through Google Cloud Map IDs. This strictly enforces the Cloud Console as the source of truth for the map's visual payload.
+
+### Z-Index Spatial Overlays
+The application utilizes a rigorous, three-tier z-index hierarchy on mobile views. The base Map Action Buttons float at `z-40`, the screen-dimming Event Details Drawer portals in at `z-50`, and the omnipresent Bottom Navigation Bar rests permanently at `z-[60]` with a `pointer-events-none` wrapper to ensure seamless interaction across layers.
+
 ## 6. Secure Route Group Governance
 The folder structure utilizes Next.js App Router Route Groups to enforce authorization at the layout level.
 
