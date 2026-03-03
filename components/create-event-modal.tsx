@@ -34,11 +34,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: "", category: "", tags: [], location: "",
-<<<<<<< HEAD
     date: "", endDate: "", time: "", endTime: "", maxPlayers: 10, description: "", icon: ""
-=======
-    date: "", time: "", endTime: "", maxPlayers: 10, description: "",
->>>>>>> origin/main
   })
   const [isAiLoading, setIsAiLoading] = useState(false)
   const [suggestions, setSuggestions] = useState([])
