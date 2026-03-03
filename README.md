@@ -19,7 +19,9 @@ This production-ready application features a complete authentication system, rea
 ### 🌍 Frictionless Guest Access & Discovery
 *   **Live Interactive Map**: Unauthenticated users can instantly explore the live map and Discover feed. 
 *   **Premium Map Pins**: Custom React teardrop nodes featuring rich gradients, drop shadows, and scale-on-hover micro-animations. Categorizes events via custom emojis.
-*   **Discovery Filters**: Surface events happening "Next 2 Hrs", "Today", or "This Weekend" with a single tap. 
+*   **Discovery Filters**: Surface events happening "Live", "This Week", or "This Weekend" with a single tap.
+*   **Cloud Console Styling**: Map visual themes (like Dark Mode and Point of Interest decluttering) are natively controlled via Google Cloud Map IDs without local style overrides.
+
 
 ### 📊 Organizer Logistics & CRM (Organizer Studio)
 *   **Organizer Dashboard**: High-level analytics to track event performance, total RSVPs, and average show rates.

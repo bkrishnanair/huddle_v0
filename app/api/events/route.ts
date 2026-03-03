@@ -10,9 +10,11 @@ import { z } from "zod"
 const eventSchema = z.object({
   name: z.string().min(1, "Event name is required"),
   category: z.string().min(1, "Category is required"),
+  icon: z.string().max(2, "Icon must be a single emoji").optional(),
   tags: z.array(z.string()).optional(),
   date: z.string().min(1, "Date is required"),
   time: z.string().min(1, "Time is required"),
+  endTime: z.string().optional(),
   location: z.string().min(1, "Location is required"),
   maxPlayers: z.number().min(1, "At least one player is required"),
   minPlayers: z.number().optional(),
@@ -51,12 +53,18 @@ export async function GET(request: NextRequest) {
       // Return only actual Firebase events
       const combinedEvents = events.filter((e: any) => !e.isPrivate)
 
-      return NextResponse.json({ events: combinedEvents })
+      return NextResponse.json(
+        { events: combinedEvents },
+        { headers: { 'Cache-Control': 'no-store, max-age=0' } }
+      )
     }
 
     const events = await getEvents()
     const combinedEvents = events.filter((e: any) => !e.isPrivate)
-    return NextResponse.json({ events: combinedEvents })
+    return NextResponse.json(
+      { events: combinedEvents },
+      { headers: { 'Cache-Control': 'no-store, max-age=0' } }
+    )
   } catch (error) {
     console.error("Error fetching events:", error)
     return NextResponse.json({ error: "Failed to fetch events" }, { status: 500 })

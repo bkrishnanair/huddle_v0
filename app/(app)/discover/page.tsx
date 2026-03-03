@@ -15,9 +15,10 @@ import { signOut } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
-import { isToday, isWeekend, isBefore, addHours, isFuture } from "date-fns"
+import { isToday, isWeekend, isBefore, addHours, isFuture, addDays } from "date-fns"
 
-const CATEGORY_FILTERS = ["All", "Sports", "Music", "Community", "Learning", "Food & Drink", "Tech", "Arts & Culture", "Outdoors"];
+const CATEGORY_FILTERS = ["All", "Recommended", "Sports", "Music", "Community", "Learning", "Food & Drink", "Tech", "Arts & Culture", "Outdoors"];
+const TIME_FILTERS = ["All", "Live", "This Week", "Today", "This Weekend"];
 
 const ActionableEmptyState = ({ onOpenCreateModal }: { onOpenCreateModal: () => void }) => (
     <div className="text-center glass-surface border-white/15 rounded-2xl p-8 mt-8">
@@ -120,12 +121,17 @@ export default function DiscoverPage() {
             const searchLower = searchQuery.toLowerCase();
             const matchesSearch =
                 event.name.toLowerCase().includes(searchLower) ||
-                (event.category && event.category.toLowerCase().includes(searchLower)) ||
+                (typeof event.category === 'string' && event.category.toLowerCase().includes(searchLower)) ||
                 (typeof event.location === 'string' && event.location.toLowerCase().includes(searchLower));
-            const matchesCategory = activeCategory === 'All' || event.category === activeCategory;
-
-            let matchesRange = true;
             let eventDistance = event.distance;
+            let matchesRange = true;
+
+            if (activeCategory === 'Recommended') {
+                const interests = userProfile?.favoriteSports || [];
+                if (interests.length > 0 && !interests.includes(event.category)) return false;
+            } else if (activeCategory !== 'All') {
+                if (event.category !== activeCategory) return false;
+            }
 
             if (userLocation && event.geopoint) {
                 const R = 3958.8; // Radius in miles
@@ -166,8 +172,16 @@ export default function DiscoverPage() {
                     try {
                         const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
                         if (!isNaN(eventDateTime.getTime())) {
-                            if (activeTime === 'Next 2 Hrs') {
-                                matchesTime = isBefore(eventDateTime, addHours(now, 2)) && isFuture(eventDateTime);
+                            if (activeTime === 'Live') {
+                                // Default roughly 3 hr duration for display logic if no endTime
+                                let endTime = new Date(eventDateTime.getTime() + 180 * 60000);
+                                if (event.endTime) endTime = new Date(`${event.date}T${event.endTime}`);
+                                const isOngoing = now >= eventDateTime && now <= endTime;
+                                const isStartingSoon = isBefore(eventDateTime, addHours(now, 1)) && isFuture(eventDateTime);
+                                matchesTime = isOngoing || isStartingSoon;
+                            } else if (activeTime === 'This Week') {
+                                const thisWeekEnd = addDays(now, 7);
+                                matchesTime = isBefore(eventDateTime, thisWeekEnd) && isFuture(eventDateTime);
                             } else if (activeTime === 'Today') {
                                 matchesTime = isToday(eventDateTime);
                             } else if (activeTime === 'This Weekend') {
@@ -180,7 +194,7 @@ export default function DiscoverPage() {
                 }
             }
 
-            return matchesSearch && matchesCategory && matchesRange && matchesTime && isNotPast;
+            return matchesSearch && matchesRange && matchesTime && isNotPast;
         });
 
         const favoriteCategories = userProfile?.favoriteCategories || [];
