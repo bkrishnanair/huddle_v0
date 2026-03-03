@@ -499,565 +499,561 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
 
   return (
     <Drawer open={isOpen} onOpenChange={onClose}>
-<<<<<<< HEAD
-  <DrawerContent className="glass-surface border-white/15 text-foreground max-w-2xl mx-auto rounded-t-[2rem] max-h-[85vh] flex flex-col focus:outline-none">
-=======
-      <DrawerContent className="glass-surface border-white/15 text-foreground max-w-2xl mx-auto rounded-t-[2rem] max-h-[92vh] flex flex-col focus:outline-none">
->>>>>>> origin/main
-      <div className="mx-auto mt-4 h-1.5 w-12 rounded-full bg-white/20 shrink-0" />
-      <DrawerHeader className="pb-2 pt-2 shrink-0">
-        <div className="flex justify-between items-start gap-4">
-          <div className="flex-1">
-            <DrawerTitle className="text-2xl font-black text-white tracking-tight leading-tight flex items-center gap-2">
-              {event.title}
-              {event.maxPlayers - event.currentPlayers > 0 && event.maxPlayers - event.currentPlayers <= 3 && (
-                <span className="bg-red-500 text-white px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(239,68,68,0.5)]">
-                  <AlertTriangle className="w-3 h-3" />
-                  Limited Seating!
-                </span>
-              )}
-            </DrawerTitle>
-            <DrawerDescription className="flex items-center gap-2 mt-1">
-              <span className="bg-primary/20 text-primary px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider">{event.sport}</span>
-              <span className="text-slate-500 text-xs font-medium">by {event.organizerName}</span>
-            </DrawerDescription>
+      <DrawerContent className="glass-surface border-white/15 text-foreground max-w-2xl mx-auto rounded-t-[2rem] max-h-[85vh] flex flex-col focus:outline-none">
+        <div className="mx-auto mt-4 h-1.5 w-12 rounded-full bg-white/20 shrink-0" />
+        <DrawerHeader className="pb-2 pt-2 shrink-0">
+          <div className="flex justify-between items-start gap-4">
+            <div className="flex-1">
+              <DrawerTitle className="text-2xl font-black text-white tracking-tight leading-tight flex items-center gap-2">
+                {event.title}
+                {event.maxPlayers - event.currentPlayers > 0 && event.maxPlayers - event.currentPlayers <= 3 && (
+                  <span className="bg-red-500 text-white px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(239,68,68,0.5)]">
+                    <AlertTriangle className="w-3 h-3" />
+                    Limited Seating!
+                  </span>
+                )}
+              </DrawerTitle>
+              <DrawerDescription className="flex items-center gap-2 mt-1">
+                <span className="bg-primary/20 text-primary px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider">{event.sport}</span>
+                <span className="text-slate-500 text-xs font-medium">by {event.organizerName}</span>
+              </DrawerDescription>
+            </div>
           </div>
-        </div>
-      </DrawerHeader>
+        </DrawerHeader>
 
-      <Tabs defaultValue="details" className="flex-1 w-full h-full flex flex-col min-h-0 overflow-hidden">
-        <div className="px-5 mb-3">
-          <TabsList className="grid w-full grid-cols-3 bg-slate-900/50 border border-white/5 rounded-xl p-1 h-10">
-            <TabsTrigger value="details" className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white text-xs font-bold transition-all rounded-lg">Details</TabsTrigger>
-            <TabsTrigger
-              value="chat"
-              disabled={!user || (!hasJoined && !isOrganizer)}
-              className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white text-xs font-bold transition-all rounded-lg flex items-center gap-2"
-            >
-              <MessageCircle className="w-3.5 h-3.5" />
-              Chat
-            </TabsTrigger>
-            <TabsTrigger
-              value="gallery"
-              className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white text-xs font-bold transition-all rounded-lg flex items-center gap-2"
-            >
-              <ImageIcon className="w-3.5 h-3.5" />
-              Gallery
-            </TabsTrigger>
-          </TabsList>
-        </div>
+        <Tabs defaultValue="details" className="flex-1 w-full h-full flex flex-col min-h-0 overflow-hidden">
+          <div className="px-5 mb-3">
+            <TabsList className="grid w-full grid-cols-3 bg-slate-900/50 border border-white/5 rounded-xl p-1 h-10">
+              <TabsTrigger value="details" className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white text-xs font-bold transition-all rounded-lg">Details</TabsTrigger>
+              <TabsTrigger
+                value="chat"
+                disabled={!user || (!hasJoined && !isOrganizer)}
+                className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white text-xs font-bold transition-all rounded-lg flex items-center gap-2"
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+                Chat
+              </TabsTrigger>
+              <TabsTrigger
+                value="gallery"
+                className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white text-xs font-bold transition-all rounded-lg flex items-center gap-2"
+              >
+                <ImageIcon className="w-3.5 h-3.5" />
+                Gallery
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-        <TabsContent value="details" className="flex-1 h-full overflow-y-auto outline-none pb-4 mt-0 data-[state=inactive]:hidden">
-          <div className="px-5 space-y-4">
-            {/* Info Grid - Modern Compact */}
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { icon: Users, label: "Capacity", value: `${event.currentPlayers} / ${event.maxPlayers}` },
-                { icon: Calendar, label: "Date", value: event.date.includes('/') ? event.date : format(parseISO(event.date), 'MMM d, yyyy') },
-                { icon: Clock, label: "Time", value: event.endTime ? `${event.time} - ${event.endTime}` : event.time },
-                { icon: MapPin, label: "Location", value: typeof event.location === 'string' ? event.location : 'Unavailable' }
-              ].map((item, i) => (
-                <div key={i} className="bg-white/5 border border-white/5 p-3 rounded-xl flex items-center gap-3">
-                  <item.icon className="w-4 h-4 text-primary shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest leading-none mb-1">{item.label}</p>
-                    {item.label === "Location" ? (
-                      <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.value)}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-emerald-400 hover:text-emerald-300 truncate block hover:underline">
-                        {item.value} ↗
-                      </a>
-                    ) : (
-                      <p className="text-xs font-bold text-slate-200 truncate">{item.value}</p>
-                    )}
+          <TabsContent value="details" className="flex-1 h-full overflow-y-auto outline-none pb-4 mt-0 data-[state=inactive]:hidden">
+            <div className="px-5 space-y-4">
+              {/* Info Grid - Modern Compact */}
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { icon: Users, label: "Capacity", value: `${event.currentPlayers} / ${event.maxPlayers}` },
+                  { icon: Calendar, label: "Date", value: event.date.includes('/') ? event.date : format(parseISO(event.date), 'MMM d, yyyy') },
+                  { icon: Clock, label: "Time", value: event.endTime ? `${event.time} - ${event.endTime}` : event.time },
+                  { icon: MapPin, label: "Location", value: typeof event.location === 'string' ? event.location : 'Unavailable' }
+                ].map((item, i) => (
+                  <div key={i} className="bg-white/5 border border-white/5 p-3 rounded-xl flex items-center gap-3">
+                    <item.icon className="w-4 h-4 text-primary shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest leading-none mb-1">{item.label}</p>
+                      {item.label === "Location" ? (
+                        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.value)}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-emerald-400 hover:text-emerald-300 truncate block hover:underline">
+                          {item.value} ↗
+                        </a>
+                      ) : (
+                        <p className="text-xs font-bold text-slate-200 truncate">{item.value}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add to Calendar Sync */}
+              {(hasJoined || isOrganizer) && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 text-[10px] font-bold text-slate-300"
+                    onClick={() => window.open(generateGoogleCalendarUrl(event), '_blank')}
+                  >
+                    <CalendarPlus className="w-3.5 h-3.5 mr-2 text-blue-400" />
+                    Google Calendar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 text-[10px] font-bold text-slate-300"
+                    onClick={() => downloadIcsFile(event)}
+                  >
+                    Apple / Outlook (.ics)
+                  </Button>
+                </div>
+              )}
+
+              {/* Capacity Meter */}
+              <div className="bg-slate-900/40 p-4 rounded-xl border border-white/5 space-y-2">
+                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                  <span className="text-slate-400">Spots Filled</span>
+                  <span className={isFull ? "text-amber-500" : "text-primary"}>
+                    {isFull ? "Event Full (Waitlist Open)" : `${event.maxPlayers - event.currentPlayers} Spots Left`}
+                  </span>
+                </div>
+                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${isFull ? 'bg-amber-500' : 'bg-primary'}`}
+                    style={{ width: `${Math.min((event.currentPlayers / event.maxPlayers) * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Event Logistics block */}
+              {(event.stayUntil || event.transitTips) && (
+                <div className="bg-indigo-900/30 p-4 rounded-xl border border-indigo-500/20 space-y-3">
+                  {event.stayUntil && (
+                    <div>
+                      <p className="text-[9px] text-indigo-400 uppercase font-black tracking-widest mb-1 flex items-center gap-1"><Clock className="w-3 h-3" /> Stay Until</p>
+                      <p className="text-sm font-medium text-indigo-100">{event.stayUntil}</p>
+                    </div>
+                  )}
+                  {event.transitTips && (
+                    <div>
+                      <p className="text-[9px] text-indigo-400 uppercase font-black tracking-widest mb-1 flex items-center gap-1"><Info className="w-3 h-3" /> Transit Tips</p>
+                      <p className="text-sm font-medium text-indigo-100">{event.transitTips}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {event.description && (
+                <div className="bg-slate-900/40 p-4 rounded-xl border border-white/5 relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover:bg-primary/40 transition-colors" />
+                  <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest mb-2 px-1">About this event</p>
+                  <span className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed block px-1">{event.description}</span>
+                </div>
+              )}
+
+              {isWaitlisted && (
+                <div className="flex items-center justify-center bg-amber-500/10 text-amber-500 py-3 rounded-xl border border-amber-500/20">
+                  <span className="text-[10px] font-black uppercase tracking-widest">🕒 On Waitlist</span>
+                </div>
+              )}
+
+              {isOrganizer && (
+                <div className="space-y-3 pt-4 border-t border-white/5 mt-4">
+                  {/* Logistics Summary */}
+                  {(!!event.questions?.length || !!event.pickupPoints?.length) && attendees.length > 0 && (
+                    <div className="bg-white/5 rounded-xl border border-white/5 p-3 mb-4 space-y-3">
+                      <h3 className="font-black text-[10px] uppercase tracking-widest text-emerald-400">Logistics Summary</h3>
+
+                      {event.questions?.map(q => {
+                        const yesCount = attendees.filter(a => event?.attendeeAnswers?.[a.id]?.[q] === "Yes").length;
+                        return (
+                          <div key={q} className="flex justify-between items-center text-xs">
+                            <span className="text-slate-400">{q} (Yes)</span>
+                            <span className="font-bold text-slate-200">{yesCount}</span>
+                          </div>
+                        )
+                      })}
+
+                      {event.pickupPoints && event.pickupPoints.length > 0 && (
+                        <div className="pt-2 border-t border-white/5 space-y-2">
+                          <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Pickup Headcounts</p>
+                          {event.pickupPoints.map(pt => {
+                            const count = attendees.filter(a => event?.attendeePickup?.[a.id] === pt.id).length;
+                            return (
+                              <div key={pt.id} className="flex justify-between items-center text-xs">
+                                <span className="text-slate-400">{pt.location} @ {pt.time}</span>
+                                <span className="font-bold text-slate-200">{count}</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between px-1">
+                    <h3 className="font-black text-[10px] uppercase tracking-widest text-primary/80 flex items-center gap-2">
+                      Organizer Roster
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant={event.checkInOpen ? "destructive" : "default"}
+                        size="sm"
+                        onClick={handleToggleCheckInOpen}
+                        disabled={isLoading}
+                        className="h-6 text-[9px] font-black uppercase tracking-wider px-2"
+                      >
+                        {event.checkInOpen ? "Close Check-In" : "Open Check-In"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={downloadCSV}
+                        disabled={isFetchingAttendees || attendees.length === 0}
+                        className="h-6 text-[9px] font-black uppercase tracking-wider text-slate-500 hover:text-primary transition-all p-0"
+                      >
+                        <Download className="w-3 h-3 mr-1" />
+                        Export
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-900/30 rounded-xl border border-white/5 overflow-hidden">
+                    <div className="max-h-40 overflow-y-auto no-scrollbar divide-y divide-white/5">
+                      {isFetchingAttendees ? (
+                        <div className="flex justify-center p-6"><Loader2 className="w-5 h-5 animate-spin text-primary/50" /></div>
+                      ) : attendees.length > 0 ? (
+                        attendees.map(a => (
+                          <div key={a.id} className="flex flex-col px-4 py-2.5 hover:bg-white/5 transition-colors group">
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-slate-300">{a.name}</span>
+                                {(a.loyaltyCount || 0) >= 2 && (
+                                  <span className="text-[8px] bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded-md border border-amber-500/20 font-black uppercase tracking-tighter shadow-sm">
+                                    🔥 Tier {a.loyaltyCount}
+                                  </span>
+                                )}
+                                {event?.checkIns?.[a.id] && (
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 ml-1" />
+                                )}
+                              </div>
+                              {a.reliabilityScore !== undefined && a.reliabilityScore !== null && (
+                                <div className="mt-1 flex items-center">
+                                  <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border ${a.reliabilityScore < 50 ? 'bg-red-500/20 text-red-500 border-red-500/20' : a.reliabilityScore === 100 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20' : 'bg-slate-800 text-slate-400 border-white/5'}`}>
+                                    {a.reliabilityScore}% Show
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex bg-slate-900/50 rounded-lg p-0.5 border border-white/5 opacity-0 group-hover:opacity-100 transition-opacity mt-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleCheckIn(a.id, !!event?.checkIns?.[a.id])}
+                                  disabled={isLoading}
+                                  className={`h-6 w-6 transition-colors ${event?.checkIns?.[a.id] ? 'text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20 hover:text-emerald-300' : 'text-slate-500 hover:text-emerald-400 hover:bg-emerald-400/10'}`}
+                                  title={event?.checkIns?.[a.id] ? "Checked In" : "Check In Attendee"}
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleRemoveAttendee(a.id)}
+                                  disabled={isLoading}
+                                  className="h-6 w-6 text-slate-500 hover:text-red-400 hover:bg-red-400/10"
+                                  title="Remove Attendee"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    setReportTarget(a.id);
+                                    setReportType("user");
+                                    setReportName(a.name);
+                                  }}
+                                  disabled={isLoading}
+                                  className="h-6 w-6 text-slate-500 hover:text-amber-400 hover:bg-amber-400/10"
+                                  title="Report Attendee"
+                                >
+                                  <ShieldAlert className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleBlockAttendee(a.id, a.name)}
+                                  disabled={isLoading}
+                                  className="h-6 w-6 text-slate-500 hover:text-red-500 hover:bg-red-500/10"
+                                  title="Block User from Future Events"
+                                >
+                                  <Ban className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
+                            </div>
+                            {a.note && (
+                              <p className="text-[10px] text-slate-500 italic mt-1 pl-1 border-l-2 border-primary/20">
+                                "{a.note}"
+                              </p>
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs font-bold text-slate-600 text-center py-6 italic">Waiting for attendees...</p>
+                      )}
+                    </div>
                   </div>
                 </div>
-              ))}
+              )}
             </div>
+          </TabsContent>
 
-            {/* Add to Calendar Sync */}
-            {(hasJoined || isOrganizer) && (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 text-[10px] font-bold text-slate-300"
-                  onClick={() => window.open(generateGoogleCalendarUrl(event), '_blank')}
-                >
-                  <CalendarPlus className="w-3.5 h-3.5 mr-2 text-blue-400" />
-                  Google Calendar
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 text-[10px] font-bold text-slate-300"
-                  onClick={() => downloadIcsFile(event)}
-                >
-                  Apple / Outlook (.ics)
-                </Button>
-              </div>
-            )}
-
-            {/* Capacity Meter */}
-            <div className="bg-slate-900/40 p-4 rounded-xl border border-white/5 space-y-2">
-              <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                <span className="text-slate-400">Spots Filled</span>
-                <span className={isFull ? "text-amber-500" : "text-primary"}>
-                  {isFull ? "Event Full (Waitlist Open)" : `${event.maxPlayers - event.currentPlayers} Spots Left`}
-                </span>
-              </div>
-              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${isFull ? 'bg-amber-500' : 'bg-primary'}`}
-                  style={{ width: `${Math.min((event.currentPlayers / event.maxPlayers) * 100, 100)}%` }}
+          <TabsContent value="chat" className="flex-1 min-h-0 flex flex-col overflow-hidden outline-none mt-0 pb-2 data-[state=inactive]:hidden">
+            <div className="flex-1 overflow-hidden px-5">
+              <div className="h-full rounded-2xl overflow-hidden border border-white/5 shadow-2xl">
+                <EventChat
+                  eventId={event.id as string}
+                  organizerId={event.createdBy}
+                  pinnedMessage={event.pinnedMessage}
                 />
               </div>
             </div>
+          </TabsContent>
 
-            {/* Event Logistics block */}
-            {(event.stayUntil || event.transitTips) && (
-              <div className="bg-indigo-900/30 p-4 rounded-xl border border-indigo-500/20 space-y-3">
-                {event.stayUntil && (
-                  <div>
-                    <p className="text-[9px] text-indigo-400 uppercase font-black tracking-widest mb-1 flex items-center gap-1"><Clock className="w-3 h-3" /> Stay Until</p>
-                    <p className="text-sm font-medium text-indigo-100">{event.stayUntil}</p>
-                  </div>
-                )}
-                {event.transitTips && (
-                  <div>
-                    <p className="text-[9px] text-indigo-400 uppercase font-black tracking-widest mb-1 flex items-center gap-1"><Info className="w-3 h-3" /> Transit Tips</p>
-                    <p className="text-sm font-medium text-indigo-100">{event.transitTips}</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {event.description && (
-              <div className="bg-slate-900/40 p-4 rounded-xl border border-white/5 relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover:bg-primary/40 transition-colors" />
-                <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest mb-2 px-1">About this event</p>
-                <span className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed block px-1">{event.description}</span>
-              </div>
-            )}
-
-            {isWaitlisted && (
-              <div className="flex items-center justify-center bg-amber-500/10 text-amber-500 py-3 rounded-xl border border-amber-500/20">
-                <span className="text-[10px] font-black uppercase tracking-widest">🕒 On Waitlist</span>
-              </div>
-            )}
-
-            {isOrganizer && (
-              <div className="space-y-3 pt-4 border-t border-white/5 mt-4">
-                {/* Logistics Summary */}
-                {(!!event.questions?.length || !!event.pickupPoints?.length) && attendees.length > 0 && (
-                  <div className="bg-white/5 rounded-xl border border-white/5 p-3 mb-4 space-y-3">
-                    <h3 className="font-black text-[10px] uppercase tracking-widest text-emerald-400">Logistics Summary</h3>
-
-                    {event.questions?.map(q => {
-                      const yesCount = attendees.filter(a => event?.attendeeAnswers?.[a.id]?.[q] === "Yes").length;
-                      return (
-                        <div key={q} className="flex justify-between items-center text-xs">
-                          <span className="text-slate-400">{q} (Yes)</span>
-                          <span className="font-bold text-slate-200">{yesCount}</span>
-                        </div>
-                      )
-                    })}
-
-                    {event.pickupPoints && event.pickupPoints.length > 0 && (
-                      <div className="pt-2 border-t border-white/5 space-y-2">
-                        <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Pickup Headcounts</p>
-                        {event.pickupPoints.map(pt => {
-                          const count = attendees.filter(a => event?.attendeePickup?.[a.id] === pt.id).length;
-                          return (
-                            <div key={pt.id} className="flex justify-between items-center text-xs">
-                              <span className="text-slate-400">{pt.location} @ {pt.time}</span>
-                              <span className="font-bold text-slate-200">{count}</span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between px-1">
-                  <h3 className="font-black text-[10px] uppercase tracking-widest text-primary/80 flex items-center gap-2">
-                    Organizer Roster
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant={event.checkInOpen ? "destructive" : "default"}
-                      size="sm"
-                      onClick={handleToggleCheckInOpen}
-                      disabled={isLoading}
-                      className="h-6 text-[9px] font-black uppercase tracking-wider px-2"
-                    >
-                      {event.checkInOpen ? "Close Check-In" : "Open Check-In"}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={downloadCSV}
-                      disabled={isFetchingAttendees || attendees.length === 0}
-                      className="h-6 text-[9px] font-black uppercase tracking-wider text-slate-500 hover:text-primary transition-all p-0"
-                    >
-                      <Download className="w-3 h-3 mr-1" />
-                      Export
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="bg-slate-900/30 rounded-xl border border-white/5 overflow-hidden">
-                  <div className="max-h-40 overflow-y-auto no-scrollbar divide-y divide-white/5">
-                    {isFetchingAttendees ? (
-                      <div className="flex justify-center p-6"><Loader2 className="w-5 h-5 animate-spin text-primary/50" /></div>
-                    ) : attendees.length > 0 ? (
-                      attendees.map(a => (
-                        <div key={a.id} className="flex flex-col px-4 py-2.5 hover:bg-white/5 transition-colors group">
-                          <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-slate-300">{a.name}</span>
-                              {(a.loyaltyCount || 0) >= 2 && (
-                                <span className="text-[8px] bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded-md border border-amber-500/20 font-black uppercase tracking-tighter shadow-sm">
-                                  🔥 Tier {a.loyaltyCount}
-                                </span>
-                              )}
-                              {event?.checkIns?.[a.id] && (
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 ml-1" />
-                              )}
-                            </div>
-                            {a.reliabilityScore !== undefined && a.reliabilityScore !== null && (
-                              <div className="mt-1 flex items-center">
-                                <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border ${a.reliabilityScore < 50 ? 'bg-red-500/20 text-red-500 border-red-500/20' : a.reliabilityScore === 100 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20' : 'bg-slate-800 text-slate-400 border-white/5'}`}>
-                                  {a.reliabilityScore}% Show
-                                </span>
-                              </div>
-                            )}
-                            <div className="flex bg-slate-900/50 rounded-lg p-0.5 border border-white/5 opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleCheckIn(a.id, !!event?.checkIns?.[a.id])}
-                                disabled={isLoading}
-                                className={`h-6 w-6 transition-colors ${event?.checkIns?.[a.id] ? 'text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20 hover:text-emerald-300' : 'text-slate-500 hover:text-emerald-400 hover:bg-emerald-400/10'}`}
-                                title={event?.checkIns?.[a.id] ? "Checked In" : "Check In Attendee"}
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleRemoveAttendee(a.id)}
-                                disabled={isLoading}
-                                className="h-6 w-6 text-slate-500 hover:text-red-400 hover:bg-red-400/10"
-                                title="Remove Attendee"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  setReportTarget(a.id);
-                                  setReportType("user");
-                                  setReportName(a.name);
-                                }}
-                                disabled={isLoading}
-                                className="h-6 w-6 text-slate-500 hover:text-amber-400 hover:bg-amber-400/10"
-                                title="Report Attendee"
-                              >
-                                <ShieldAlert className="w-3.5 h-3.5" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleBlockAttendee(a.id, a.name)}
-                                disabled={isLoading}
-                                className="h-6 w-6 text-slate-500 hover:text-red-500 hover:bg-red-500/10"
-                                title="Block User from Future Events"
-                              >
-                                <Ban className="w-3.5 h-3.5" />
-                              </Button>
-                            </div>
-                          </div>
-                          {a.note && (
-                            <p className="text-[10px] text-slate-500 italic mt-1 pl-1 border-l-2 border-primary/20">
-                              "{a.note}"
-                            </p>
-                          )}
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-xs font-bold text-slate-600 text-center py-6 italic">Waiting for attendees...</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="chat" className="flex-1 min-h-0 flex flex-col overflow-hidden outline-none mt-0 pb-2 data-[state=inactive]:hidden">
-          <div className="flex-1 overflow-hidden px-5">
-            <div className="h-full rounded-2xl overflow-hidden border border-white/5 shadow-2xl">
-              <EventChat
+          <TabsContent value="gallery" className="flex-1 min-h-[40vh] flex flex-col overflow-y-auto no-scrollbar outline-none mt-0 pb-4 data-[state=inactive]:hidden">
+            <div className="px-5">
+              <EventGallery
                 eventId={event.id as string}
-                organizerId={event.createdBy}
-                pinnedMessage={event.pinnedMessage}
+                isOrganizer={isOrganizer || false}
+                hasJoined={hasJoined || false}
+                eventDate={event.date}
               />
             </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="gallery" className="flex-1 min-h-[40vh] flex flex-col overflow-y-auto no-scrollbar outline-none mt-0 pb-4 data-[state=inactive]:hidden">
-          <div className="px-5">
-            <EventGallery
-              eventId={event.id as string}
-              isOrganizer={isOrganizer || false}
-              hasJoined={hasJoined || false}
-              eventDate={event.date}
-            />
-          </div>
-        </TabsContent>
-      </Tabs>
-      <DrawerFooter className="flex flex-col gap-2 p-5 pt-3 pb-28 bg-slate-950/20 border-t border-white/5 shrink-0">
-        {/* Main Action Button */}
-        {!isOrganizer && (
-          <div className="flex flex-col gap-2">
-            {event.checkInOpen && hasJoined && !event.checkIns?.[user?.uid || ''] && (
+          </TabsContent>
+        </Tabs>
+        <DrawerFooter className="flex flex-col gap-2 p-5 pt-3 pb-28 bg-slate-950/20 border-t border-white/5 shrink-0">
+          {/* Main Action Button */}
+          {!isOrganizer && (
+            <div className="flex flex-col gap-2">
+              {event.checkInOpen && hasJoined && !event.checkIns?.[user?.uid || ''] && (
+                <Button
+                  size="lg"
+                  onClick={handleSelfCheckIn}
+                  disabled={isLoading}
+                  className="h-12 rounded-xl text-sm font-black uppercase tracking-widest shadow-[0_0_15px_rgba(52,211,153,0.3)] bg-emerald-500 hover:bg-emerald-400 text-slate-900 transition-all active:scale-95 animate-pulse-subtle"
+                >
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "I'm Here (Check-In)"}
+                </Button>
+              )}
+              {event.checkIns?.[user?.uid || ''] && hasJoined && (
+                <div className="h-12 rounded-xl text-sm font-black flex items-center justify-center gap-2 uppercase tracking-widest border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
+                  <CheckCircle2 className="w-4 h-4" /> Checked In
+                </div>
+              )}
               <Button
                 size="lg"
-                onClick={handleSelfCheckIn}
-                disabled={isLoading}
-                className="h-12 rounded-xl text-sm font-black uppercase tracking-widest shadow-[0_0_15px_rgba(52,211,153,0.3)] bg-emerald-500 hover:bg-emerald-400 text-slate-900 transition-all active:scale-95 animate-pulse-subtle"
+                onClick={handleRSVPClick}
+                disabled={isLoading || loading}
+                variant={getButtonVariant()}
+                className="h-12 rounded-xl text-sm font-black uppercase tracking-widest shadow-lg transition-all active:scale-95"
               >
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "I'm Here (Check-In)"}
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {getButtonText()}
               </Button>
-            )}
-            {event.checkIns?.[user?.uid || ''] && hasJoined && (
-              <div className="h-12 rounded-xl text-sm font-black flex items-center justify-center gap-2 uppercase tracking-widest border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
-                <CheckCircle2 className="w-4 h-4" /> Checked In
+            </div>
+          )}
+
+          {/* Organizer Secondary Actions */}
+          {isOrganizer && (
+            <div className="flex flex-col gap-2">
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditing(true)}
+                  className="h-10 bg-white/5 hover:bg-white/10 text-white border-white/10 rounded-xl text-xs font-bold"
+                >
+                  Edit Event
+                </Button>
+                <Button
+                  onClick={handleEndEvent}
+                  disabled={isLoading || event.status === 'past'}
+                  className="h-10 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-xl text-xs font-bold"
+                >
+                  {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : (event.status === 'past' ? "Event Ended" : "End Event")}
+                </Button>
+              </div>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={isLoading}
+                className="h-10 text-xs font-bold rounded-xl w-full"
+              >
+                {isLoading && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                <Trash2 className="mr-2 h-3.5 w-3.5" />
+                Delete
+              </Button>
+            </div>
+          )}
+
+          {/* Nav & Share Utility */}
+          <div className="grid grid-cols-6 gap-2 mt-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsCloning(true)}
+              className="col-span-2 h-10 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold"
+            >
+              <Copy className="mr-2 h-3.5 w-3.5" />
+              Clone
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleShare}
+              className="col-span-2 h-10 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold"
+              title="Share Event"
+            >
+              <Share className="w-3.5 h-3.5 mr-2" />
+              Share
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setReportTarget(event.id);
+                setReportType("event");
+                setReportName(event.title || "");
+              }}
+              className="col-span-1 h-10 rounded-xl border-white/10 bg-white/5 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 text-slate-500"
+              title="Report Event"
+            >
+              <ShieldAlert className="w-4 h-4" />
+            </Button>
+            <DrawerClose asChild className="col-span-1">
+              <Button variant="outline" className="h-10 rounded-xl border-white/10 bg-white/10 hover:bg-white/20 text-white font-bold text-xs tracking-tight">
+                Close
+              </Button>
+            </DrawerClose>
+          </div>
+        </DrawerFooter>
+      </DrawerContent>
+      {(isCloning || isEditing) && event && (
+        <CreateEventModal
+          isOpen={isCloning || isEditing}
+          onClose={() => {
+            setIsCloning(false);
+            setIsEditing(false);
+          }}
+          onEventCreated={(newEvent) => {
+            setIsCloning(false);
+            setIsEditing(false);
+            onEventUpdated(newEvent);
+            onClose(); // Close the drawer as well so they see the new pin
+          }}
+          userLocation={null}
+          initialData={event}
+          isEditMode={isEditing}
+        />
+      )}
+
+      {/* RSVP PROMPT MODAL (For Name & Notes) */}
+      <Dialog open={showRsvpPrompt} onOpenChange={setShowRsvpPrompt}>
+        <DialogContent className="glass-surface border-white/10 sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black uppercase tracking-widest text-white">Join Event</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              {isWaitlisted || isFull
+                ? "This event is currently full. Join the waitlist and we will automatically add you if a spot opens up."
+                : "You are about to secure your spot for this event."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto no-scrollbar px-1">
+            {/* ONLY show Name input if they are not logged in */}
+            {!user && (
+              <div className="grid gap-2">
+                <Label htmlFor="guestName" className="text-xs font-bold uppercase tracking-widest text-slate-300">
+                  Your Name <span className="text-primary">*</span>
+                </Label>
+                <Input
+                  id="guestName"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  placeholder="e.g., John Doe"
+                  className="bg-slate-900/50 border-white/10 text-white placeholder:text-slate-500"
+                />
+                <p className="text-[10px] text-slate-500">We need a name so the organizer knows who is coming.</p>
               </div>
             )}
+
+            {/* Questions from Organizer */}
+            {event.questions?.map((q) => (
+              <div key={q} className="grid gap-2">
+                <Label className="text-xs font-bold uppercase tracking-widest text-slate-300">
+                  {q} <span className="text-primary">*</span>
+                </Label>
+                <Select
+                  value={rsvpAnswers[q] || ""}
+                  onValueChange={(val) => setRsvpAnswers(prev => ({ ...prev, [q]: val }))}
+                >
+                  <SelectTrigger className="bg-slate-900/50 border-white/10 text-white">
+                    <SelectValue placeholder="Select an option" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Yes">Yes</SelectItem>
+                    <SelectItem value="No">No</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+
+            {/* Pickup Points from Organizer */}
+            {event.pickupPoints && event.pickupPoints.length > 0 && (
+              <div className="grid gap-2">
+                <Label className="text-xs font-bold uppercase tracking-widest text-slate-300">
+                  Select Pickup Point <span className="text-primary">*</span>
+                </Label>
+                <Select
+                  value={rsvpPickupId}
+                  onValueChange={setRsvpPickupId}
+                >
+                  <SelectTrigger className="bg-slate-900/50 border-white/10 text-white">
+                    <SelectValue placeholder="Where do you need a ride from?" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">I don't need a ride</SelectItem>
+                    {event.pickupPoints.map(pt => (
+                      <SelectItem key={pt.id} value={pt.id}>{pt.location} @ {pt.time}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Show notes for everyone */}
+            <div className="grid gap-2">
+              <Label htmlFor="rsvpNote" className="text-xs font-bold uppercase tracking-widest text-slate-300">
+                Message to Organizer <span className="text-slate-500 font-normal capitalize tracking-normal">(Optional)</span>
+              </Label>
+              <Textarea
+                id="rsvpNote"
+                value={rsvpNote}
+                onChange={(e) => setRsvpNote(e.target.value)}
+                placeholder="e.g., I will be 10 mins late! or I'm bringing an extra ball."
+                className="bg-slate-900/50 border-white/10 text-white placeholder:text-slate-500 min-h-[80px]"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRsvpPrompt(false)} className="border-white/10 bg-white/5 text-white">
+              Cancel
+            </Button>
             <Button
-              size="lg"
-              onClick={handleRSVPClick}
-              disabled={isLoading || loading}
-              variant={getButtonVariant()}
-              className="h-12 rounded-xl text-sm font-black uppercase tracking-widest shadow-lg transition-all active:scale-95"
+              onClick={() => executeRSVP("join", rsvpNote, guestName)}
+              disabled={
+                isLoading ||
+                (!user && !guestName.trim()) ||
+                (!!event.questions?.length && Object.keys(rsvpAnswers).length !== event.questions.length) ||
+                (!!event.pickupPoints?.length && !rsvpPickupId)
+              }
+              className="bg-primary text-primary-foreground font-bold"
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {getButtonText()}
+              {isFull ? "Join Waitlist" : "Confirm RSVP"}
             </Button>
-          </div>
-        )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        {/* Organizer Secondary Actions */}
-        {isOrganizer && (
-          <div className="flex flex-col gap-2">
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setIsEditing(true)}
-                className="h-10 bg-white/5 hover:bg-white/10 text-white border-white/10 rounded-xl text-xs font-bold"
-              >
-                Edit Event
-              </Button>
-              <Button
-                onClick={handleEndEvent}
-                disabled={isLoading || event.status === 'past'}
-                className="h-10 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-xl text-xs font-bold"
-              >
-                {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : (event.status === 'past' ? "Event Ended" : "End Event")}
-              </Button>
-            </div>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={isLoading}
-              className="h-10 text-xs font-bold rounded-xl w-full"
-            >
-              {isLoading && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
-              <Trash2 className="mr-2 h-3.5 w-3.5" />
-              Delete
-            </Button>
-          </div>
-        )}
-
-        {/* Nav & Share Utility */}
-        <div className="grid grid-cols-6 gap-2 mt-2">
-          <Button
-            variant="outline"
-            onClick={() => setIsCloning(true)}
-            className="col-span-2 h-10 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold"
-          >
-            <Copy className="mr-2 h-3.5 w-3.5" />
-            Clone
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleShare}
-            className="col-span-2 h-10 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold"
-            title="Share Event"
-          >
-            <Share className="w-3.5 h-3.5 mr-2" />
-            Share
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setReportTarget(event.id);
-              setReportType("event");
-              setReportName(event.title || "");
-            }}
-            className="col-span-1 h-10 rounded-xl border-white/10 bg-white/5 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 text-slate-500"
-            title="Report Event"
-          >
-            <ShieldAlert className="w-4 h-4" />
-          </Button>
-          <DrawerClose asChild className="col-span-1">
-            <Button variant="outline" className="h-10 rounded-xl border-white/10 bg-white/10 hover:bg-white/20 text-white font-bold text-xs tracking-tight">
-              Close
-            </Button>
-          </DrawerClose>
-        </div>
-      </DrawerFooter>
-    </DrawerContent>
-    {(isCloning || isEditing) && event && (
-      <CreateEventModal
-        isOpen={isCloning || isEditing}
-        onClose={() => {
-          setIsCloning(false);
-          setIsEditing(false);
-        }}
-        onEventCreated={(newEvent) => {
-          setIsCloning(false);
-          setIsEditing(false);
-          onEventUpdated(newEvent);
-          onClose(); // Close the drawer as well so they see the new pin
-        }}
-        userLocation={null}
-        initialData={event}
-        isEditMode={isEditing}
+      {/* REPORT MODAL */}
+      <ReportModal
+        isOpen={!!reportTarget}
+        onClose={() => setReportTarget(null)}
+        targetId={reportTarget || ""}
+        itemType={reportType}
+        targetName={reportName}
       />
-    )}
-
-    {/* RSVP PROMPT MODAL (For Name & Notes) */}
-    <Dialog open={showRsvpPrompt} onOpenChange={setShowRsvpPrompt}>
-      <DialogContent className="glass-surface border-white/10 sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-black uppercase tracking-widest text-white">Join Event</DialogTitle>
-          <DialogDescription className="text-slate-400">
-            {isWaitlisted || isFull
-              ? "This event is currently full. Join the waitlist and we will automatically add you if a spot opens up."
-              : "You are about to secure your spot for this event."}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto no-scrollbar px-1">
-          {/* ONLY show Name input if they are not logged in */}
-          {!user && (
-            <div className="grid gap-2">
-              <Label htmlFor="guestName" className="text-xs font-bold uppercase tracking-widest text-slate-300">
-                Your Name <span className="text-primary">*</span>
-              </Label>
-              <Input
-                id="guestName"
-                value={guestName}
-                onChange={(e) => setGuestName(e.target.value)}
-                placeholder="e.g., John Doe"
-                className="bg-slate-900/50 border-white/10 text-white placeholder:text-slate-500"
-              />
-              <p className="text-[10px] text-slate-500">We need a name so the organizer knows who is coming.</p>
-            </div>
-          )}
-
-          {/* Questions from Organizer */}
-          {event.questions?.map((q) => (
-            <div key={q} className="grid gap-2">
-              <Label className="text-xs font-bold uppercase tracking-widest text-slate-300">
-                {q} <span className="text-primary">*</span>
-              </Label>
-              <Select
-                value={rsvpAnswers[q] || ""}
-                onValueChange={(val) => setRsvpAnswers(prev => ({ ...prev, [q]: val }))}
-              >
-                <SelectTrigger className="bg-slate-900/50 border-white/10 text-white">
-                  <SelectValue placeholder="Select an option" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Yes">Yes</SelectItem>
-                  <SelectItem value="No">No</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          ))}
-
-          {/* Pickup Points from Organizer */}
-          {event.pickupPoints && event.pickupPoints.length > 0 && (
-            <div className="grid gap-2">
-              <Label className="text-xs font-bold uppercase tracking-widest text-slate-300">
-                Select Pickup Point <span className="text-primary">*</span>
-              </Label>
-              <Select
-                value={rsvpPickupId}
-                onValueChange={setRsvpPickupId}
-              >
-                <SelectTrigger className="bg-slate-900/50 border-white/10 text-white">
-                  <SelectValue placeholder="Where do you need a ride from?" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">I don't need a ride</SelectItem>
-                  {event.pickupPoints.map(pt => (
-                    <SelectItem key={pt.id} value={pt.id}>{pt.location} @ {pt.time}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* Show notes for everyone */}
-          <div className="grid gap-2">
-            <Label htmlFor="rsvpNote" className="text-xs font-bold uppercase tracking-widest text-slate-300">
-              Message to Organizer <span className="text-slate-500 font-normal capitalize tracking-normal">(Optional)</span>
-            </Label>
-            <Textarea
-              id="rsvpNote"
-              value={rsvpNote}
-              onChange={(e) => setRsvpNote(e.target.value)}
-              placeholder="e.g., I will be 10 mins late! or I'm bringing an extra ball."
-              className="bg-slate-900/50 border-white/10 text-white placeholder:text-slate-500 min-h-[80px]"
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setShowRsvpPrompt(false)} className="border-white/10 bg-white/5 text-white">
-            Cancel
-          </Button>
-          <Button
-            onClick={() => executeRSVP("join", rsvpNote, guestName)}
-            disabled={
-              isLoading ||
-              (!user && !guestName.trim()) ||
-              (!!event.questions?.length && Object.keys(rsvpAnswers).length !== event.questions.length) ||
-              (!!event.pickupPoints?.length && !rsvpPickupId)
-            }
-            className="bg-primary text-primary-foreground font-bold"
-          >
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isFull ? "Join Waitlist" : "Confirm RSVP"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-
-    {/* REPORT MODAL */}
-    <ReportModal
-      isOpen={!!reportTarget}
-      onClose={() => setReportTarget(null)}
-      targetId={reportTarget || ""}
-      itemType={reportType}
-      targetName={reportName}
-    />
-  </Drawer>
+    </Drawer>
   )
 }
