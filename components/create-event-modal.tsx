@@ -34,7 +34,11 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: "", category: "", tags: [], location: "",
+<<<<<<< HEAD
     date: "", endDate: "", time: "", endTime: "", maxPlayers: 10, description: "", icon: ""
+=======
+    date: "", time: "", endTime: "", maxPlayers: 10, description: "",
+>>>>>>> origin/main
   })
   const [isAiLoading, setIsAiLoading] = useState(false)
   const [suggestions, setSuggestions] = useState([])
@@ -449,12 +453,14 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
               </div>
             </div>
 
-            {conflictWarning && (
-              <div className="bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-bold p-3 rounded-lg flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                {conflictWarning}
-              </div>
-            )}
+            {
+              conflictWarning && (
+                <div className="bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-bold p-3 rounded-lg flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  {conflictWarning}
+                </div>
+              )
+            }
 
             <div>
               <Label htmlFor="maxPlayers">Number of Attendees</Label>
@@ -631,15 +637,15 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                 <Switch id="boost" checked={boostEvent} onCheckedChange={setBoostEvent} />
               </div>
             </div>
-          </form>
-        </div>
+          </form >
+        </div >
 
         <DialogFooter className="p-6 pt-4 bg-slate-900/50 border-t border-border">
           <Button type="submit" form="event-form" disabled={isLoading} className="w-full" size="lg">
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Create Event"}
           </Button>
         </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </DialogContent >
+    </Dialog >
   )
 }

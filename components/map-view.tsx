@@ -21,18 +21,30 @@ interface MapViewProps {
   intent?: string
 }
 
+<<<<<<< HEAD
 const MapRenderer = ({ onMapLoad, children, isDarkMode }: { onMapLoad: (map: google.maps.Map) => void, children: React.ReactNode, isDarkMode: boolean }) => {
+=======
+const MapRenderer = ({ onMapLoad, children, styles, isDarkMode }: { onMapLoad: (map: google.maps.Map) => void, children: React.ReactNode, styles?: google.maps.MapTypeStyle[], isDarkMode: boolean }) => {
+>>>>>>> origin/main
   const map = useMap();
   useEffect(() => {
     if (map) {
       map.setOptions({
+<<<<<<< HEAD
+=======
+        styles: styles || [],
+>>>>>>> origin/main
         backgroundColor: isDarkMode ? '#010b13' : '#ffffff',
         // @ts-ignore - for newer Maps API features
         colorScheme: isDarkMode ? 'DARK' : 'LIGHT'
       });
       onMapLoad(map);
     }
+<<<<<<< HEAD
   }, [map, onMapLoad, isDarkMode]);
+=======
+  }, [map, onMapLoad, styles, isDarkMode]);
+>>>>>>> origin/main
 
 
   useEffect(() => {
@@ -107,9 +119,17 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [hasCenteredDefault, setHasCenteredDefault] = useState(!!initialCenter);
   const [isDarkMode, setIsDarkMode] = useState(true);
+<<<<<<< HEAD
   const [userProfile, setUserProfile] = useState<any>(null);
 
 
+=======
+
+  // Use useMemo to select the style object
+  const activeMapStyle = useMemo(() => {
+    return isDarkMode ? DARK_MAP_STYLE : []; // Empty array defaults to standard light theme
+  }, [isDarkMode]);
+>>>>>>> origin/main
 
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID;
@@ -428,6 +448,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   }, [events, activeCategory, activeTime]);
 
 
+
   const getDisplayDate = (dateStr: string) => {
     if (!dateStr || dateStr.includes('/')) return dateStr;
     try {
@@ -464,287 +485,319 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
               className="w-full h-full"
               disableDefaultUI={true}
               mapId={mapId}
+<<<<<<< HEAD
+=======
+              styles={activeMapStyle}
+>>>>>>> origin/main
               // @ts-ignore
               colorScheme={isDarkMode ? "DARK" : "LIGHT"}
               gestureHandling={'greedy'}
             >
-              <MapRenderer onMapLoad={setMap} isDarkMode={isDarkMode}>
-                {map && (
-                  <>
-                    {userLocation && (
-                      <AdvancedMarker position={userLocation}>
-                        <div className="relative flex items-center justify-center">
-                          <div className="absolute w-8 h-8 bg-blue-500/30 rounded-full animate-ping" />
-                          <div className="relative w-4 h-4 bg-blue-500 border-2 border-white rounded-full shadow-lg" />
-                        </div>
-                      </AdvancedMarker>
-                    )}
-                    {!userLocation && (
-                      <AdvancedMarker position={{ lat: 38.9897, lng: -76.9378 }}>
-                        <div className="flex flex-col items-center">
-                          <div className="bg-primary/20 backdrop-blur-sm border border-primary/50 text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-full mb-1">
-                            College Park
-                          </div>
-                          <div className="w-3 h-3 bg-primary rounded-full border-2 border-white shadow-lg animate-pulse" />
-                        </div>
-                      </AdvancedMarker>
-                    )}
-                    {filteredEvents.map((event: GameEvent) => {
-                      const isHovered = hoveredEvent?.id === event.id;
-                      const showDetails = isHovered || currentZoom >= 16;
-                      const categoryColor = getCategoryColor(event.category);
+<<<<<<< HEAD
+  <MapRenderer onMapLoad={setMap} isDarkMode={isDarkMode}>
+=======
+              <MapRenderer onMapLoad={setMap} styles={activeMapStyle} isDarkMode={isDarkMode}>
+>>>>>>> origin/main
+      {map && (
+        <>
+          {userLocation && (
+            <AdvancedMarker position={userLocation}>
+              <div className="relative flex items-center justify-center">
+                <div className="absolute w-8 h-8 bg-blue-500/30 rounded-full animate-ping" />
+                <div className="relative w-4 h-4 bg-blue-500 border-2 border-white rounded-full shadow-lg" />
+              </div>
+            </AdvancedMarker>
+          )}
+          {!userLocation && (
+            <AdvancedMarker position={{ lat: 38.9897, lng: -76.9378 }}>
+              <div className="flex flex-col items-center">
+                <div className="bg-primary/20 backdrop-blur-sm border border-primary/50 text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-full mb-1">
+                  College Park
+                </div>
+                <div className="w-3 h-3 bg-primary rounded-full border-2 border-white shadow-lg animate-pulse" />
+              </div>
+            </AdvancedMarker>
+          )}
+          {filteredEvents.map((event: GameEvent) => {
+            const isHovered = hoveredEvent?.id === event.id;
+            const showDetails = isHovered || currentZoom >= 16;
+            const categoryColor = getCategoryColor(event.category);
 
-                      let isFutureEvent = false;
-                      if (!event.date || event.date.includes('/')) {
-                        isFutureEvent = false;
-                      } else {
-                        try {
-                          const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
-                          isFutureEvent = !isToday(eventDateTime) && eventDateTime > new Date();
-                        } catch (e) {
-                          isFutureEvent = false;
-                        }
-                      }
+            let isFutureEvent = false;
+            if (!event.date || event.date.includes('/')) {
+              isFutureEvent = false;
+            } else {
+              try {
+                const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
+                isFutureEvent = !isToday(eventDateTime) && eventDateTime > new Date();
+              } catch (e) {
+                isFutureEvent = false;
+              }
+            }
 
-                      return (
-                        <AdvancedMarker
-                          key={event.id}
-                          position={{ lat: event.geopoint.latitude, lng: event.geopoint.longitude }}
-                          onClick={() => setSelectedEvent(event)}
-                          onMouseEnter={() => setHoveredEvent(event)}
-                          onMouseLeave={() => setHoveredEvent(null)}
-                          style={{ zIndex: isHovered ? 50 : (showDetails ? 10 : 0) }}
-                        >
-                          <div className={`flex flex-col items-center transition-all duration-500 transform origin-bottom ${isHovered ? 'scale-110 -translate-y-1' : 'scale-100'}`}>
-                            {/* Floating Info Bubble */}
-                            <div className={`
+            return (
+              <AdvancedMarker
+                key={event.id}
+                position={{ lat: event.geopoint.latitude, lng: event.geopoint.longitude }}
+                onClick={() => setSelectedEvent(event)}
+                onMouseEnter={() => setHoveredEvent(event)}
+                onMouseLeave={() => setHoveredEvent(null)}
+                style={{ zIndex: isHovered ? 50 : (showDetails ? 10 : 0) }}
+              >
+                <div className={`flex flex-col items-center transition-all duration-500 transform origin-bottom ${isHovered ? 'scale-110 -translate-y-1' : 'scale-100'}`}>
+                  {/* Floating Info Bubble */}
+                  <div className={`
                               mb-2 px-3 py-1.5 rounded-2xl glass-surface border border-white/20 shadow-2xl
                               transition-all duration-300 ease-out flex flex-col items-center
                               ${showDetails ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
                             `}>
-                              <span className="text-[11px] font-black text-white whitespace-nowrap leading-none mb-1">{event.name}</span>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[9px] text-slate-300 font-bold leading-none">
-                                  {getDisplayDate(event.date)} • {event.time}{event.endTime ? ` - ${event.endTime}` : ''}
-                                </span>
-                                {isEventOngoing(event) && (
-                                  <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 rounded font-black flex items-center gap-1 animate-pulse border border-emerald-500/30">
-                                    <span className="w-1 h-1 rounded-full bg-emerald-400" /> LIVE
-                                  </span>
-                                )}
-                              </div>
-                            </div>
+                    <span className="text-[11px] font-black text-white whitespace-nowrap leading-none mb-1">{event.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] text-slate-300 font-bold leading-none">
+                        {getDisplayDate(event.date)} • {event.time}{event.endTime ? ` - ${event.endTime}` : ''}
+                      </span>
+                      {isEventOngoing(event) && (
+                        <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 rounded font-black flex items-center gap-1 animate-pulse border border-emerald-500/30">
+                          <span className="w-1 h-1 rounded-full bg-emerald-400" /> LIVE
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-                            {/* Teardrop Pin */}
-                            <div className="relative group">
-                              {/* Pulse effect for hovered OR ongoing pins */}
-                              {(isHovered || isEventOngoing(event)) && (
-                                <div
-                                  className={`absolute ${isEventOngoing(event) && !isHovered ? '-inset-1 animate-[ping_2.5s_cubic-bezier(0,0,0.2,1)_infinite] opacity-60' : 'inset-0 animate-ping opacity-40'} rounded-full`}
-                                  style={{ backgroundColor: isEventOngoing(event) && !isHovered ? '#10b981' : categoryColor }}
-                                />
-                              )}
+                  {/* Teardrop Pin */}
+                  <div className="relative group">
+                    {/* Pulse effect for hovered OR ongoing pins */}
+                    {(isHovered || isEventOngoing(event)) && (
+                      <div
+                        className={`absolute ${isEventOngoing(event) && !isHovered ? '-inset-1 animate-[ping_2.5s_cubic-bezier(0,0,0.2,1)_infinite] opacity-60' : 'inset-0 animate-ping opacity-40'} rounded-full`}
+                        style={{ backgroundColor: isEventOngoing(event) && !isHovered ? '#10b981' : categoryColor }}
+                      />
+                    )}
 
-                              <div
-                                className={`
+                    <div
+                      className={`
                                   relative w-10 h-10 flex items-center justify-center
                                   rounded-full rounded-br-none rotate-45
                                   border-2 ${isEventOngoing(event) ? 'border-emerald-400' : 'border-white'} transition-all duration-300
+<<<<<<< HEAD
                                   ${isFutureEvent ? 'opacity-70 saturate-50' : 'opacity-100'}
+=======
+>>>>>>> origin/main
                                 `}
-                                style={{
-                                  background: `linear-gradient(135deg, ${categoryColor}, ${categoryColor}dd)`,
-                                  boxShadow: isHovered ? `0 0 25px ${categoryColor}aa` : (isEventOngoing(event) ? `0 0 15px rgba(16, 185, 129, 0.6), 0 4px 10px rgba(0,0,0,0.4)` : `0 4px 10px rgba(0,0,0,0.4)`)
-                                }}
-                              >
-                                <div className="-rotate-45 text-xl filter drop-shadow-sm brightness-110">
-                                  {event.icon || getCategoryIcon(event.category)}
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Mini shadow at base */}
-                            <div className={`
-                              w-4 h-1 bg-black/40 rounded-full blur-[2px] mt-1 transition-all duration-300
-                              ${isHovered ? 'scale-150 opacity-60' : 'scale-100 opacity-30'}
-                            `} />
-                          </div>
-                        </AdvancedMarker>
-                      );
-                    })}
-                  </>
-                )}
-              </MapRenderer>
-            </Map>
-          </div>
-
-          <div className="absolute top-4 left-4 right-4 z-20 flex flex-col gap-3 pointer-events-none">
-            {/* Header: Search Bar & Toggle */}
-            <div className="flex items-center gap-3 w-full pointer-events-auto">
-              {/* Search Bar */}
-              <div className="flex-1 glass-surface border border-white/10 rounded-2xl overflow-hidden shadow-2xl p-1">
-                <LocationSearchInput onPlaceSelect={handleGlobalSearchSelect} />
-              </div>
-
-              {/* View Toggle */}
-              <div className="flex items-center p-1 glass-surface border border-white/10 rounded-2xl shadow-2xl shrink-0">
-                <Button variant="ghost" size="icon" className={`rounded-xl h-10 w-10 ${viewMode === 'map' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-slate-300 hover:text-white'} ${viewMode === 'list' ? 'animate-pulse' : ''}`} onClick={() => setViewMode('map')}>
-                  <MapIcon className="w-5 h-5" />
-                </Button>
-                <Button variant="ghost" size="icon" className={`rounded-xl h-10 w-10 ${viewMode === 'list' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-slate-300 hover:text-white'}`} onClick={() => setViewMode('list')}>
-                  <List className="w-5 h-5" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Filter Group: Category and Time */}
-            <div className="flex flex-col gap-2 pointer-events-auto">
-              {/* Category Chips */}
-              <div className="flex items-center space-x-2 p-1.5 glass-surface border border-white/10 rounded-full overflow-x-auto no-scrollbar max-w-max shadow-xl">
-                {CATEGORIES.map(category => (
-                  <Chip
-                    key={category}
-                    isActive={activeCategory === category}
-                    onClick={() => setActiveCategory(category)}
-                  >
-                    {category}
-                  </Chip>
-                ))}
-              </div>
-
-              {/* Time Filter Chips */}
-              <div className="flex items-center space-x-2 p-1.5 glass-surface border border-white/10 rounded-full overflow-x-auto no-scrollbar max-w-max shadow-xl">
-                {TIMES.map(time => (
-                  <Chip
-                    key={time}
-                    isActive={activeTime === time}
-                    onClick={() => setActiveTime(time)}
-                  >
-                    {time}
-                  </Chip>
-                ))}
-              </div>
-            </div>
-
-            {/* Location Permission Toast/Prompt */}
-            {showLocationPrompt && !userLocation && (
-              <div className="absolute top-48 left-1/2 -translate-x-1/2 z-20 w-[90%] max-w-sm pointer-events-auto">
-                <div className="glass-surface border border-primary/30 p-4 rounded-3xl shadow-[0_0_30px_rgba(245,158,11,0.2)] animate-in fade-in slide-in-from-top-4 duration-500">
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                      <MapPin className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="text-white font-bold text-sm">Find events near you</h4>
-                      <p className="text-slate-300 text-xs mt-1 leading-relaxed">
-                        Enable location to instantly discover what's happening in your neighborhood.
-                      </p>
-                      <div className="flex items-center gap-3 mt-3">
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={handleRecenter}
-                          className="bg-primary hover:bg-orange-600 text-white text-xs font-bold rounded-full px-4"
-                        >
-                          Share Location
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={dismissPrompt}
-                          className="text-slate-400 hover:text-white text-xs px-2"
-                        >
-                          Not now
-                        </Button>
+                      style={{
+                        background: `linear-gradient(135deg, ${categoryColor}, ${categoryColor}dd)`,
+                        boxShadow: isHovered ? `0 0 25px ${categoryColor}aa` : (isEventOngoing(event) ? `0 0 15px rgba(16, 185, 129, 0.6), 0 4px 10px rgba(0,0,0,0.4)` : `0 4px 10px rgba(0,0,0,0.4)`)
+                      }}
+                    >
+                      <div className="-rotate-45 text-xl filter drop-shadow-sm brightness-110">
+                        {event.icon || getCategoryIcon(event.category)}
                       </div>
                     </div>
                   </div>
+
+                  {/* Mini shadow at base */}
+                  <div className={`
+                              w-4 h-1 bg-black/40 rounded-full blur-[2px] mt-1 transition-all duration-300
+                              ${isHovered ? 'scale-150 opacity-60' : 'scale-100 opacity-30'}
+                            `} />
                 </div>
-              </div>
-            )}
-          </div>
+              </AdvancedMarker>
+            );
+          })}
+        </>
+      )}
+    </MapRenderer>
+  </Map>
+          </div >
 
-          {viewMode === 'list' && (
-            <div
-              className="absolute inset-0 z-10 pt-[190px] px-4 pb-28 overflow-y-auto no-scrollbar pointer-events-auto bg-slate-950/60 backdrop-blur-md cursor-pointer"
-              onClick={() => setViewMode('map')}
-            >
-              <div className="max-w-4xl mx-auto cursor-default" onClick={(e) => e.stopPropagation()}>
-                {filteredEvents.length === 0 ? (
-                  <div className="text-center text-slate-400 mt-10">
-                    <p>No events found in this area.</p>
-                    <p className="text-sm mt-2 opacity-70">Try zooming out on the map or searching a new location.</p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-4">
-                    {filteredEvents.map(event => (
-                      <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} showMapButton={true} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {viewMode === 'map' && (
-            <Button
-              id="create-event-button"
-              onClick={() => {
-                if (!user) {
-                  toast.error("Please sign in to host an event.");
-                  setTimeout(() => {
-                    router.push('/login?return_to=/map?intent=create');
-                  }, 1500)
-                } else {
-                  setShowCreateModal(true);
-                }
-              }}
-              onTouchEnd={(e) => {
-                e.preventDefault();
-                if (!user) {
-                  toast.error("Please sign in to host an event.");
-                  setTimeout(() => {
-                    router.push('/login?return_to=/map?intent=create');
-                  }, 1500)
-                } else {
-                  setShowCreateModal(true);
-                }
-              }}
-              size="lg"
-              className="absolute bottom-44 md:bottom-28 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-110 transition-transform z-40 pointer-events-auto cursor-pointer"
-            >
-              <Plus className="w-6 h-6" />
-            </Button>
-          )}
-
-          {viewMode === 'map' && (
-            <Button
-              onClick={handleRecenter}
-              onTouchEnd={(e) => { e.preventDefault(); handleRecenter(); }}
-              variant="default"
-              size="lg"
-              className="absolute bottom-28 md:bottom-12 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-orange-600 hover:scale-110 transition-all z-40 pointer-events-auto cursor-pointer"
-            >
-              <LocateFixed className="w-6 h-6" />
-            </Button>
-          )}
-
-          {viewMode === 'map' && (
-            <Button
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              onTouchEnd={(e) => { e.preventDefault(); setIsDarkMode(!isDarkMode); }}
-              variant="default"
-              size="lg"
-              className="absolute bottom-60 md:bottom-44 right-6 h-14 w-14 rounded-full bg-slate-900 text-white shadow-lg border border-white/20 hover:scale-110 transition-all z-40 pointer-events-auto cursor-pointer"
-            >
-              {isDarkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
-            </Button>
-          )}
+    <div className="absolute top-4 left-4 right-4 z-20 flex flex-col gap-3 pointer-events-none">
+      {/* Header: Search Bar & Toggle */}
+      <div className="flex items-center gap-3 w-full pointer-events-auto">
+        {/* Search Bar */}
+        <div className="flex-1 glass-surface border border-white/10 rounded-2xl overflow-hidden shadow-2xl p-1">
+          <LocationSearchInput onPlaceSelect={handleGlobalSearchSelect} />
         </div>
 
-        {selectedEvent && <EventDetailsDrawer event={selectedEvent} isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} onEventUpdated={() => { }} />}
-        {showCreateModal && <CreateEventModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onEventCreated={() => { }} userLocation={userLocation || mapCenter} />}
-      </APIProvider>
+        {/* View Toggle */}
+        <div className="flex items-center p-1 glass-surface border border-white/10 rounded-2xl shadow-2xl shrink-0">
+          <Button variant="ghost" size="icon" className={`rounded-xl h-10 w-10 ${viewMode === 'map' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-slate-300 hover:text-white'} ${viewMode === 'list' ? 'animate-pulse' : ''}`} onClick={() => setViewMode('map')}>
+            <MapIcon className="w-5 h-5" />
+          </Button>
+          <Button variant="ghost" size="icon" className={`rounded-xl h-10 w-10 ${viewMode === 'list' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-slate-300 hover:text-white'}`} onClick={() => setViewMode('list')}>
+            <List className="w-5 h-5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Filter Group: Category and Time */}
+      <div className="flex flex-col gap-2 pointer-events-auto">
+        {/* Category Chips */}
+        <div className="flex items-center space-x-2 p-1.5 glass-surface border border-white/10 rounded-full overflow-x-auto no-scrollbar max-w-max shadow-xl">
+          {CATEGORIES.map(category => (
+            <Chip
+              key={category}
+              isActive={activeCategory === category}
+              onClick={() => setActiveCategory(category)}
+            >
+              {category}
+            </Chip>
+          ))}
+        </div>
+
+        {/* Time Filter Chips */}
+        <div className="flex items-center space-x-2 p-1.5 glass-surface border border-white/10 rounded-full overflow-x-auto no-scrollbar max-w-max shadow-xl">
+          {TIMES.map(time => (
+            <Chip
+              key={time}
+              isActive={activeTime === time}
+              onClick={() => setActiveTime(time)}
+            >
+              {time}
+            </Chip>
+          ))}
+        </div>
+      </div>
+
+      {/* Location Permission Toast/Prompt */}
+      {showLocationPrompt && !userLocation && (
+        <div className="absolute top-48 left-1/2 -translate-x-1/2 z-20 w-[90%] max-w-sm pointer-events-auto">
+          <div className="glass-surface border border-primary/30 p-4 rounded-3xl shadow-[0_0_30px_rgba(245,158,11,0.2)] animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                <MapPin className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-white font-bold text-sm">Find events near you</h4>
+                <p className="text-slate-300 text-xs mt-1 leading-relaxed">
+                  Enable location to instantly discover what's happening in your neighborhood.
+                </p>
+                <div className="flex items-center gap-3 mt-3">
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={handleRecenter}
+                    className="bg-primary hover:bg-orange-600 text-white text-xs font-bold rounded-full px-4"
+                  >
+                    Share Location
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={dismissPrompt}
+                    className="text-slate-400 hover:text-white text-xs px-2"
+                  >
+                    Not now
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+
+  {
+    viewMode === 'list' && (
+      <div
+        className="absolute inset-0 z-10 pt-[190px] px-4 pb-28 overflow-y-auto no-scrollbar pointer-events-auto bg-slate-950/60 backdrop-blur-md cursor-pointer"
+        onClick={() => setViewMode('map')}
+      >
+        <div className="max-w-4xl mx-auto cursor-default" onClick={(e) => e.stopPropagation()}>
+          {filteredEvents.length === 0 ? (
+            <div className="text-center text-slate-400 mt-10">
+              <p>No events found in this area.</p>
+              <p className="text-sm mt-2 opacity-70">Try zooming out on the map or searching a new location.</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {filteredEvents.map(event => (
+                <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} showMapButton={true} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  {
+    viewMode === 'map' && (
+      <Button
+        id="create-event-button"
+        onClick={() => {
+          if (!user) {
+            toast.error("Please sign in to host an event.");
+            setTimeout(() => {
+              router.push('/login?return_to=/map?intent=create');
+            }, 1500)
+          } else {
+            setShowCreateModal(true);
+          }
+        }}
+        onTouchEnd={(e) => {
+          e.preventDefault();
+          if (!user) {
+            toast.error("Please sign in to host an event.");
+            setTimeout(() => {
+              router.push('/login?return_to=/map?intent=create');
+            }, 1500)
+          } else {
+            setShowCreateModal(true);
+          }
+        }}
+        size="lg"
+<<<<<<< HEAD
+        className="absolute bottom-44 md:bottom-28 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-110 transition-transform z-40 pointer-events-auto cursor-pointer"
+=======
+              className="absolute bottom-44 md:bottom-28 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-110 transition-transform z-[99999] pointer-events-auto cursor-pointer"
+>>>>>>> origin/main
+      >
+        <Plus className="w-6 h-6" />
+      </Button>
+    )
+  }
+
+  {
+    viewMode === 'map' && (
+      <Button
+        onClick={handleRecenter}
+        onTouchEnd={(e) => { e.preventDefault(); handleRecenter(); }}
+        variant="default"
+        size="lg"
+<<<<<<< HEAD
+        className="absolute bottom-28 md:bottom-12 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-orange-600 hover:scale-110 transition-all z-40 pointer-events-auto cursor-pointer"
+=======
+              className="absolute bottom-28 md:bottom-12 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-orange-600 hover:scale-110 transition-all z-[99999] pointer-events-auto cursor-pointer"
+>>>>>>> origin/main
+      >
+        <LocateFixed className="w-6 h-6" />
+      </Button>
+    )
+  }
+
+  {
+    viewMode === 'map' && (
+      <Button
+        onClick={() => setIsDarkMode(!isDarkMode)}
+        onTouchEnd={(e) => { e.preventDefault(); setIsDarkMode(!isDarkMode); }}
+        variant="default"
+        size="lg"
+<<<<<<< HEAD
+        className="absolute bottom-60 md:bottom-44 right-6 h-14 w-14 rounded-full bg-slate-900 text-white shadow-lg border border-white/20 hover:scale-110 transition-all z-40 pointer-events-auto cursor-pointer"
+=======
+              className="absolute bottom-60 md:bottom-44 right-6 h-14 w-14 rounded-full bg-slate-900 text-white shadow-lg border border-white/20 hover:scale-110 transition-all z-[99999] pointer-events-auto cursor-pointer"
+>>>>>>> origin/main
+      >
+        {isDarkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
+      </Button>
+    )
+  }
+        </div >
+
+    { selectedEvent && <EventDetailsDrawer event={selectedEvent} isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} onEventUpdated={() => { }} />
+}
+{ showCreateModal && <CreateEventModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onEventCreated={() => { }} userLocation={userLocation || mapCenter} /> }
+      </APIProvider >
+    </div >
   )
 }
