@@ -551,10 +551,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                                   relative w-10 h-10 flex items-center justify-center
                                   rounded-full rounded-br-none rotate-45
                                   border-2 ${isEventOngoing(event) ? 'border-emerald-400' : 'border-white'} transition-all duration-300
-<<<<<<< HEAD
                                   ${isFutureEvent ? 'opacity-70 saturate-50' : 'opacity-100'}
-=======
->>>>>>> origin/main
                                 `}
                                 style={{
                                   background: `linear-gradient(135deg, ${categoryColor}, ${categoryColor}dd)`,
