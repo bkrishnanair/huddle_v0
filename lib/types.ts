@@ -20,6 +20,7 @@ export interface GameEvent {
   title?: string; // Alias for name
   category: string;
   sport?: string; // Alias for category
+  icon?: string;
   tags?: string[];
   venue: any;
   location?: any; // Alias for venue
@@ -59,6 +60,7 @@ export interface GameEvent {
     sent: boolean;
     isAnnouncement: boolean; // if true, pin it when sent
   }[];
+  status?: "active" | "past"; // To allow organizers to explicitly close events
   checkInOpen?: boolean;
 }
 

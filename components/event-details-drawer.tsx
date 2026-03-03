@@ -209,6 +209,41 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
     }
   }
 
+  const handleEndEvent = async () => {
+    if (!confirm("Are you sure you want to end this event? It will be moved to past events for everyone.")) return;
+    setIsLoading(true);
+
+    try {
+      const idToken = await user?.getIdToken();
+      if (!event) return;
+
+      const response = await fetch(`/api/events/${event.id}/status`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ status: "past" }),
+        credentials: "include"
+      });
+
+      if (response.ok) {
+        toast.success("Event ended successfully");
+        const { event: updatedEvent } = await response.json();
+        onEventUpdated(updatedEvent);
+        setEvent(updatedEvent);
+      } else {
+        const data = await response.json();
+        toast.error(data.error || "Failed to end event");
+      }
+    } catch (error) {
+      console.error("End event error:", error);
+      toast.error("An unexpected error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   if (!event) return null;
 
   // Check if current user has joined this event
@@ -464,7 +499,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
 
   return (
     <Drawer open={isOpen} onOpenChange={onClose}>
-      <DrawerContent className="glass-surface border-white/15 text-foreground max-w-2xl mx-auto rounded-t-[2rem] max-h-[92vh] flex flex-col focus:outline-none">
+      <DrawerContent className="glass-surface border-white/15 text-foreground max-w-2xl mx-auto rounded-t-[2rem] max-h-[85vh] flex flex-col focus:outline-none">
         <div className="mx-auto mt-4 h-1.5 w-12 rounded-full bg-white/20 shrink-0" />
         <DrawerHeader className="pb-2 pt-2 shrink-0">
           <div className="flex justify-between items-start gap-4">
@@ -515,7 +550,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                 {[
                   { icon: Users, label: "Capacity", value: `${event.currentPlayers} / ${event.maxPlayers}` },
                   { icon: Calendar, label: "Date", value: event.date.includes('/') ? event.date : format(parseISO(event.date), 'MMM d, yyyy') },
-                  { icon: Clock, label: "Time", value: event.time },
+                  { icon: Clock, label: "Time", value: event.endTime ? `${event.time} - ${event.endTime}` : event.time },
                   { icon: MapPin, label: "Location", value: typeof event.location === 'string' ? event.location : 'Unavailable' }
                 ].map((item, i) => (
                   <div key={i} className="bg-white/5 border border-white/5 p-3 rounded-xl flex items-center gap-3">
@@ -756,7 +791,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
             </div>
           </TabsContent>
 
-          <TabsContent value="chat" className="flex-1 min-h-[50vh] flex flex-col overflow-hidden outline-none mt-0 pb-2 data-[state=inactive]:hidden">
+          <TabsContent value="chat" className="flex-1 min-h-0 flex flex-col overflow-hidden outline-none mt-0 pb-2 data-[state=inactive]:hidden">
             <div className="flex-1 overflow-hidden px-5">
               <div className="h-full rounded-2xl overflow-hidden border border-white/5 shadow-2xl">
                 <EventChat
@@ -779,7 +814,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
             </div>
           </TabsContent>
         </Tabs>
-        <DrawerFooter className="flex flex-col gap-2 p-5 pt-3 mb-2 bg-slate-950/20 border-t border-white/5 shrink-0">
+        <DrawerFooter className="flex flex-col gap-2 p-5 pt-3 pb-28 bg-slate-950/20 border-t border-white/5 shrink-0">
           {/* Main Action Button */}
           {!isOrganizer && (
             <div className="flex flex-col gap-2">
@@ -813,19 +848,28 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
 
           {/* Organizer Secondary Actions */}
           {isOrganizer && (
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setIsEditing(true)}
-                className="h-10 bg-white/5 hover:bg-white/10 text-white border-white/10 rounded-xl text-xs font-bold"
-              >
-                Edit Event
-              </Button>
+            <div className="flex flex-col gap-2">
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditing(true)}
+                  className="h-10 bg-white/5 hover:bg-white/10 text-white border-white/10 rounded-xl text-xs font-bold"
+                >
+                  Edit Event
+                </Button>
+                <Button
+                  onClick={handleEndEvent}
+                  disabled={isLoading || event.status === 'past'}
+                  className="h-10 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-xl text-xs font-bold"
+                >
+                  {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : (event.status === 'past' ? "Event Ended" : "End Event")}
+                </Button>
+              </div>
               <Button
                 variant="destructive"
                 onClick={handleDelete}
                 disabled={isLoading}
-                className="h-10 text-xs font-bold rounded-xl"
+                className="h-10 text-xs font-bold rounded-xl w-full"
               >
                 {isLoading && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
                 <Trash2 className="mr-2 h-3.5 w-3.5" />

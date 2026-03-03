@@ -13,6 +13,7 @@ export default function MyEventsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0) // State to trigger re-fetch
   const [searchQuery, setSearchQuery] = useState("")
+  const [filterDate, setFilterDate] = useState("")
 
   if (loading) {
     return (
@@ -67,22 +68,34 @@ export default function MyEventsPage() {
             </TabsList>
           </div>
 
-          <div className="relative w-full md:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              placeholder="Search your events..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 bg-slate-900/50 border-white/10 text-slate-200 placeholder:text-slate-500 rounded-xl h-10"
-            />
+          <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+            {/* Search */}
+            <div className="relative w-full md:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                placeholder="Search your events..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 bg-slate-900/50 border-white/10 text-slate-200 placeholder:text-slate-500 rounded-xl h-10"
+              />
+            </div>
+            {/* Date Picker */}
+            <div className="relative w-full md:w-48">
+              <Input
+                type="date"
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
+                className="w-full bg-slate-900/50 border-white/10 text-slate-200 rounded-xl h-10 [color-scheme:dark]"
+              />
+            </div>
           </div>
         </div>
 
         <TabsContent value="organized" className="mt-0 outline-none">
-          <EventList userId={user.uid} eventType="organized" searchQuery={searchQuery} />
+          <EventList userId={user.uid} eventType="organized" searchQuery={searchQuery} filterDate={filterDate} />
         </TabsContent>
         <TabsContent value="joined" className="mt-0 outline-none">
-          <EventList userId={user.uid} eventType="joined" searchQuery={searchQuery} />
+          <EventList userId={user.uid} eventType="joined" searchQuery={searchQuery} filterDate={filterDate} />
         </TabsContent>
       </Tabs>
 
