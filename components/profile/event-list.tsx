@@ -13,10 +13,11 @@ interface EventListProps {
   userId: string
   eventType: "organized" | "joined" | "history"
   searchQuery?: string
-  filterDate?: string
+  filterStartDate?: string
+  filterEndDate?: string
 }
 
-export function EventList({ userId, eventType, searchQuery = "", filterDate = "" }: EventListProps) {
+export function EventList({ userId, eventType, searchQuery = "", filterStartDate = "", filterEndDate = "" }: EventListProps) {
   const { user } = useAuth()
   const router = useRouter()
   const [events, setEvents] = useState<GameEvent[]>([])
@@ -138,8 +139,17 @@ export function EventList({ userId, eventType, searchQuery = "", filterDate = ""
       );
     }
 
-    if (filterDate) {
-      filtered = filtered.filter(e => e.date === filterDate);
+    if (filterStartDate) {
+      if (filterEndDate) {
+        // Range: filter events between start and end dates
+        filtered = filtered.filter(e => {
+          if (!e.date) return false;
+          return e.date >= filterStartDate && e.date <= filterEndDate;
+        });
+      } else {
+        // Single date: exact match
+        filtered = filtered.filter(e => e.date === filterStartDate);
+      }
     }
 
     const parseDateTime = (ev: GameEvent) => {
@@ -159,7 +169,7 @@ export function EventList({ userId, eventType, searchQuery = "", filterDate = ""
     }
 
     return filtered;
-  }, [events, searchQuery, eventType]);
+  }, [events, searchQuery, filterStartDate, filterEndDate, eventType]);
 
   const isUpcoming = (ev: GameEvent) => {
     if (ev.status === 'past') return false;

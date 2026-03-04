@@ -12,8 +12,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Rocket, Loader2, Plus, Trash2, Save, Bookmark, AlertCircle } from "lucide-react"
+import { Rocket, Loader2, Plus, Trash2, Save, Bookmark, AlertCircle, Video, Monitor, MapPin, Navigation } from "lucide-react"
 import LocationSearchInput from "./location-search"
+import { Chip } from "@/components/ui/chip"
 import { toast } from "sonner"
 import { useAuth } from "@/lib/firebase-context"
 
@@ -39,6 +40,13 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   const [isAiLoading, setIsAiLoading] = useState(false)
   const [suggestions, setSuggestions] = useState([])
   const [boostEvent, setBoostEvent] = useState(false)
+
+  // Virtual / Hybrid Event State
+  const [eventType, setEventType] = useState<"in-person" | "virtual" | "hybrid">("in-person")
+  const [virtualLink, setVirtualLink] = useState("")
+  const isVirtual = eventType === "virtual"
+  const isHybrid = eventType === "hybrid"
+  const needsLocation = eventType !== "virtual" // in-person and hybrid need a map
   const [isPrivate, setIsPrivate] = useState(false)
 
   // Advanced Logistics State
@@ -108,6 +116,8 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
           icon: String(initialData.icon || ""),
         })
         setIsPrivate(!!initialData.isPrivate)
+        setEventType(initialData.eventType || "in-person")
+        setVirtualLink(initialData.virtualLink || "")
         setAskRide(initialData.questions?.includes("Need a ride?") || false)
         setAskDiet(initialData.questions?.includes("Dietary restrictions?") || false)
         const presetQs = initialData.questions?.filter((q: string) => q !== "Need a ride?" && q !== "Dietary restrictions?") || []
@@ -135,6 +145,8 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         })
         setIsPrivate(false)
         setBoostEvent(false)
+        setEventType("in-person")
+        setVirtualLink("")
         setAskRide(false)
         setAskDiet(false)
         setSelectedQuestions([])
@@ -238,6 +250,32 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
     }
   }
 
+  const handleDeletePreset = async (type: 'questions' | 'transitTips', value: string) => {
+    if (!user) return;
+    try {
+      const idToken = await user.getIdToken();
+      let payload = {};
+      if (type === 'questions') {
+        const newSaved = savedQuestions.filter(q => q !== value);
+        setSavedQuestions(newSaved);
+        setSelectedQuestions(prev => prev.filter(q => q !== value));
+        payload = { savedQuestions: newSaved };
+      } else {
+        const newSaved = savedTransitTips.filter(t => t !== value);
+        setSavedTransitTips(newSaved);
+        payload = { savedTransitTips: newSaved };
+      }
+      await fetch(`/api/users/${user.uid}/profile`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
+        body: JSON.stringify(payload)
+      });
+      toast.success("Preset removed.");
+    } catch (e) {
+      console.error("Failed to delete preset", e);
+    }
+  }
+
   const handleInputChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
@@ -254,15 +292,86 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
     }
   }
 
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser.")
+      return
+    }
+    toast.info("Getting your location...")
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const coords = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        }
+        setMapCenter(coords)
+        setMarkerPosition(coords)
+
+        // Reverse geocode to get address
+        try {
+          const geocoder = new google.maps.Geocoder()
+          const result = await geocoder.geocode({ location: coords })
+          if (result.results && result.results.length > 0) {
+            handleInputChange("location", result.results[0].formatted_address)
+            toast.success("Location set to your current position!")
+          } else {
+            handleInputChange("location", `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`)
+          }
+        } catch {
+          handleInputChange("location", `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`)
+        }
+      },
+      () => {
+        toast.error("Unable to get your location. Please allow location access.")
+      },
+      { enableHighAccuracy: true }
+    )
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.category || !formData.location || !markerPosition) {
-      toast.error("Please fill in all required fields.")
+
+    // Validate based on event type
+    if (!formData.category) {
+      toast.error("Please select a category.")
       return
+    }
+    if (needsLocation && (!formData.location || !markerPosition)) {
+      toast.error("Please set a location for this event.")
+      return
+    }
+    if ((isVirtual || isHybrid) && !virtualLink.trim()) {
+      toast.error("Please provide a meeting link for this event.")
+      return
+    }
+    // Basic URL validation for virtual link
+    if ((isVirtual || isHybrid) && virtualLink.trim()) {
+      try {
+        new URL(virtualLink.trim())
+      } catch {
+        toast.error("Please enter a valid URL for the meeting link.")
+        return
+      }
     }
     const eventDateTime = new Date(`${formData.date}T${formData.time}`);
     if (eventDateTime < new Date()) {
       toast.error("You cannot create an event in the past.");
+      return;
+    }
+
+    // Fix #8: If end time is before start time and no end date is set, auto-set end date to next day
+    if (formData.endTime && formData.time && formData.endTime < formData.time && !formData.endDate) {
+      const nextDay = new Date(`${formData.date}T00:00:00`);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const nextDayStr = nextDay.toISOString().split('T')[0];
+      handleInputChange("endDate", nextDayStr);
+      formData.endDate = nextDayStr; // Also update the local reference for this submission
+      toast.info("End time is before start time — event will end the next day.", { duration: 4000 });
+    }
+
+    // Validate end date isn't before start date
+    if (formData.endDate && formData.endDate < formData.date) {
+      toast.error("End date cannot be before start date.");
       return;
     }
 
@@ -291,9 +400,10 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
           };
         });
 
-      const payload = {
+      const payload: Record<string, any> = {
         ...formData,
-        geopoint: { latitude: markerPosition.lat, longitude: markerPosition.lng },
+        eventType,
+        virtualLink: (isVirtual || isHybrid) ? virtualLink.trim() : null,
         isBoosted: boostEvent,
         isPrivate: isPrivate,
         questions: configuredQuestions,
@@ -301,6 +411,11 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         stayUntil,
         transitTips,
         ...(scheduledMessagesPayload.length > 0 && { scheduledMessages: scheduledMessagesPayload })
+      }
+
+      // Only include geopoint for events with a physical location
+      if (needsLocation && markerPosition) {
+        payload.geopoint = { latitude: markerPosition.lat, longitude: markerPosition.lng }
       }
 
       const endpoint = isEditMode && initialData?.id ? `/api/events/${initialData.id}` : "/api/events"
@@ -335,7 +450,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="glass-surface border-white/15 text-foreground p-0 gap-0 sm:max-w-md max-h-[90vh] flex flex-col"
+        className="glass-surface border-white/15 text-foreground p-0 gap-0 sm:max-w-md max-h-[calc(100vh-var(--safe-bottom))] sm:max-h-[90vh] flex flex-col"
         onInteractOutside={(e) => {
           const target = e.target as HTMLElement;
           // Prevent Radix from closing the modal or blocking the click 
@@ -352,6 +467,31 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
 
         <div className="flex-1 overflow-y-auto no-scrollbar px-6">
           <form id="event-form" onSubmit={handleSubmit} className="space-y-4">
+            {/* Event Type Segmented Toggle */}
+            <div>
+              <Label className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-2 block">Event Type</Label>
+              <div className="flex items-center gap-1.5 p-1 glass-surface border border-white/10 rounded-full w-fit">
+                {(["in-person", "virtual", "hybrid"] as const).map(type => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setEventType(type)}
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${eventType === type
+                      ? type === "virtual" ? "bg-blue-500 text-white shadow-lg shadow-blue-500/30"
+                        : type === "hybrid" ? "bg-violet-500 text-white shadow-lg shadow-violet-500/30"
+                          : "bg-primary text-primary-foreground shadow-lg"
+                      : "text-slate-400 hover:text-white hover:bg-white/10"
+                      }`}
+                  >
+                    {type === "in-person" && <MapPin className="w-3 h-3" />}
+                    {type === "virtual" && <Monitor className="w-3 h-3" />}
+                    {type === "hybrid" && <><MapPin className="w-3 h-3" /><span>+</span><Monitor className="w-3 h-3" /></>}
+                    {type === "in-person" ? "In-Person" : type === "virtual" ? "Virtual" : "Hybrid"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div>
               <Label htmlFor="name">Event Title</Label>
               <Input id="name" placeholder="e.g., Community Workshop" value={formData.name} onChange={(e) => handleInputChange("name", e.target.value)} required />
@@ -382,47 +522,98 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
               </div>
             </div>
 
-            <div className={isFullscreenMap ? "fixed inset-0 z-[100] bg-slate-950 p-4 pt-10 flex flex-col" : ""}>
-              <Label htmlFor="location-search" className={isFullscreenMap ? "text-white mb-2" : ""}>Location</Label>
-              {mapsApiKey ? (
-                <APIProvider apiKey={mapsApiKey}>
-                  <LocationSearchInput onPlaceSelect={handlePlaceSelect} insideModal={true} />
-                  <div className={`${isFullscreenMap ? "flex-1 mt-4" : "h-48 mt-2"} w-full rounded-lg overflow-hidden relative border border-border`}>
-                    <Map
-                      center={mapCenter}
-                      defaultZoom={15}
-                      gestureHandling={"greedy"}
-                      disableDefaultUI={true}
-                      mapId={mapId}
-                    >
-                      <AdvancedMarker position={markerPosition} draggable={true} onDragEnd={(e) => setMarkerPosition({ lat: e.latLng!.lat(), lng: e.latLng!.lng() })} />
-                    </Map>
+            {/* Meeting Link for Virtual/Hybrid */}
+            {(isVirtual || isHybrid) && (
+              <div className="space-y-2">
+                <Label htmlFor="virtualLink" className="flex items-center gap-2">
+                  <Video className="w-4 h-4 text-blue-400" />
+                  Meeting Link <span className="text-primary text-xs">*</span>
+                </Label>
+                <Input
+                  id="virtualLink"
+                  type="url"
+                  placeholder="https://zoom.us/j/... or https://meet.google.com/..."
+                  value={virtualLink}
+                  onChange={(e) => setVirtualLink(e.target.value)}
+                  className="bg-slate-900/50 border-white/10"
+                  required
+                />
+                <p className="text-[10px] text-slate-500">Paste a Zoom, Google Meet, Teams, or Discord link.</p>
+              </div>
+            )}
 
-                    {/* Fullscreen Map Toggle Button */}
-                    <div className="absolute top-2 right-2 flex flex-col gap-2 z-10 pointer-events-auto">
+            {/* Virtual-only: optional timezone/general location */}
+            {isVirtual && (
+              <div>
+                <Label htmlFor="location" className="text-slate-400">General Location / Timezone <span className="text-[10px] font-normal">(Opt)</span></Label>
+                <Input
+                  id="location"
+                  placeholder="e.g., EST or College Park, MD"
+                  value={formData.location}
+                  onChange={(e) => handleInputChange("location", e.target.value)}
+                  className="bg-slate-900/50 border-white/10"
+                />
+              </div>
+            )}
+
+            {/* Location Picker — only for in-person and hybrid */}
+            {needsLocation && (
+              <div className={isFullscreenMap ? "fixed inset-0 z-[100] bg-slate-950 p-4 pt-10 flex flex-col" : ""}>
+                <Label htmlFor="location-search" className={isFullscreenMap ? "text-white mb-2" : ""}>Location</Label>
+                {mapsApiKey ? (
+                  <APIProvider apiKey={mapsApiKey}>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <LocationSearchInput onPlaceSelect={handlePlaceSelect} insideModal={true} />
+                      </div>
                       <Button
                         type="button"
-                        variant="secondary"
+                        variant="outline"
                         size="icon"
-                        onClick={(e) => { e.preventDefault(); setIsFullscreenMap(!isFullscreenMap); }}
-                        className="bg-slate-900/80 hover:bg-slate-800 text-white backdrop-blur-md border border-white/20 shadow-xl h-10 w-10 text-xs"
+                        className="h-10 w-10 shrink-0 border-white/20 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+                        onClick={handleUseCurrentLocation}
+                        title="Use current location"
                       >
-                        {isFullscreenMap ? "Minimize" : "Expand"}
+                        <Navigation className="w-4 h-4" />
                       </Button>
                     </div>
+                    <div className={`${isFullscreenMap ? "flex-1 mt-4" : "h-48 mt-2"} w-full rounded-lg overflow-hidden relative border border-border`} style={{ touchAction: "none" }}>
+                      <Map
+                        center={mapCenter}
+                        defaultZoom={15}
+                        gestureHandling={"greedy"}
+                        disableDefaultUI={true}
+                        mapId={mapId}
+                      >
+                        <AdvancedMarker position={markerPosition} draggable={true} onDragEnd={(e) => setMarkerPosition({ lat: e.latLng!.lat(), lng: e.latLng!.lng() })} />
+                      </Map>
+
+                      {/* Fullscreen Map Toggle Button */}
+                      <div className="absolute top-2 right-2 flex flex-col gap-2 z-10 pointer-events-auto">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="icon"
+                          onClick={(e) => { e.preventDefault(); setIsFullscreenMap(!isFullscreenMap); }}
+                          className="bg-slate-900/80 hover:bg-slate-800 text-white backdrop-blur-md border border-white/20 shadow-xl h-10 w-10 text-xs"
+                        >
+                          {isFullscreenMap ? "Minimize" : "Expand"}
+                        </Button>
+                      </div>
+                    </div>
+                    {isFullscreenMap && (
+                      <Button type="button" onClick={() => setIsFullscreenMap(false)} className="mt-4 w-full h-12 bg-primary hover:bg-orange-600 text-white font-bold rounded-xl shadow-lg border border-orange-500/50">
+                        Confirm Location Pin
+                      </Button>
+                    )}
+                  </APIProvider>
+                ) : (
+                  <div className="h-48 w-full rounded-lg mt-2 border border-border flex items-center justify-center text-center bg-slate-800/50">
+                    <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading Map...
                   </div>
-                  {isFullscreenMap && (
-                    <Button type="button" onClick={() => setIsFullscreenMap(false)} className="mt-4 w-full h-12 bg-primary hover:bg-orange-600 text-white font-bold rounded-xl shadow-lg border border-orange-500/50">
-                      Confirm Location Pin
-                    </Button>
-                  )}
-                </APIProvider>
-              ) : (
-                <div className="h-48 w-full rounded-lg mt-2 border border-border flex items-center justify-center text-center bg-slate-800/50">
-                  <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading Map...
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             <div className={`space-y-3 ${isFullscreenMap ? 'hidden' : ''}`}>
               {/* Row 1: Start Date + End Date */}
@@ -487,10 +678,15 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                 {savedQuestions.map(q => (
                   <div key={q} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-primary/20">
                     <span className="text-sm font-medium text-slate-200 flex items-center gap-2"><Bookmark className="w-3 h-3 text-primary" /> {q}</span>
-                    <Switch checked={selectedQuestions.includes(q)} onCheckedChange={(checked) => {
-                      if (checked) setSelectedQuestions(prev => [...prev, q]);
-                      else setSelectedQuestions(prev => prev.filter(x => x !== q));
-                    }} />
+                    <div className="flex items-center gap-2">
+                      <Switch checked={selectedQuestions.includes(q)} onCheckedChange={(checked) => {
+                        if (checked) setSelectedQuestions(prev => [...prev, q]);
+                        else setSelectedQuestions(prev => prev.filter(x => x !== q));
+                      }} />
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-slate-500 hover:text-red-400" onClick={() => handleDeletePreset('questions', q)}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
                 <div className="flex items-center gap-2 mt-2">
@@ -636,9 +832,9 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
           </form >
         </div >
 
-        <DialogFooter className="p-6 pt-4 bg-slate-900/50 border-t border-border">
+        <DialogFooter className="shrink-0 p-6 pt-4 bg-slate-900/90 backdrop-blur-md border-t border-border">
           <Button type="submit" form="event-form" disabled={isLoading} className="w-full" size="lg">
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Create Event"}
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : isEditMode ? "Save Changes" : "Create Event"}
           </Button>
         </DialogFooter>
       </DialogContent >

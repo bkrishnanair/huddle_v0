@@ -2,7 +2,7 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, MapPin, Users, CalendarPlus } from "lucide-react";
+import { Clock, MapPin, Users, CalendarPlus, Monitor } from "lucide-react";
 import { GameEvent } from "@/lib/types";
 import { formatDistanceToNow } from 'date-fns';
 
@@ -10,6 +10,16 @@ import { generateGoogleCalendarUrl, downloadIcsFile } from "@/lib/calendar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 import Link from "next/link";
+import { useFollowing } from "@/hooks/use-following";
+
+const getCategoryIcon = (category: string): string => {
+  const icons: { [key: string]: string } = {
+    Sports: "⚽", Music: "🎵", Community: "🤝", Learning: "📚",
+    "Food & Drink": "🍕", Tech: "💻", "Arts & Culture": "🎨",
+    Outdoors: "🌲", default: "📍"
+  }
+  return icons[category] || icons.default
+}
 
 interface EventCardProps {
   event: GameEvent;
@@ -20,6 +30,10 @@ interface EventCardProps {
 
 export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = false, onUnjoin }: EventCardProps) => {
   const isFull = event.currentPlayers >= event.maxPlayers;
+  const { followingSet } = useFollowing();
+
+  // Calculate friends attending
+  const friendsAttendingCount = event.players ? event.players.filter(uid => followingSet.has(uid)).length : 0;
 
   const getTimeDifference = (date: string, time: string) => {
     if (!date || date === "Today" || date === "Tomorrow" || date.includes("/")) {
@@ -66,7 +80,10 @@ export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = fal
       <CardContent className="p-4 flex-grow">
         <div className="flex justify-between items-start mb-3">
           <div className="flex items-center gap-2 pr-2 overflow-hidden">
-            <h3 className="font-bold text-lg text-slate-50 truncate">{event.name}</h3>
+            <h3 className="font-bold text-lg text-slate-50 truncate">
+              <span className="mr-1.5">{event.icon || getCategoryIcon(event.category)}</span>
+              {event.name}
+            </h3>
             {ongoing && (
               <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 whitespace-nowrap text-[9px] font-black uppercase tracking-wider px-1.5 shadow-sm animate-pulse">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-ping"></span>
@@ -79,9 +96,24 @@ export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = fal
               </Badge>
             )}
           </div>
-          <Badge variant="secondary" className="bg-white/10 text-slate-300 border-none whitespace-nowrap shrink-0">
-            {event.category}
-          </Badge>
+          <div className="flex items-center gap-1.5">
+            {friendsAttendingCount > 0 && (
+              <Badge variant="secondary" className="bg-orange-500/20 text-orange-400 border border-orange-500/30 whitespace-nowrap text-[10px] font-bold px-1.5 shadow-sm">
+                🔥 {friendsAttendingCount} {friendsAttendingCount === 1 ? 'friend' : 'friends'}
+              </Badge>
+            )}
+            {(event.eventType === 'virtual' || event.eventType === 'hybrid') && (
+              <Badge className={`border whitespace-nowrap text-[9px] font-black uppercase tracking-wider px-1.5 ${event.eventType === 'virtual'
+                ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                : 'bg-violet-500/20 text-violet-400 border-violet-500/30'
+                }`}>
+                {event.eventType === 'virtual' ? '🖥️ Virtual' : '📡 Hybrid'}
+              </Badge>
+            )}
+            <Badge variant="secondary" className="bg-white/10 text-slate-300 border-none whitespace-nowrap shrink-0">
+              {event.category}
+            </Badge>
+          </div>
         </div>
         <div className="space-y-2 text-sm text-slate-300">
           <div className="flex items-center">
@@ -89,8 +121,17 @@ export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = fal
             <span>{getTimeDifference(event.date, event.time)} • {event.time}</span>
           </div>
           <div className="flex items-center">
-            <MapPin className="w-4 h-4 mr-2 text-emerald-400" />
-            <span className="truncate">{event.distance ? `${event.distance.toFixed(1)} miles away` : (event.venue || event.location || 'Location TBD')}</span>
+            {event.eventType === 'virtual' ? (
+              <>
+                <Monitor className="w-4 h-4 mr-2 text-blue-400" />
+                <span className="truncate">🖥️ Virtual Event{event.location ? ` • ${event.location}` : ''}</span>
+              </>
+            ) : (
+              <>
+                <MapPin className="w-4 h-4 mr-2 text-emerald-400" />
+                <span className="truncate">{event.distance ? `${event.distance.toFixed(1)} miles away` : (event.venue || event.location || 'Location TBD')}</span>
+              </>
+            )}
           </div>
         </div>
       </CardContent>
@@ -109,7 +150,7 @@ export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = fal
               asChild
               className="bg-white/5 border-white/20 text-white hover:bg-white/10 h-9 px-3"
             >
-              <Link href={`/map?eventId=${event.id}`}>
+              <Link href={`/map?eventId=${event.id}&intent=locate`}>
                 <MapPin className="w-4 h-4 mr-1.5 text-primary" />
                 Map
               </Link>

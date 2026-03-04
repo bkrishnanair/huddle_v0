@@ -1,4 +1,4 @@
-# Huddle - V2.5 Enhanced
+# Huddle - V3.0 Enhanced
 
 Huddle is a modern, full-stack web application designed to help users discover, create, and join local pickup sports events. Centered around an interactive map, it provides a seamless experience for finding nearby games, creating events, and engaging with other participants through real-time chat, social profiles, and automated reminders.
 
@@ -18,16 +18,18 @@ This production-ready application features a complete authentication system, rea
 
 ### 🌍 Frictionless Guest Access & Discovery
 *   **Live Interactive Map**: Unauthenticated users can instantly explore the live map and Discover feed. 
-*   **Premium Map Pins**: Custom React teardrop nodes featuring rich gradients, drop shadows, and scale-on-hover micro-animations. Categorizes events via custom emojis.
-*   **Discovery Filters**: Surface events happening "Live", "This Week", or "This Weekend" with a single tap.
+*   **Premium Map Pins**: Custom React teardrop nodes featuring rich gradients, drop shadows, and scale-on-hover micro-animations. Categorizes events via custom emojis. **Zoom-adaptive sizing** — pins shrink at low zoom to reduce overlap and improve click accuracy.
+*   **Discovery Filters**: Surface events happening "Live", "This Week", or "This Weekend" with a single tap. Collapsible "More Filters" panel for Range and Date Range to keep the UI clean.
+*   **Virtual & Hybrid Events**: Create events as In-Person, Virtual (Zoom/Meet link), or Hybrid. Virtual events hide the map picker and show a meeting link field instead.
 *   **Cloud Console Styling**: Map visual themes (like Dark Mode and Point of Interest decluttering) are natively controlled via Google Cloud Map IDs without local style overrides.
 
 
 ### 📊 Organizer Logistics & CRM (Organizer Studio)
 *   **Organizer Dashboard**: High-level analytics to track event performance, total RSVPs, and average show rates.
-*   **Advanced RSVP Logic**: Require answers to custom logistics questions ("Dietary restrictions?") and force selection of specific **Pickup Points**.
+*   **Advanced RSVP Logic**: Require answers to custom logistics questions ("Dietary restrictions?") and force selection of specific **Pickup Points**. Save and delete question presets.
 *   **CSV Exports**: One-click roster downloads now include attendee notes, question responses, and checkout flags.
 *   **One-Click Cloning**: Instantly duplicate repetitive events while safely blanking date/time fields to prevent scheduling overlaps.
+*   **📍 Use Current Location**: One-tap GPS button in the event creation form auto-fills the address via reverse geocoding.
 
 ### 👥 Reliability & Trust Signal
 *   **Live Check-Ins**: Organizers can open check-in at the event start; attendees use "self-check-in" to verify presence.
@@ -37,7 +39,14 @@ This production-ready application features a complete authentication system, rea
 ### 🛡️ Safety & Moderation Layer
 *   **User Blocking**: Organizers can block problematic users from seeing or joining their future events.
 *   **Reporting Suite**: Users can report events, profiles, or gallery photos for administrative review.
-*   **Event Photo Gallery**: Shared memory spaces post-event. Contributors can upload photos (< 10MB) to preserve the game's highlights.
+*   **Event Photo Gallery**: Shared memory spaces post-event. Contributors can upload photos (< 10MB) to preserve the game's highlights. Includes upload cancel functionality.
+*   **📊 Most Joined Categories**: Profile page shows your top 3 most-joined event categories with emoji icons and counts.
+*   **🎯 Smart Recommended Filter**: Map and Discover "Recommended" filter merges your profile interests with your top joined categories for personalized event discovery.
+
+### 🌐 Social Graph & Serendipity Engine
+*   **Atomic Follow System**: Users can build their network by following active organizers and friends. Transactions securely synchronize follower/following counts globally.
+*   **Optimized Social Proof**: Event cards instantly highlight `"🔥 N friends attending"` if someone in your network RSVPs.
+*   **The Serendipity Filter**: A highly-targeted algorithm that evaluates physical distance (`geofire-common`) and declared user interests to ping followers with high-urgency app notifications ("`🔥 Your friend is playing basketball near you! Join them?`") when relevant games are created. Location tracking is aggressively debounced on the client to drastically conserve database writes.
 
 ### 💬 Real-Time Communication & Automation
 *   **Live Event Chat**: Instant messaging for all confirmed participants with **Pinned Announcements** from the host.

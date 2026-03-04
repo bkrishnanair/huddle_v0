@@ -20,6 +20,8 @@ export interface GameEvent {
   title?: string; // Alias for name
   category: string;
   sport?: string; // Alias for category
+  eventType?: "in-person" | "virtual" | "hybrid"; // default: "in-person"
+  virtualLink?: string | null; // URL to Zoom/Meet/Teams/custom link
   icon?: string;
   tags?: string[];
   venue: any;
