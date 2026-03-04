@@ -1,13 +1,13 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useMemo } from "react"
 import { useAuth } from "@/lib/firebase-context"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Trophy, LogOut, UserCircle, Pencil, Zap, Calendar, Star, Info } from "lucide-react"
+import { Trophy, LogOut, UserCircle, Pencil, Zap, Calendar, Star, Info, BarChart3 } from "lucide-react"
 import EditProfileModal from "@/components/profile/edit-profile-modal"
 import HuddleProModal from "@/components/huddle-pro-modal"
 import { signOut } from "firebase/auth"
@@ -18,10 +18,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { EventCard } from "@/components/events/event-card"
 import EventDetailsDrawer from "@/components/event-details-drawer"
 import { GameEvent } from "@/lib/types"
+import { useFollowing } from "@/hooks/use-following"
+import FollowListModal from "@/components/profile/follow-list-modal"
 
 function ProfileSkeleton() {
   return (
-    <div className="min-h-screen liquid-gradient p-4 md:p-6 pb-28 animate-pulse">
+    <div className="min-h-screen liquid-gradient p-4 md:p-6 pb-[var(--safe-bottom)] animate-pulse">
       <header className="flex justify-end items-center gap-2 mb-6">
         <Skeleton className="h-10 w-10 rounded-lg bg-slate-700" />
         <Skeleton className="h-10 w-10 rounded-lg bg-slate-700" />
@@ -67,6 +69,12 @@ export default function ProfilePage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isProModalOpen, setIsProModalOpen] = useState(false)
 
+  // Follower State
+  const [followerCount, setFollowerCount] = useState<number | null>(null)
+  const [followingCount, setFollowingCount] = useState<number | null>(null)
+  const [followModalOpen, setFollowModalOpen] = useState(false)
+  const [followModalType, setFollowModalType] = useState<"followers" | "following">("followers")
+
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -98,6 +106,10 @@ export default function ProfilePage() {
         setUserStats(data.stats || { organized: 0, joined: 0, upcoming: 0 })
         setReliabilityScore(data.reliabilityScore)
         setTotalTracked(data.totalTracked || 0)
+
+        // Use optimized counts from the API payload
+        if (data.followerCount !== undefined) setFollowerCount(data.followerCount)
+        if (data.followingCount !== undefined) setFollowingCount(data.followingCount)
 
         const eventsRes = await fetch(`/api/events/past?userId=${user.uid}`, {
           headers: {
@@ -152,13 +164,35 @@ export default function ProfilePage() {
     fetchProfileData()
   }
 
+  const getCategoryIcon = (category: string): string => {
+    const icons: { [key: string]: string } = {
+      Sports: "⚽", Music: "🎵", Community: "🤝", Learning: "📚",
+      "Food & Drink": "🍕", Tech: "💻", "Arts & Culture": "🎨",
+      Outdoors: "🌲", default: "📍"
+    }
+    return icons[category] || icons.default
+  }
+
+  const topCategories = useMemo(() => {
+    if (!pastEvents || pastEvents.length === 0) return []
+    const counts: { [key: string]: number } = {}
+    pastEvents.forEach((event: any) => {
+      const cat = event.sport || event.category || "Other"
+      counts[cat] = (counts[cat] || 0) + 1
+    })
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([category, count]) => ({ category, count, icon: getCategoryIcon(category) }))
+  }, [pastEvents])
+
   if (authLoading || loading) {
     return <ProfileSkeleton />
   }
 
   return (
     <>
-      <div className="min-h-screen liquid-gradient pb-28">
+      <div className="min-h-screen liquid-gradient pb-[var(--safe-bottom)]">
         <header className="p-4 flex justify-end items-center gap-3">
           <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl glass-surface border border-rose-500/20 shadow-xl hover:bg-rose-500/10 text-rose-400" onClick={handleLogout}>
             <LogOut className="w-5 h-5" />
@@ -175,6 +209,39 @@ export default function ProfilePage() {
             </Avatar>
             <h1 className="text-2xl font-bold text-slate-50">{userProfile?.displayName || "Huddle User"}</h1>
             <p className="text-slate-400">{userProfile?.email}</p>
+
+            {/* Followers / Following Row - Better UI */}
+            <div className="inline-flex items-center bg-white/5 border border-white/10 rounded-2xl p-1 mt-4 shadow-lg backdrop-blur-md">
+              <button
+                onClick={() => { setFollowModalType("following"); setFollowModalOpen(true); }}
+                className="flex flex-col items-center justify-center min-w-24 px-4 py-2 rounded-xl hover:bg-white/10 transition-all group"
+              >
+                <span className="text-xl font-black text-slate-50 group-hover:text-primary transition-colors">{followingCount ?? '-'}</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 group-hover:text-slate-300 transition-colors">Following</span>
+              </button>
+
+              <div className="w-px h-8 bg-white/10 mx-1" />
+
+              <button
+                onClick={() => { setFollowModalType("followers"); setFollowModalOpen(true); }}
+                className="flex flex-col items-center justify-center min-w-24 px-4 py-2 rounded-xl hover:bg-white/10 transition-all group"
+              >
+                <span className="text-xl font-black text-slate-50 group-hover:text-primary transition-colors">
+                  {followerCount === null ? '-' : followerCount}
+                </span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 group-hover:text-slate-300 transition-colors">Followers</span>
+              </button>
+            </div>
+
+            {followerCount !== null && followerCount < 5 && (
+              <div className="mt-4 max-w-sm w-full mx-auto p-3 rounded-2xl border border-blue-500/20 bg-blue-500/10 backdrop-blur-md">
+                <p className="text-sm text-blue-200">
+                  <span className="font-bold text-blue-400 block mb-0.5">Build your network!</span>
+                  Gain followers to unlock social alerts about nearby games.
+                </p>
+              </div>
+            )}
+
             <Button variant="secondary" size="sm" className="mt-4" onClick={() => setIsEditModalOpen(true)}>
               <Pencil className="w-4 h-4 mr-2" />
               Edit Profile
@@ -266,6 +333,34 @@ export default function ProfilePage() {
               </Card>
             </div>
 
+            {/* Most Joined Categories */}
+            <Card className="glass-surface border-white/10 shadow-2xl rounded-3xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-xl font-bold">
+                  <BarChart3 className="w-6 h-6 text-primary" />
+                  Most Joined Categories
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {topCategories.length > 0 ? (
+                  <div className="space-y-3">
+                    {topCategories.map((item, index) => (
+                      <div key={item.category} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
+                        <span className="text-2xl">{item.icon}</span>
+                        <div className="flex-1">
+                          <p className="font-bold text-slate-200">{item.category}</p>
+                          <p className="text-xs text-slate-500">{item.count} {item.count === 1 ? 'event' : 'events'} joined</p>
+                        </div>
+                        <span className="text-lg font-extrabold text-primary">#{index + 1}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-400 text-lg">Join events to see your top categories here!</p>
+                )}
+              </CardContent>
+            </Card>
+
             <section className="space-y-6 pt-4">
               <div className="flex items-center gap-3">
                 <Calendar className="w-7 h-7 text-primary" />
@@ -306,6 +401,14 @@ export default function ProfilePage() {
         />
       )}
       <HuddleProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
+      {user && (
+        <FollowListModal
+          isOpen={followModalOpen}
+          onClose={() => setFollowModalOpen(false)}
+          type={followModalType}
+          userId={user.uid}
+        />
+      )}
     </>
   )
 }

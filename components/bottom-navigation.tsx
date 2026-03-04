@@ -26,8 +26,8 @@ export default function BottomNavigation() {
 
   return (
     <div className="fixed bottom-4 inset-x-0 z-[60] flex justify-center px-4 pointer-events-none">
-      <div className="flex items-center justify-around gap-2 rounded-full p-2 glass-surface border-white/15 w-full max-w-md pointer-events-auto shadow-[0_0_30px_rgba(0,0,0,0.6)]">
-        <Link href="/" className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
+      <div className="flex items-center justify-around gap-1.5 rounded-full p-1.5 glass-surface border-white/15 w-full max-w-md pointer-events-auto shadow-[0_0_30px_rgba(0,0,0,0.6)]">
+        <Link href="/" className="w-9 h-9 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
           <HuddleLogo />
         </Link>
         {tabs.map((tab) => {
@@ -49,13 +49,13 @@ export default function BottomNavigation() {
                 }
               }}
               className={`
-                flex flex-col items-center justify-center w-16 h-16 rounded-2xl
+                flex flex-col items-center justify-center w-14 h-14 rounded-2xl
                 transition-colors duration-200
                 ${isActive ? "bg-white/10" : "text-slate-400 hover:bg-white/5"}
               `}
             >
-              <Icon className={`w-6 h-6 mb-1 ${isActive ? "text-primary" : "text-slate-400"}`} />
-              <span className={`text-xs font-light ${isActive ? "text-primary" : "text-slate-400"}`}>{tab.label}</span>
+              <Icon className={`w-5 h-5 mb-0.5 ${isActive ? "text-primary" : "text-slate-400"}`} />
+              <span className={`text-[10px] font-light ${isActive ? "text-primary" : "text-slate-400"}`}>{tab.label}</span>
             </Link>
           )
         })}

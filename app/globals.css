@@ -16,9 +16,17 @@
   }
 
   @keyframes liquid-gradient-animation {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+    0% {
+      background-position: 0% 50%;
+    }
+
+    50% {
+      background-position: 100% 50%;
+    }
+
+    100% {
+      background-position: 0% 50%;
+    }
   }
 
   .liquid-gradient {
@@ -26,7 +34,7 @@
     background-size: 200% 200%;
     animation: liquid-gradient-animation 20s ease infinite;
   }
-  
+
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
@@ -39,7 +47,12 @@
 
 @layer base {
   :root {
-    --background: 240 55% 14%; /* A new, richer dark base */
+    --nav-height: 5rem;
+    /* 96px — matches bottom-4 offset (16px) + navbar height (~80px) */
+    --safe-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom));
+
+    --background: 240 55% 14%;
+    /* A new, richer dark base */
     --foreground: 210 40% 98%;
 
     --card: 222.2 84% 4.9%;
@@ -48,7 +61,8 @@
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 31 94% 52%; /* Sunny Orange */
+    --primary: 31 94% 52%;
+    /* Sunny Orange */
     --primary-foreground: 210 40% 98%;
 
     --secondary: 217.2 32.6% 17.5%;
@@ -59,7 +73,7 @@
 
     --accent: 31 94% 52%;
     --accent-foreground: 210 40% 98%;
-    
+
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
@@ -92,7 +106,7 @@
 
     --accent: 31 94% 52%;
     --accent-foreground: 210 40% 98%;
-    
+
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
@@ -106,6 +120,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
     font-size: 1.05rem;
@@ -114,12 +129,12 @@
 
 /* Ensure the Google Places Autocomplete dropdown is above Modals/UI and clickable on touch devices */
 .pac-container {
-    z-index: 10000 !important; 
-    pointer-events: auto !important;
-    touch-action: interpolation !important; 
+  z-index: 10000 !important;
+  pointer-events: auto !important;
+  touch-action: interpolation !important;
 }
 
 /* Improve tap reliability on mobile */
 .pac-item {
-    cursor: pointer;
+  cursor: pointer;
 }

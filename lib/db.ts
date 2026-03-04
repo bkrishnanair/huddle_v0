@@ -90,7 +90,16 @@ export const getEvent = async (eventId: string) => {
   try {
     const eventRef = doc(db, "events", eventId)
     const eventSnap = await getDoc(eventRef)
-    return eventSnap.exists() ? { id: eventSnap.id, ...eventSnap.data() } : null
+    if (!eventSnap.exists()) return null;
+    const rawData = eventSnap.data();
+    return {
+      id: eventSnap.id,
+      ...rawData,
+      geopoint: rawData.geopoint ? {
+        latitude: typeof rawData.geopoint.latitude === 'number' ? rawData.geopoint.latitude : rawData.geopoint._latitude,
+        longitude: typeof rawData.geopoint.longitude === 'number' ? rawData.geopoint.longitude : rawData.geopoint._longitude
+      } : null
+    };
   } catch (error) {
     console.error("Error fetching event:", error)
     throw new Error("Failed to retrieve event.")
@@ -305,7 +314,15 @@ export const getEventWithPlayerDetails = async (eventId: string) => {
     const eventSnap = await adminDb.collection("events").doc(eventId).get();
     if (!eventSnap.exists) return null;
 
-    const event = { id: eventSnap.id, ...eventSnap.data() } as any;
+    const rawData = eventSnap.data() as any;
+    const event = {
+      id: eventSnap.id,
+      ...rawData,
+      geopoint: rawData.geopoint ? {
+        latitude: typeof rawData.geopoint.latitude === 'number' ? rawData.geopoint.latitude : rawData.geopoint._latitude,
+        longitude: typeof rawData.geopoint.longitude === 'number' ? rawData.geopoint.longitude : rawData.geopoint._longitude
+      } : null
+    } as any;
 
     const playerIds = event.players || [];
     const playerDetails = await Promise.all(
@@ -533,5 +550,130 @@ export const toggleUserBlock = async (organizerId: string, targetUserId: string,
   } catch (error) {
     console.error("Error toggling user block:", error);
     throw new Error("Failed to update block list");
+  }
+};
+
+export const toggleFollowUser = async (followerId: string, targetId: string, isFollowing: boolean) => {
+  try {
+    const { getFirebaseAdminDb } = await import("@/lib/firebase-admin");
+    const { FieldValue, Timestamp } = await import("firebase-admin/firestore");
+    const adminDb = getFirebaseAdminDb();
+    if (!adminDb) throw new Error("Firebase Admin not initialized");
+
+    if (followerId === targetId) {
+      throw new Error("Cannot follow yourself");
+    }
+
+    const targetUserRef = adminDb.collection("users").doc(targetId);
+
+    // Check if target has blocked the follower
+    const targetSnap = await targetUserRef.get();
+    if (targetSnap.exists && targetSnap.data()?.blockedUsers?.includes(followerId)) {
+      throw new Error("UNAUTHORIZED_BLOCK");
+    }
+
+    const followerFollowingRef = adminDb.collection("users").doc(followerId).collection("following").doc(targetId);
+    const targetFollowersRef = targetUserRef.collection("followers").doc(followerId);
+
+    await adminDb.runTransaction(async (transaction) => {
+      // It's a simple set/delete, but we use a transaction to ensure both subcollections stay in sync
+      if (isFollowing) {
+        transaction.set(followerFollowingRef, { followedAt: Timestamp.now() });
+        transaction.set(targetFollowersRef, { followedAt: Timestamp.now() });
+      } else {
+        transaction.delete(followerFollowingRef);
+        transaction.delete(targetFollowersRef);
+      }
+    });
+
+  } catch (error: any) {
+    console.error("Error toggling follow status:", error);
+    if (error.message === "UNAUTHORIZED_BLOCK") {
+      throw error;
+    }
+    throw new Error("Failed to update follow status");
+  }
+};
+
+export const getFollowers = async (userId: string) => {
+  try {
+    const { getFirebaseAdminDb } = await import("@/lib/firebase-admin");
+    const adminDb = getFirebaseAdminDb();
+    if (!adminDb) throw new Error("Firebase Admin not initialized");
+
+    const followersRef = adminDb.collection("users").doc(userId).collection("followers");
+    const snapshot = await followersRef.get();
+
+    if (snapshot.empty) return [];
+
+    const followerIds = snapshot.docs.map(doc => doc.id);
+
+    // Hydrate profile data (Batch lookup using whereIn)
+    // Firestore whereIn has a limit of 30, so we chunk it just to be safe
+    const hydratedUsers: any[] = [];
+    for (let i = 0; i < followerIds.length; i += 30) {
+      const chunk = followerIds.slice(i, i + 30);
+      const userSnaps = await adminDb.collection("users").where("__name__", "in", chunk).get();
+      userSnaps.forEach(doc => {
+        hydratedUsers.push({ uid: doc.id, ...doc.data() });
+      });
+    }
+
+    return hydratedUsers;
+  } catch (error) {
+    console.error("Error fetching followers:", error);
+    throw new Error("Failed to fetch followers");
+  }
+};
+
+export const getFollowing = async (userId: string) => {
+  try {
+    const { getFirebaseAdminDb } = await import("@/lib/firebase-admin");
+    const adminDb = getFirebaseAdminDb();
+    if (!adminDb) throw new Error("Firebase Admin not initialized");
+
+    const followingRef = adminDb.collection("users").doc(userId).collection("following");
+    const snapshot = await followingRef.get();
+
+    if (snapshot.empty) return [];
+
+    const followingIds = snapshot.docs.map(doc => doc.id);
+
+    // Hydrate profile data
+    const hydratedUsers: any[] = [];
+    for (let i = 0; i < followingIds.length; i += 30) {
+      const chunk = followingIds.slice(i, i + 30);
+      const userSnaps = await adminDb.collection("users").where("__name__", "in", chunk).get();
+      userSnaps.forEach(doc => {
+        hydratedUsers.push({ uid: doc.id, ...doc.data() });
+      });
+    }
+
+    return hydratedUsers;
+  } catch (error) {
+    console.error("Error fetching following:", error);
+    throw new Error("Failed to fetch following");
+  }
+};
+
+export const updateUserLocation = async (userId: string, latitude: number, longitude: number) => {
+  try {
+    const { getFirebaseAdminDb, GeoPoint } = await import("@/lib/firebase-admin");
+    const adminDb = getFirebaseAdminDb();
+    if (!adminDb) return false;
+
+    // geohash allows for efficient radius querying
+    const geohash = geofire.geohashForLocation([latitude, longitude]);
+
+    await adminDb.collection("users").doc(userId).update({
+      lastKnownLocation: new GeoPoint(latitude, longitude),
+      geohash: geohash,
+      locationUpdatedAt: new Date().toISOString()
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Error updating user location:", error);
+    return false;
   }
 };

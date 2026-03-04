@@ -64,7 +64,7 @@ const MapRenderer = ({ onMapLoad, children, isDarkMode }: { onMapLoad: (map: goo
   return <>{children}</>;
 };
 
-const CATEGORIES = ['All', 'Joined', 'Recommended', 'Sports', 'Music', 'Community', 'Learning', 'Food & Drink', 'Tech', 'Arts & Culture', 'Outdoors']
+const CATEGORIES = ['All', 'Joined', 'Recommended', '🖥️ Virtual', 'Sports', 'Music', 'Community', 'Learning', 'Food & Drink', 'Tech', 'Arts & Culture', 'Outdoors']
 const TIMES = ['All', 'Live', 'This Week', 'Today', 'This Weekend']
 
 const getCategoryColor = (category: string): string => {
@@ -94,6 +94,7 @@ const getCategoryIcon = (category: string): string => {
 export default function MapView({ user, eventId, initialCenter, intent }: MapViewProps) {
   const router = useRouter()
   const isProcessingDeepLink = useRef(!!eventId)
+  const deepLinkProcessed = useRef(false)
   const [events, setEvents] = useState<GameEvent[]>([])
   const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null)
   const [hoveredEvent, setHoveredEvent] = useState<GameEvent | null>(null)
@@ -216,7 +217,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
   // Deep Link handler: Pans map and opens drawer when eventId is supplied via URL
   useEffect(() => {
-    if (eventId && map && !selectedEvent) {
+    if (eventId && map && !selectedEvent && !deepLinkProcessed.current) {
       const fetchAndFocusEvent = async () => {
         isProcessingDeepLink.current = true; // Lock the map
         try {
@@ -238,16 +239,27 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           const response = await fetch(`/api/events/${eventId}/details`, fetchOptions);
           if (response.ok) {
             const event: GameEvent = await response.json();
-            if (event.geopoint) {
+            if (event.geopoint && typeof event.geopoint.latitude === 'number' && isFinite(event.geopoint.latitude) && typeof event.geopoint.longitude === 'number' && isFinite(event.geopoint.longitude)) {
               // Override map centering for deep links to ensure it pans correctly
               map.panTo({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
-              map.setZoom(17);
+              map.setZoom(18);
               // Store the deep link center so handleRecenter knows not to override it initially
               sessionStorage.setItem('huddleMapCenter', JSON.stringify({ lat: event.geopoint.latitude, lng: event.geopoint.longitude }));
-              setSelectedEvent(event);
+              // Only open drawer if not coming from a 'locate' intent (e.g. map button on event cards)
+              if (intent !== 'locate') {
+                setSelectedEvent(event);
+              }
+              deepLinkProcessed.current = true;
 
               // Prevent default center from re-running (but don't set user physical location)
               setHasCenteredDefault(true);
+
+              // Fetch events in the new viewport after a brief delay for map to settle
+              setTimeout(() => fetchEventsInView(), 800);
+            } else {
+              // Virtual event or no geopoint — still open the drawer
+              setSelectedEvent(event);
+              deepLinkProcessed.current = true;
             }
           }
         } catch (error) {
@@ -259,7 +271,16 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
       };
       fetchAndFocusEvent();
     }
-  }, [user, eventId, map, selectedEvent]);
+  }, [user, eventId, map, selectedEvent, intent]);
+
+  // Fix: Always fetch pins once the map is initialized, even before user interacts
+  useEffect(() => {
+    if (map) {
+      // Small delay to let the map finish rendering
+      const timer = setTimeout(() => fetchEventsInView(), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [map, fetchEventsInView]);
 
   // Debounce the map idle event to prevent spamming the API when dragging/zooming rapidly
   const debouncedFetchEventsInView = useMemo(() => {
@@ -315,6 +336,48 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             map.panTo(loc);
             map.setZoom(16);
           }
+
+          // Silently update backend anchor for Serendipity Engine
+          if (user) {
+            let shouldSync = true;
+            try {
+              const lastSyncStr = localStorage.getItem(`lastLocationSync_${user.uid}`);
+              if (lastSyncStr) {
+                const lastSync = JSON.parse(lastSyncStr);
+                // Calculate distance if Google Maps geometry is loaded
+                if (window.google?.maps?.geometry?.spherical) {
+                  const distance = window.google.maps.geometry.spherical.computeDistanceBetween(
+                    new window.google.maps.LatLng(loc.lat, loc.lng),
+                    new window.google.maps.LatLng(lastSync.lat, lastSync.lng)
+                  );
+                  // Only sync if user moved more than 500 meters
+                  if (distance < 500) {
+                    shouldSync = false;
+                    console.log("Skipping location sync, distance moved < 500m.");
+                  }
+                }
+              }
+            } catch (e) {
+              console.warn("Could not read local sync state for location", e);
+            }
+
+            if (shouldSync) {
+              user.getIdToken().then((token: string) => {
+                fetch(`/api/users/${user.uid}/location`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  },
+                  body: JSON.stringify(loc)
+                }).then(res => {
+                  if (res.ok) {
+                    localStorage.setItem(`lastLocationSync_${user.uid}`, JSON.stringify(loc));
+                  }
+                }).catch((e: any) => console.error("Failed to sync location anchor", e));
+              }).catch((e: any) => console.error("Failed to get token for location sync", e));
+            }
+          }
         },
         (error) => {
           const errMsg = error.message || String(error);
@@ -361,12 +424,17 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
       result = result.filter(event => event.players?.includes(user?.uid))
     } else if (activeCategory === 'Recommended') {
       const interests = userProfile?.favoriteSports || [];
-      if (interests.length === 0) {
+      // Merge profile interests with top 3 joined categories for broader recommendations
+      const topJoined = (userProfile?.topCategories || []).map((c: any) => typeof c === 'string' ? c : c.category);
+      const combined = [...new Set([...interests, ...topJoined])];
+      if (combined.length === 0) {
         toast.error("Add interests to your profile to see recommended events!");
         // We will default to showing all if they have no interests, but ping the warning.
       } else {
-        result = result.filter(event => interests.includes(event.category));
+        result = result.filter(event => combined.includes(event.category));
       }
+    } else if (activeCategory === '🖥️ Virtual') {
+      result = result.filter(event => event.eventType === 'virtual' || event.eventType === 'hybrid')
     } else if (activeCategory !== 'All') {
       result = result.filter(event => event.category === activeCategory);
     }
@@ -490,89 +558,107 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                         </div>
                       </AdvancedMarker>
                     )}
-                    {filteredEvents.map((event: GameEvent) => {
-                      const isHovered = hoveredEvent?.id === event.id;
-                      const showDetails = isHovered || currentZoom >= 16;
-                      const categoryColor = getCategoryColor(event.category);
+                    {filteredEvents
+                      .filter((event: GameEvent) => event.eventType !== 'virtual' && event.geopoint)
+                      .map((event: GameEvent) => {
+                        const isHovered = hoveredEvent?.id === event.id;
+                        const showDetails = isHovered || currentZoom >= 16;
+                        // Zoom-based pin sizing — smaller pins at low zoom reduce overlap
+                        const pinSize = currentZoom <= 13 ? 'w-7 h-7' : currentZoom <= 15 ? 'w-8 h-8' : 'w-10 h-10';
+                        const emojiSize = currentZoom <= 13 ? 'text-sm' : currentZoom <= 15 ? 'text-base' : 'text-xl';
+                        const shadowSize = currentZoom <= 13 ? 'w-3 h-0.5' : 'w-4 h-1';
+                        const categoryColor = getCategoryColor(event.category);
 
-                      let isFutureEvent = false;
-                      if (!event.date || event.date.includes('/')) {
-                        isFutureEvent = false;
-                      } else {
-                        try {
-                          const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
-                          isFutureEvent = !isToday(eventDateTime) && eventDateTime > new Date();
-                        } catch (e) {
+                        let isFutureEvent = false;
+                        if (!event.date || event.date.includes('/')) {
                           isFutureEvent = false;
+                        } else {
+                          try {
+                            const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
+                            isFutureEvent = !isToday(eventDateTime) && eventDateTime > new Date();
+                          } catch (e) {
+                            isFutureEvent = false;
+                          }
                         }
-                      }
 
-                      return (
-                        <AdvancedMarker
-                          key={event.id}
-                          position={{ lat: event.geopoint.latitude, lng: event.geopoint.longitude }}
-                          onClick={() => setSelectedEvent(event)}
-                          onMouseEnter={() => setHoveredEvent(event)}
-                          onMouseLeave={() => setHoveredEvent(null)}
-                          style={{ zIndex: isHovered ? 50 : (showDetails ? 10 : 0) }}
-                        >
-                          <div className={`flex flex-col items-center transition-all duration-500 transform origin-bottom ${isHovered ? 'scale-110 -translate-y-1' : 'scale-100'}`}>
-                            {/* Floating Info Bubble */}
-                            <div className={`
+                        return (
+                          <AdvancedMarker
+                            key={event.id}
+                            position={{ lat: event.geopoint.latitude, lng: event.geopoint.longitude }}
+                            onClick={() => setSelectedEvent(event)}
+                            onMouseEnter={() => setHoveredEvent(event)}
+                            onMouseLeave={() => setHoveredEvent(null)}
+                            style={{ zIndex: isHovered ? 50 : (showDetails ? 10 : 0) }}
+                          >
+                            <div className={`flex flex-col items-center transition-all duration-500 transform origin-bottom ${isHovered ? 'scale-110 -translate-y-1' : 'scale-100'}`}>
+                              {/* Floating Info Bubble */}
+                              <div className={`
                               mb-2 px-3 py-1.5 rounded-2xl glass-surface border border-white/20 shadow-2xl
                               transition-all duration-300 ease-out flex flex-col items-center
                               ${showDetails ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
                             `}>
-                              <span className="text-[11px] font-black text-white whitespace-nowrap leading-none mb-1">{event.name}</span>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[9px] text-slate-300 font-bold leading-none">
-                                  {getDisplayDate(event.date)} • {event.time}{event.endTime ? ` - ${event.endTime}` : ''}
-                                </span>
-                                {isEventOngoing(event) && (
-                                  <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 rounded font-black flex items-center gap-1 animate-pulse border border-emerald-500/30">
-                                    <span className="w-1 h-1 rounded-full bg-emerald-400" /> LIVE
+                                <span className="text-[11px] font-black text-white whitespace-nowrap leading-none mb-1">{event.name}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[9px] text-slate-300 font-bold leading-none">
+                                    {getDisplayDate(event.date)} • {event.time}{event.endTime ? ` - ${event.endTime}` : ''}
                                   </span>
-                                )}
+                                  {isEventOngoing(event) && (
+                                    <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 rounded font-black flex items-center gap-1 animate-pulse border border-emerald-500/30">
+                                      <span className="w-1 h-1 rounded-full bg-emerald-400" /> LIVE
+                                    </span>
+                                  )}
+                                  {event.eventType === 'hybrid' && (
+                                    <span className="text-[8px] bg-violet-500/20 text-violet-400 px-1 rounded font-black border border-violet-500/30">
+                                      📡
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                            </div>
 
-                            {/* Teardrop Pin */}
-                            <div className="relative group">
-                              {/* Pulse effect for hovered OR ongoing pins */}
-                              {(isHovered || isEventOngoing(event)) && (
+                              {/* Teardrop Pin */}
+                              <div className="relative group">
+                                {/* Pulse effect for hovered OR ongoing pins */}
+                                {(isHovered || isEventOngoing(event)) && (
+                                  <div
+                                    className={`absolute ${isEventOngoing(event) && !isHovered ? '-inset-1 animate-[ping_2.5s_cubic-bezier(0,0,0.2,1)_infinite] opacity-60' : 'inset-0 animate-ping opacity-40'} rounded-full`}
+                                    style={{ backgroundColor: isEventOngoing(event) && !isHovered ? '#10b981' : categoryColor }}
+                                  />
+                                )}
+
                                 <div
-                                  className={`absolute ${isEventOngoing(event) && !isHovered ? '-inset-1 animate-[ping_2.5s_cubic-bezier(0,0,0.2,1)_infinite] opacity-60' : 'inset-0 animate-ping opacity-40'} rounded-full`}
-                                  style={{ backgroundColor: isEventOngoing(event) && !isHovered ? '#10b981' : categoryColor }}
-                                />
-                              )}
-
-                              <div
-                                className={`
-                                  relative w-10 h-10 flex items-center justify-center
+                                  className={`
+                                  relative ${pinSize} flex items-center justify-center
                                   rounded-full rounded-br-none rotate-45
                                   border-2 ${isEventOngoing(event) ? 'border-emerald-400' : 'border-white'} transition-all duration-300
                                   ${isFutureEvent ? 'opacity-70 saturate-50' : 'opacity-100'}
                                 `}
-                                style={{
-                                  background: `linear-gradient(135deg, ${categoryColor}, ${categoryColor}dd)`,
-                                  boxShadow: isHovered ? `0 0 25px ${categoryColor}aa` : (isEventOngoing(event) ? `0 0 15px rgba(16, 185, 129, 0.6), 0 4px 10px rgba(0,0,0,0.4)` : `0 4px 10px rgba(0,0,0,0.4)`)
-                                }}
-                              >
-                                <div className="-rotate-45 text-xl filter drop-shadow-sm brightness-110">
-                                  {event.icon || getCategoryIcon(event.category)}
+                                  style={{
+                                    background: `linear-gradient(135deg, ${categoryColor}, ${categoryColor}dd)`,
+                                    boxShadow: isHovered ? `0 0 25px ${categoryColor}aa` : (isEventOngoing(event) ? `0 0 15px rgba(16, 185, 129, 0.6), 0 4px 10px rgba(0,0,0,0.4)` : `0 4px 10px rgba(0,0,0,0.4)`)
+                                  }}
+                                >
+                                  <div className={`-rotate-45 ${emojiSize} filter drop-shadow-sm brightness-110`}>
+                                    {event.icon || getCategoryIcon(event.category)}
+                                  </div>
                                 </div>
-                              </div>
-                            </div>
 
-                            {/* Mini shadow at base */}
-                            <div className={`
-                              w-4 h-1 bg-black/40 rounded-full blur-[2px] mt-1 transition-all duration-300
+                                {/* Hybrid badge on the marker */}
+                                {event.eventType === 'hybrid' && (
+                                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-violet-500 rounded-full border border-white flex items-center justify-center text-[8px] shadow-lg">
+                                    📡
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Mini shadow at base */}
+                              <div className={`
+                              ${shadowSize} bg-black/40 rounded-full blur-[2px] mt-1 transition-all duration-300
                               ${isHovered ? 'scale-150 opacity-60' : 'scale-100 opacity-30'}
                             `} />
-                          </div>
-                        </AdvancedMarker>
-                      );
-                    })}
+                            </div>
+                          </AdvancedMarker>
+                        );
+                      })}
                   </>
                 )}
               </MapRenderer>
@@ -668,7 +754,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           {
             viewMode === 'list' && (
               <div
-                className="absolute inset-0 z-10 pt-[190px] px-4 pb-28 overflow-y-auto no-scrollbar pointer-events-auto bg-slate-950/60 backdrop-blur-md cursor-pointer"
+                className="absolute inset-0 z-10 pt-[190px] px-4 pb-[var(--safe-bottom)] overflow-y-auto no-scrollbar pointer-events-auto bg-slate-950/60 backdrop-blur-md cursor-pointer"
                 onClick={() => setViewMode('map')}
               >
                 <div className="max-w-4xl mx-auto cursor-default" onClick={(e) => e.stopPropagation()}>

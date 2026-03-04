@@ -98,7 +98,13 @@ export async function GET(
     const totalTracked = attended + noShows;
     const reliabilityScore = totalTracked > 0 ? Math.round((attended / totalTracked) * 100) : null;
 
-    return NextResponse.json({ profile, stats, pastEvents, reliabilityScore, totalTracked })
+    // Fetch efficient Subcollection Counts (Firestore Count query handles this server-side without document reads limit issues)
+    const followersSnapshot = await adminDb.collection("users").doc(requestedUserId).collection("followers").count().get();
+    const followingSnapshot = await adminDb.collection("users").doc(requestedUserId).collection("following").count().get();
+    const followerCount = followersSnapshot.data().count;
+    const followingCount = followingSnapshot.data().count;
+
+    return NextResponse.json({ profile, stats, pastEvents, reliabilityScore, totalTracked, followerCount, followingCount })
   } catch (error) {
     console.error(`Error fetching profile for user:`, error)
     return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 })
