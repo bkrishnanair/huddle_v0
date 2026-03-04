@@ -6,7 +6,7 @@ import { storage, db } from "@/lib/firebase";
 import { ref, uploadBytesResumable, getDownloadURL, listAll, deleteObject } from "firebase/storage";
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
-import { Loader2, UploadCloud, Trash2, Image as ImageIcon } from "lucide-react";
+import { Loader2, UploadCloud, Trash2, Image as ImageIcon, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 
@@ -24,6 +24,7 @@ export default function EventGallery({ eventId, isOrganizer, hasJoined, eventDat
     const [uploading, setUploading] = useState(false);
     const [progress, setProgress] = useState(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const uploadTaskRef = useRef<any>(null);
 
     const isPastEvent = () => {
         if (!eventDate || eventDate.includes('/')) return true; // default open for legacy/bad dates
@@ -103,6 +104,8 @@ export default function EventGallery({ eventId, isOrganizer, hasJoined, eventDat
                 }
             });
 
+            uploadTaskRef.current = uploadTask;
+
             uploadTask.on('state_changed',
                 (snapshot) => {
                     const p = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
@@ -110,6 +113,10 @@ export default function EventGallery({ eventId, isOrganizer, hasJoined, eventDat
                     setProgress(p);
                 },
                 (error) => {
+                    if (error.code === 'storage/canceled') {
+                        // User cancelled — handled by the cancel button, don't show error
+                        return;
+                    }
                     console.error("Upload failed! Error Code:", error.code, "Message:", error.message);
                     toast.error(`Upload failed: ${error.code}. Check CORS settings.`);
                     setUploading(false);
@@ -131,6 +138,7 @@ export default function EventGallery({ eventId, isOrganizer, hasJoined, eventDat
                     setPhotos(prev => [...prev, photoData]);
                     toast.success("Photo added to gallery! 📸");
                     setUploading(false);
+                    uploadTaskRef.current = null;
                     if (fileInputRef.current) fileInputRef.current.value = "";
                 }
             );
@@ -203,6 +211,25 @@ export default function EventGallery({ eventId, isOrganizer, hasJoined, eventDat
                             {uploading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <UploadCloud className="w-3 h-3 mr-1" />}
                             {uploading ? `${Math.round(progress)}%` : "Upload Photo"}
                         </Button>
+                        {uploading && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                onClick={() => {
+                                    if (uploadTaskRef.current) {
+                                        uploadTaskRef.current.cancel();
+                                        uploadTaskRef.current = null;
+                                    }
+                                    setUploading(false);
+                                    setProgress(0);
+                                    if (fileInputRef.current) fileInputRef.current.value = "";
+                                    toast.info("Upload cancelled.");
+                                }}
+                            >
+                                <XCircle className="w-3.5 h-3.5" />
+                            </Button>
+                        )}
                     </>
                 )}
             </div>

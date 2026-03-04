@@ -6,6 +6,7 @@ import { useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useFirebase } from "@/lib/firebase-context"
 import BottomNavigation from "@/components/bottom-navigation"
+import { FollowingProvider } from "@/hooks/use-following"
 
 export default function AppLayout({
   children,
@@ -43,8 +44,10 @@ export default function AppLayout({
 
   return (
     <div className="relative">
-      {children}
-      <BottomNavigation />
+      <FollowingProvider>
+        {children}
+        <BottomNavigation />
+      </FollowingProvider>
     </div>
   )
 }

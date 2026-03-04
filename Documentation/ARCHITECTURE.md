@@ -56,11 +56,29 @@ The `Map` component only fires its fetch function when the map *stops* moving (`
 ### Advanced Marker UX
 We use `@vis.gl/react-google-maps` `<AdvancedMarker>` tags to inject Tailwind-styled React HTML directly onto the map canvas. This enables emojis, gradients, and CSS-based micro-animations (like `animate-pulse` for boosted events).
 
+### Zoom-Adaptive Pin Sizing
+Pins dynamically scale based on `currentZoom` state to prevent overlap at low zoom levels:
+- **Zoom ≤ 13**: 28px pins (`w-7 h-7`), `text-sm` emoji
+- **Zoom 14–15**: 32px pins (`w-8 h-8`), `text-base` emoji
+- **Zoom ≥ 16**: 40px pins (`w-10 h-10`), `text-xl` emoji (full detail + info bubble)
+
 ### Cloud Console Map IDs
 Rather than bloating the JavaScript bundle with extensive local JSON styling arrays, Map themes (like hiding Points of Interest or rendering dark mode) are managed dynamically through Google Cloud Map IDs. This strictly enforces the Cloud Console as the source of truth for the map's visual payload.
 
 ### Z-Index Spatial Overlays
-The application utilizes a rigorous, three-tier z-index hierarchy on mobile views. The base Map Action Buttons float at `z-40`, the screen-dimming Event Details Drawer portals in at `z-50`, and the omnipresent Bottom Navigation Bar rests permanently at `z-[60]` with a `pointer-events-none` wrapper to ensure seamless interaction across layers.
+The application utilizes a rigorous z-index hierarchy on mobile views:
+- `z-40`: Map Action Buttons (Locate Me, Recenter)
+- `z-[60]`: Bottom Navigation Bar (with `pointer-events-none` wrapper)
+- `z-[70]`: Dialog and Drawer overlays (Event Details, Create Event)
+- `z-[80]`: Select/dropdown popovers (renders above modals)
+
+### Deep Link Intent System
+The map supports two deep link modes via URL parameters:
+- `?eventId=xxx` — Pans to the event pin AND opens the Event Details drawer (for shared links).
+- `?eventId=xxx&intent=locate` — Pans to the pin only, no drawer (for "View on Map" buttons in event cards).
+
+### Initial Pin Loading
+A dedicated `useEffect` fires `fetchEventsInView()` 300ms after the map initializes, ensuring pins always appear on first load without requiring user interaction.
 
 ## 6. Secure Route Group Governance
 The folder structure utilizes Next.js App Router Route Groups to enforce authorization at the layout level.
