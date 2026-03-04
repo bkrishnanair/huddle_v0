@@ -13,7 +13,8 @@ export default function MyEventsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0) // State to trigger re-fetch
   const [searchQuery, setSearchQuery] = useState("")
-  const [filterDate, setFilterDate] = useState("")
+  const [filterStartDate, setFilterStartDate] = useState("")
+  const [filterEndDate, setFilterEndDate] = useState("")
 
   if (loading) {
     return (
@@ -37,7 +38,7 @@ export default function MyEventsPage() {
   };
 
   return (
-    <div className="min-h-screen liquid-gradient p-4 pb-28 md:p-8 md:pb-28">
+    <div className="min-h-screen liquid-gradient p-4 pb-[var(--safe-bottom)] md:p-8 md:pb-[var(--safe-bottom)]">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
         <div className="space-y-1">
           <h1 className="text-4xl font-extrabold text-slate-50 tracking-tight">My Events</h1>
@@ -79,23 +80,44 @@ export default function MyEventsPage() {
                 className="w-full pl-9 bg-slate-900/50 border-white/10 text-slate-200 placeholder:text-slate-500 rounded-xl h-10"
               />
             </div>
-            {/* Date Picker */}
-            <div className="relative w-full md:w-48">
+            {/* Date Range */}
+            <div className="flex items-center gap-2 w-full md:w-auto">
               <Input
                 type="date"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-                className="w-full bg-slate-900/50 border-white/10 text-slate-200 rounded-xl h-10 [color-scheme:dark]"
+                value={filterStartDate}
+                onChange={(e) => {
+                  setFilterStartDate(e.target.value);
+                  if (filterEndDate && e.target.value > filterEndDate) setFilterEndDate("");
+                }}
+                className="w-full md:w-40 bg-slate-900/50 border-white/10 text-slate-200 rounded-xl h-10 [color-scheme:dark] text-xs"
+                placeholder="Start date"
               />
+              <span className="text-slate-500 text-xs shrink-0">to</span>
+              <Input
+                type="date"
+                value={filterEndDate}
+                onChange={(e) => setFilterEndDate(e.target.value)}
+                min={filterStartDate}
+                className="w-full md:w-40 bg-slate-900/50 border-white/10 text-slate-200 rounded-xl h-10 [color-scheme:dark] text-xs"
+                placeholder="End date"
+              />
+              {(filterStartDate || filterEndDate) && (
+                <button
+                  onClick={() => { setFilterStartDate(""); setFilterEndDate(""); }}
+                  className="text-xs text-slate-400 hover:text-white shrink-0 px-2"
+                >
+                  Clear
+                </button>
+              )}
             </div>
           </div>
         </div>
 
         <TabsContent value="organized" className="mt-0 outline-none">
-          <EventList userId={user.uid} eventType="organized" searchQuery={searchQuery} filterDate={filterDate} />
+          <EventList userId={user.uid} eventType="organized" searchQuery={searchQuery} filterStartDate={filterStartDate} filterEndDate={filterEndDate} />
         </TabsContent>
         <TabsContent value="joined" className="mt-0 outline-none">
-          <EventList userId={user.uid} eventType="joined" searchQuery={searchQuery} filterDate={filterDate} />
+          <EventList userId={user.uid} eventType="joined" searchQuery={searchQuery} filterStartDate={filterStartDate} filterEndDate={filterEndDate} />
         </TabsContent>
       </Tabs>
 

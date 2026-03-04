@@ -6,6 +6,85 @@ import { getFirebaseAdminDb } from "@/lib/firebase-admin"
 import { z } from "zod"
 import { FieldValue } from "firebase-admin/firestore"
 
+// Helper function to fan-out notifications in the background using Serendipity Logic
+async function notifyFollowersOfJoin(userId: string, eventId: string, eventName: string, eventCategory: string, eventGeopoint: any) {
+  try {
+    const adminDb = getFirebaseAdminDb()
+    if (!adminDb) return;
+
+    // Get the user's details for the notification string (e.g. "Bobby just joined...")
+    const userDoc = await adminDb.collection("users").doc(userId).get()
+    const userName = userDoc.exists ? (userDoc.data()?.displayName || userDoc.data()?.name || "A friend") : "A friend"
+
+    // Fetch followers
+    const followersRef = adminDb.collection("users").doc(userId).collection("followers")
+    const followersSnap = await followersRef.get()
+
+    if (followersSnap.empty) return
+
+    const followerIds = followersSnap.docs.map(doc => doc.id)
+
+    // Chunk array by 500 (Firestore batch limit)
+    const chunkSize = 500;
+    const { Timestamp } = await import("firebase-admin/firestore");
+    const geofire = await import("geofire-common");
+
+    for (let i = 0; i < followerIds.length; i += chunkSize) {
+      const chunk = followerIds.slice(i, i + chunkSize);
+      const batch = adminDb.batch();
+
+      // Fetch follower profiles to apply Serendipity filters (Location & Interests)
+      const followerSnaps = await adminDb.collection("users").where("__name__", "in", chunk).get();
+
+      followerSnaps.docs.forEach(doc => {
+        const followerData = doc.data();
+        const followerId = doc.id;
+
+        // Serendipity Filter 1: Interest Match
+        // If they have no interests set, we assume they want to know everything their friends do.
+        // Otherwise, it must match the event category.
+        const interests: string[] = followerData.favoriteSports || [];
+        const matchesInterest = interests.length === 0 || interests.includes(eventCategory);
+
+        if (!matchesInterest) return;
+
+        // Serendipity Filter 2: Location Match (under 25 miles)
+        // If event has no physical location (virtual) OR follower hasn't opened map yet, we default to sending.
+        let isNearby = true;
+        if (eventGeopoint && followerData.lastKnownLocation) {
+          const followerLat = followerData.lastKnownLocation.latitude || followerData.lastKnownLocation._latitude;
+          const followerLng = followerData.lastKnownLocation.longitude || followerData.lastKnownLocation._longitude;
+          const eventLat = eventGeopoint.latitude || eventGeopoint._latitude;
+          const eventLng = eventGeopoint.longitude || eventGeopoint._longitude;
+
+          if (followerLat && followerLng && eventLat && eventLng) {
+            const distanceInKm = geofire.distanceBetween([followerLat, followerLng], [eventLat, eventLng]);
+            const distanceInMiles = distanceInKm * 0.621371;
+            isNearby = distanceInMiles <= 25;
+          }
+        }
+
+        if (!isNearby) return;
+
+        // Passed filters! Write notification.
+        const notificationRef = adminDb.collection("users").doc(followerId).collection("notifications").doc();
+        batch.set(notificationRef, {
+          userId: followerId,
+          type: "friend_attending",
+          message: `🔥 ${userName} is playing ${eventCategory} near you! Join them?`,
+          eventId: eventId,
+          read: false,
+          createdAt: Timestamp.now().toDate().toISOString()
+        });
+      });
+
+      await batch.commit();
+    }
+  } catch (error) {
+    console.error("Failed to notify followers:", error);
+  }
+}
+
 const rsvpSchema = z.object({
   action: z.enum(["join", "leave", "remove"]),
   note: z.string().optional(),
@@ -206,6 +285,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       } catch (e) {
         console.error("Failed to assign badge", e);
       }
+
+      // Fire-and-forget fan-out to followers (Serendipity Engine)
+      const eventName = updatedEventData.title || updatedEventData.name || "an event"
+      const eventCategory = updatedEventData.category || updatedEventData.sport || "None"
+      const eventGeopoint = updatedEventData.geopoint || null
+      notifyFollowersOfJoin(user.uid, id, eventName, eventCategory, eventGeopoint).catch(console.error)
     }
 
     return NextResponse.json({ event: { id, ...updatedEventData } })

@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { GameEvent } from "@/lib/types"
-import { Users, Calendar, Clock, MapPin, Loader2, Share, Trash2, Download, Copy, MessageCircle, AlertTriangle, Info, CalendarPlus, CheckCircle2 } from "lucide-react"
+import { Users, Calendar, Clock, MapPin, Loader2, Share, Trash2, Download, Copy, MessageCircle, AlertTriangle, Info, CalendarPlus, CheckCircle2, Video, Monitor, ExternalLink } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import EventChat from "./event-chat"
@@ -39,6 +39,15 @@ import { generateGoogleCalendarUrl, downloadIcsFile } from "@/lib/calendar"
 import { ReportModal } from "./modals/report-modal"
 import { ShieldAlert, Ban, ImageIcon } from "lucide-react"
 import EventGallery from "./events/event-gallery"
+
+const getCategoryIcon = (category: string): string => {
+  const icons: { [key: string]: string } = {
+    Sports: "⚽", Music: "🎵", Community: "🤝", Learning: "📚",
+    "Food & Drink": "🍕", Tech: "💻", "Arts & Culture": "🎨",
+    Outdoors: "🌲", default: "📍"
+  }
+  return icons[category] || icons.default
+}
 
 interface EventDetailsDrawerProps {
   event: GameEvent
@@ -499,12 +508,13 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
 
   return (
     <Drawer open={isOpen} onOpenChange={onClose}>
-      <DrawerContent className="glass-surface border-white/15 text-foreground max-w-2xl mx-auto rounded-t-[2rem] max-h-[85vh] flex flex-col focus:outline-none">
+      <DrawerContent className="glass-surface border-white/15 text-foreground max-w-2xl mx-auto rounded-t-[2rem] max-h-[80vh] flex flex-col focus:outline-none">
         <div className="mx-auto mt-4 h-1.5 w-12 rounded-full bg-white/20 shrink-0" />
         <DrawerHeader className="pb-2 pt-2 shrink-0">
           <div className="flex justify-between items-start gap-4">
             <div className="flex-1">
               <DrawerTitle className="text-2xl font-black text-white tracking-tight leading-tight flex items-center gap-2">
+                <span>{event.icon || getCategoryIcon(event.sport || event.category)}</span>
                 {event.title}
                 {event.maxPlayers - event.currentPlayers > 0 && event.maxPlayers - event.currentPlayers <= 3 && (
                   <span className="bg-red-500 text-white px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(239,68,68,0.5)]">
@@ -515,6 +525,14 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
               </DrawerTitle>
               <DrawerDescription className="flex items-center gap-2 mt-1">
                 <span className="bg-primary/20 text-primary px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider">{event.sport}</span>
+                {(event.eventType === 'virtual' || event.eventType === 'hybrid') && (
+                  <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border ${event.eventType === 'virtual'
+                    ? 'bg-blue-500/20 text-blue-400 border-blue-500/20'
+                    : 'bg-violet-500/20 text-violet-400 border-violet-500/20'
+                    }`}>
+                    {event.eventType === 'virtual' ? '🖥️ Virtual' : '📡 Hybrid'}
+                  </span>
+                )}
                 <span className="text-slate-500 text-xs font-medium">by {event.organizerName}</span>
               </DrawerDescription>
             </div>
@@ -551,13 +569,16 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                   { icon: Users, label: "Capacity", value: `${event.currentPlayers} / ${event.maxPlayers}` },
                   { icon: Calendar, label: "Date", value: event.date.includes('/') ? event.date : format(parseISO(event.date), 'MMM d, yyyy') },
                   { icon: Clock, label: "Time", value: event.endTime ? `${event.time} - ${event.endTime}` : event.time },
-                  { icon: MapPin, label: "Location", value: typeof event.location === 'string' ? event.location : 'Unavailable' }
+                  ...(event.eventType === 'virtual'
+                    ? [{ icon: Monitor, label: "Location", value: event.location || '🖥️ Virtual Event' }]
+                    : [{ icon: MapPin, label: "Location", value: typeof event.location === 'string' ? event.location : 'Unavailable' }]
+                  )
                 ].map((item, i) => (
                   <div key={i} className="bg-white/5 border border-white/5 p-3 rounded-xl flex items-center gap-3">
                     <item.icon className="w-4 h-4 text-primary shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest leading-none mb-1">{item.label}</p>
-                      {item.label === "Location" ? (
+                      {item.label === "Location" && event.eventType !== 'virtual' ? (
                         <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.value)}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-emerald-400 hover:text-emerald-300 truncate block hover:underline">
                           {item.value} ↗
                         </a>
@@ -568,6 +589,40 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                   </div>
                 ))}
               </div>
+
+              {/* Join Meeting Button — Virtual/Hybrid events, RSVP'd users only */}
+              {(event.eventType === 'virtual' || event.eventType === 'hybrid') && event.virtualLink && (hasJoined || isOrganizer) && (
+                <a
+                  href={event.virtualLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`flex items-center justify-center gap-2 h-12 rounded-xl text-sm font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 ${event.virtualLink.includes('zoom') ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/30'
+                    : event.virtualLink.includes('meet.google') ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
+                      : 'bg-violet-600 hover:bg-violet-500 text-white shadow-violet-600/30'
+                    }`}
+                >
+                  <Video className="w-4 h-4" />
+                  Join Meeting
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
+              {(event.eventType === 'virtual' || event.eventType === 'hybrid') && event.virtualLink && !hasJoined && !isOrganizer && (
+                <div className="flex items-center justify-center bg-slate-800/50 text-slate-400 py-3 rounded-xl border border-white/5">
+                  <Video className="w-4 h-4 mr-2" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">RSVP to access meeting link</span>
+                </div>
+              )}
+
+              {/* Hybrid: show both meeting and map link info */}
+              {event.eventType === 'hybrid' && event.virtualLink && (
+                <div className="bg-violet-900/20 p-3 rounded-xl border border-violet-500/20 flex items-center gap-3">
+                  <Monitor className="w-4 h-4 text-violet-400 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[9px] text-violet-400 uppercase font-black tracking-widest leading-none mb-1">Virtual Link Available</p>
+                    <p className="text-xs font-medium text-violet-200 truncate">This event has both in-person and virtual options</p>
+                  </div>
+                </div>
+              )}
 
               {/* Add to Calendar Sync */}
               {(hasJoined || isOrganizer) && (
@@ -814,7 +869,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
             </div>
           </TabsContent>
         </Tabs>
-        <DrawerFooter className="flex flex-col gap-2 p-5 pt-3 pb-28 bg-slate-950/20 border-t border-white/5 shrink-0">
+        <DrawerFooter className="flex flex-col gap-2 p-5 pt-3 pb-6 bg-slate-950/20 border-t border-white/5 shrink-0">
           {/* Main Action Button */}
           {!isOrganizer && (
             <div className="flex flex-col gap-2">
