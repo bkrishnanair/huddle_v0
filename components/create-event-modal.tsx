@@ -462,6 +462,11 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         payload.orgLocation = orgLocationName
       }
 
+      // Only include geopoint for events with a physical location
+      if (needsLocation && markerPosition) {
+        payload.geopoint = { latitude: markerPosition.lat, longitude: markerPosition.lng }
+      }
+
       const endpoint = isEditMode && initialData?.id ? `/api/events/${initialData.id}` : "/api/events"
       const method = isEditMode ? "PUT" : "POST"
 

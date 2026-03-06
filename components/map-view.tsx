@@ -680,28 +680,29 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                                     </div>
                                   );
                                 })()}
-
                                 {/* Hybrid badge on the marker */}
-                                {event.eventType === 'hybrid' && (
-                                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-violet-500 rounded-full border border-white flex items-center justify-center text-[8px] shadow-lg">
-                                    📡
-                                  </div>
-                                )}
-                              </div>
+                                {
+                                  event.eventType === 'hybrid' && (
+                                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-violet-500 rounded-full border border-white flex items-center justify-center text-[8px] shadow-lg">
+                                      📡
+                                    </div>
+                                  )
+                                }
+                              </div >
 
                               {/* Mini shadow at base */}
-                              <div className={`
+                              < div className={`
                               ${shadowSize} bg-black/40 rounded-full blur-[2px] mt-1 transition-all duration-300
                               ${isHovered ? 'scale-150 opacity-60' : 'scale-100 opacity-30'}
                             `} />
-                            </div>
-                          </AdvancedMarker>
+                            </div >
+                          </AdvancedMarker >
                         );
                       })}
                   </>
                 )}
-              </MapRenderer>
-            </Map>
+              </MapRenderer >
+            </Map >
           </div >
 
           <div className="absolute top-4 left-4 right-4 z-20 flex flex-col gap-3 pointer-events-none">

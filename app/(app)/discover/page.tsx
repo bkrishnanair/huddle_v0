@@ -19,7 +19,7 @@ import { isToday, isWeekend, isBefore, addHours, isFuture, addDays } from "date-
 import { getCategoryColor } from "@/lib/utils"
 
 const CATEGORY_FILTERS = ["All", "Recommended", "🖥️ Virtual", "Sports", "Music", "Community", "Learning", "Food & Drink", "Tech", "Arts & Culture", "Outdoors"];
-const TIME_FILTERS = ["All", "Starts Soon", "Live", "Today", "This Weekend"];
+const TIME_FILTERS = ["All", "Live", "Next 2 Hrs", "Today", "This Weekend"];
 
 const ActionableEmptyState = ({ onOpenCreateModal }: { onOpenCreateModal: () => void }) => (
     <div className="text-center glass-surface border-white/15 rounded-2xl p-8 mt-8">
@@ -214,10 +214,9 @@ export default function DiscoverPage() {
                                 const isOngoing = now >= eventDateTime && now <= endTime;
                                 const isStartingSoon = isBefore(eventDateTime, addHours(now, 1)) && isFuture(eventDateTime);
                                 matchesTime = isOngoing || isStartingSoon;
-                            } else if (activeTime === 'Starts Soon') {
-                                const thirtyMinsFromNow = addHours(now, 0.5);
-                                const sixHoursFromNow = addHours(now, 6);
-                                matchesTime = eventDateTime >= thirtyMinsFromNow && eventDateTime <= sixHoursFromNow && isFuture(eventDateTime);
+                            } else if (activeTime === 'Next 2 Hrs') {
+                                const twoHoursFromNow = addHours(now, 2);
+                                matchesTime = isBefore(eventDateTime, twoHoursFromNow) && isFuture(eventDateTime);
                             } else if (activeTime === 'Today') {
                                 matchesTime = isToday(eventDateTime);
                             } else if (activeTime === 'This Weekend') {
@@ -402,8 +401,8 @@ export default function DiscoverPage() {
                             <div className="flex items-center gap-2">
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest shrink-0">Range</span>
                                 <div className="flex items-center gap-1">
-                                    {["All", "10mi", "25mi", "50mi"].map((range, i) => {
-                                        const rangeValue = ["All", "10 Miles", "25 Miles", "50 Miles"][i];
+                                    {["All", "5mi", "10mi", "25mi"].map((range, i) => {
+                                        const rangeValue = ["All", "5 Miles", "10 Miles", "25 Miles"][i];
                                         return (
                                             <button
                                                 key={range}
