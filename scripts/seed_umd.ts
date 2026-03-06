@@ -1,351 +1,201 @@
-import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore, Timestamp, GeoPoint } from 'firebase-admin/firestore';
-import * as geofire from 'geofire-common';
-import * as fs from 'fs';
+import * as admin from 'firebase-admin';
 import * as path from 'path';
+import * as dotenv from 'dotenv';
+import { geohashForLocation } from 'geofire-common';
 
-// Manual env loading for scripts
-function loadEnv() {
-    const envPath = path.resolve(process.cwd(), '.env.local');
-    if (fs.existsSync(envPath)) {
-        const envContent = fs.readFileSync(envPath, 'utf8');
-        envContent.split('\n').forEach(line => {
-            if (line.trim() && !line.startsWith('#')) {
-                const [key, ...value] = line.split('=');
-                if (key && value) {
-                    process.env[key.trim()] = value.join('=').trim().replace(/^"(.*)"$/, '$1');
-                }
-            }
+import { fileURLToPath } from 'url';
+
+// Parse the service account from env logic or directly init
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+if (!admin.apps.length) {
+    try {
+        const projectId = process.env.FIREBASE_PROJECT_ID;
+        const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+        const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n').replace(/^"|"$/g, '');
+
+        if (!projectId || !clientEmail || !privateKey) {
+            throw new Error("Missing Firebase credentials strictly required for seeder.");
+        }
+
+        admin.initializeApp({
+            credential: admin.credential.cert({
+                projectId,
+                clientEmail,
+                privateKey
+            })
         });
-    }
-}
-
-loadEnv();
-
-if (!getApps().length) {
-    const projectId = process.env.FIREBASE_PROJECT_ID;
-    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-
-    console.log("Seed Script Config:", {
-        projectId: projectId ? "SET" : "MISSING",
-        clientEmail: clientEmail ? "SET" : "MISSING",
-        privateKey: privateKey ? "SET" : "MISSING"
-    });
-
-    if (!projectId) {
-        console.error("FIREBASE_PROJECT_ID not set! Check .env.local");
+    } catch (err) {
+        console.error("Failed to initialize firebase admin.", err);
         process.exit(1);
     }
-
-    initializeApp({
-        credential: cert({
-            projectId,
-            clientEmail,
-            privateKey
-        } as any)
-    });
 }
 
+const db = admin.firestore();
 
+// Known general coordinates for locations.
+const COORDS: any = {
+    "A. James Clark Hall": { lat: 38.9918, lng: -76.9366 },
+    "University Libraries": { lat: 38.9859, lng: -76.9426 },
+    "Cole Student Activities Building": { lat: 38.9881, lng: -76.9441 },
+    "McKeldin Mall": { lat: 38.9859, lng: -76.9426 },
+    "Adele H. Stamp Student Union": { lat: 38.9877, lng: -76.9446 },
+    "Samuel Riggs IV Alumni Center": { lat: 38.9911, lng: -76.9472 },
+    "Martin Hall": { lat: 38.9897, lng: -76.9364 },
+    "Hornbake Library": { lat: 38.9871, lng: -76.9416 },
+    "Edward St. John Learning and Teaching Center": { lat: 38.9866, lng: -76.9406 },
+    "Arboretum Outreach Center": { lat: 38.9950, lng: -76.9333 },
+    "Bob \"Turtle\" Smith Stadium at Shipley Field": { lat: 38.9893, lng: -76.9439 },
+    "Tawes Hall": { lat: 38.9848, lng: -76.9434 },
+    "The Clarice Smith Performing Arts Center": { lat: 38.9862, lng: -76.9482 },
+    "Xfinity Center": { lat: 38.9954, lng: -76.9415 },
+    "Marie Mount Hall": { lat: 38.9840, lng: -76.9405 },
+    "St. Mary's Hall": { lat: 38.9842, lng: -76.9410 },
+    "H.J. Patterson Hall": { lat: 38.9868, lng: -76.9446 },
+    "John S. Toll Physics Building": { lat: 38.9854, lng: -76.9385 },
+    "Jimenez Hall": { lat: 38.9852, lng: -76.9443 },
+    "Tawes Plaza": { lat: 38.9848, lng: -76.9434 },
+    "E.A. Fernandez IDEA Factory": { lat: 38.9912, lng: -76.9372 },
+    "Multipurpose Room": { lat: 38.9877, lng: -76.9446 }, // Approximated pointing to Stamp
+    "Memorial Chapel": { lat: 38.9839, lng: -76.9392 }
+};
 
-const db = getFirestore();
-const auth = getAuth();
+const getEventLocation = (locationName?: string) => {
+    if (!locationName) return null;
+    const match = Object.keys(COORDS).find(k => locationName.toLowerCase().includes(k.toLowerCase()));
+    if (match) return COORDS[match];
+    return { lat: 38.9869, lng: -76.9425 }; // Default fallback UMD center if it has a physical name
+}
 
-const umdLocations = [
-    { name: "Van Munching Hall Room 1335", location: "Van Munching Hall Room 1335", lat: 38.9871, lng: -76.9457, category: "Tech", event: "MCB Real Estate – Development and Acquisition", dateStr: "2026-03-02", timeStr: "17:00", organization: "The Real Estate Club" },
-    { name: "Colony Ballroom, STAMP", location: "Colony Ballroom, STAMP", lat: 38.9924, lng: -76.9410, category: "Food & Drink", event: "Iftar at Stamp – Free!", dateStr: "2026-03-02", timeStr: "17:30", organization: "Hosted by 2 organizations" },
-    { name: "Room 1303", location: "Room 1303", lat: 38.9920, lng: -76.9470, category: "Learning", event: "Guest Speaker Event", dateStr: "2026-03-03", timeStr: "18:00", organization: "Collegiate Financial Management Association" },
-    { name: "McKeldin Library 4123", location: "McKeldin Library 4123", lat: 38.9887, lng: -76.9473, category: "Sports", event: "Restorative Rest Session: Yoga", dateStr: "2026-03-04", timeStr: "11:00", organization: "Hosted by 2 organizations" },
-    { name: "STAMP Student Engagement Suite", location: "STAMP Student Engagement Suite", lat: 38.9924, lng: -76.9459, category: "Learning", event: "Snack and Study", dateStr: "2026-03-04", timeStr: "13:00", organization: "Hosted by 3 organizations" },
-    { name: "St. Mary’s Hall Multipurpose Room", location: "St. Mary’s Hall Multipurpose Room", lat: 38.9917, lng: -76.9478, category: "Food & Drink", event: "Tea Club Meeting", dateStr: "2026-03-04", timeStr: "17:00", organization: "Tea Club at UMD" },
-    { name: "STAMP Juan Jimenez Room", location: "STAMP Juan Jimenez Room", lat: 38.9834, lng: -76.9410, category: "Learning", event: "Lunch and Learn: Job & Internship Search Strategies", dateStr: "2026-03-05", timeStr: "12:00", organization: "Hosted by 2 organizations" },
-    { name: "University Health Center", location: "University Health Center", lat: 38.9836, lng: -76.9409, category: "Food & Drink", event: "Recovery Brunch", dateStr: "2026-03-06", timeStr: "11:00", organization: "Hosted by 2 organizations" },
-    { name: "STAMP Student Union", location: "STAMP Student Union", lat: 38.9842, lng: -76.9469, category: "Food & Drink", event: "Coffee @ UMD — Social", dateStr: "2026-03-06", timeStr: "14:00", organization: "Coffee @ UMD" },
-    { name: "Van Munching Hall Room 1335", location: "Van Munching Hall Room 1335", lat: 38.9871, lng: -76.9409, category: "Tech", event: "Argus Workshop with Connor Lenox", dateStr: "2026-03-09", timeStr: "17:00", organization: "The Real Estate Club" },
-    { name: "Stamp Student Union (room emailed to registrants)", location: "Stamp Student Union (room emailed to registrants)", lat: 38.9923, lng: -76.9448, category: "Learning", event: "GRadulting: From No Credit to Great Credit Score", dateStr: "2026-03-10", timeStr: "12:30", organization: "Graduate Student Legal Aid" },
-    { name: "In‑Person (Exact Space TBA)", location: "In‑Person (Exact Space TBA)", lat: 38.9929, lng: -76.9426, category: "Community", event: "New Student Mixer: No Small Talk Required", dateStr: "2026-03-10", timeStr: "17:00", organization: "STRONG Connections" },
-    { name: "Room 1303", location: "Room 1303", lat: 38.9922, lng: -76.9445, category: "Learning", event: "Personal Finance Foundations — Budgets & Balance", dateStr: "2026-03-10", timeStr: "18:00", organization: "Collegiate Financial Management Association" },
-    { name: "STAMP Atrium", location: "STAMP Atrium", lat: 38.9900, lng: -76.9432, category: "Community", event: "Good Morning, Commuters!", dateStr: "2026-03-11", timeStr: "09:00", organization: "Hosted by 2 organizations" },
-    { name: "STAMP Atrium", location: "STAMP Atrium", lat: 38.9915, lng: -76.9408, category: "Community", event: "(duplicate listing) Good Morning, Commuters!", dateStr: "2026-03-11", timeStr: "09:00", organization: "Hosted by 2 organizations" },
-    { name: "Lee Building (2124)", location: "Lee Building (2124)", lat: 38.9913, lng: -76.9411, category: "Learning", event: "Wellness Course: Academic Wellness Session 1", dateStr: "2026-03-11", timeStr: "12:00", organization: "Graduate Pathways" },
-    { name: "The Vista — The Unity Center", location: "The Vista — The Unity Center", lat: 38.9861, lng: -76.9426, category: "Learning", event: "Leadership Lunch: Neurodivergent Women & Leadership", dateStr: "2026-03-11", timeStr: "12:00", organization: "Leadership & Community Service‑Learning" },
-    { name: "Grand Ballroom Lounge, STAMP", location: "Grand Ballroom Lounge, STAMP", lat: 38.9899, lng: -76.9415, category: "Learning", event: "Free Iftar & Late‑Night Study Zone at Stamp", dateStr: "2026-03-11", timeStr: "18:30", organization: "Memorial Chapel" },
-    { name: "3112 Marie Mount Hall", location: "3112 Marie Mount Hall", lat: 38.9875, lng: -76.9430, category: "Food & Drink", event: "Nestlé Guest Speaker & Chocolate Tasting", dateStr: "2026-03-12", timeStr: "17:00", organization: "Food Science Club" },
-    { name: "STAMP Student Union", location: "STAMP Student Union", lat: 38.9921, lng: -76.9439, category: "Food & Drink", event: "Coffee @ UMD — Social", dateStr: "2026-03-13", timeStr: "14:00", organization: "Coffee @ UMD" },
-    { name: "STAMP Student Union", location: "STAMP Student Union", lat: 38.9879, lng: -76.9420, category: "Food & Drink", event: "Coffee @ UMD — Social", dateStr: "2026-03-20", timeStr: "14:00", organization: "Coffee @ UMD" },
-    { name: "Van Munching Hall Room 1335", location: "Van Munching Hall Room 1335", lat: 38.9846, lng: -76.9404, category: "Tech", event: "Real Estate 101 with John Newman", dateStr: "2026-03-23", timeStr: "17:00", organization: "The Real Estate Club" },
-    { name: "Lee Building (2124)", location: "Lee Building (2124)", lat: 38.9923, lng: -76.9454, category: "Learning", event: "Wellness Course: Academic Wellness Session Two", dateStr: "2026-03-25", timeStr: "12:00", organization: "Graduate Pathways" },
-    { name: "St. Mary’s Hall Multipurpose Room", location: "St. Mary’s Hall Multipurpose Room", lat: 38.9879, lng: -76.9477, category: "Food & Drink", event: "Tea Club Meeting", dateStr: "2026-03-25", timeStr: "17:00", organization: "Tea Club at UMD" },
-    { name: "VMH 1335", location: "VMH 1335", lat: 38.9915, lng: -76.9409, category: "Community", event: "BBB General Body Meeting", dateStr: "2026-03-25", timeStr: "19:00", organization: "Business Beyond Borders" },
-    { name: "UHC Ground Floor Drop‑in Space", location: "UHC Ground Floor Drop‑in Space", lat: 38.9835, lng: -76.9477, category: "Food & Drink", event: "Tea with TFR", dateStr: "2026-03-26", timeStr: "10:00", organization: "Hosted by 2 organizations" },
-    { name: "STAMP Student Union", location: "STAMP Student Union", lat: 38.9929, lng: -76.9487, category: "Food & Drink", event: "Coffee @ UMD — Social", dateStr: "2026-03-27", timeStr: "14:00", organization: "Coffee @ UMD" },
-    { name: "Thurgood Marshall Hall (Atrium)", location: "Thurgood Marshall Hall (Atrium)", lat: 38.9835, lng: -76.9422, category: "Community", event: "Eat, Grow & Learn: Connecting with Alum", dateStr: "2026-03-27", timeStr: "18:30", organization: "Graduate Pathways" },
-    { name: "Stamp Student Union (room emailed to registrants)", location: "Stamp Student Union (room emailed to registrants)", lat: 38.9903, lng: -76.9474, category: "Learning", event: "GRadulting: Why Create a Will & Estate Plan Now?", dateStr: "2026-03-31", timeStr: "12:30", organization: "Graduate Student Legal Aid" }
+const formatCustomDate = (dateStr: string) => {
+    // Expected format e.g. "Mar 05"
+    const monthMap: any = { "Jan": "01", "Feb": "02", "Mar": "03", "Apr": "04", "May": "05", "Jun": "06", "Jul": "07", "Aug": "08", "Sep": "09", "Oct": "10", "Nov": "11", "Dec": "12" };
+    const parts = dateStr.split(" ");
+    const month = monthMap[parts[0]];
+    const day = parts[1].padStart(2, '0');
+    return `2026-${month}-${day}`;
+}
+
+const timeTo24h = (time12: string) => {
+    const [time, modifier] = time12.split(/(am|pm)/i);
+    let [hours, minutes] = time.split(':');
+    let h = parseInt(hours, 10);
+    if (h === 12) h = 0;
+    if (modifier.toLowerCase() === 'pm') {
+        h += 12;
+    }
+    return `${h.toString().padStart(2, '0')}:${minutes}`;
+}
+
+const SEED_DATA = [
+    { name: "2026 PTK Symposium", date: "Mar 05", time: "9:00am - 5:00pm", location: "A. James Clark Hall", description: "Eight annual symposium to celebrate UMD's PTK faculty", category: "Learning" },
+    { name: "Reading and Note Taking for the Literature Review", date: "Mar 05", time: "12:00pm - 1:00pm", location: "University Libraries", description: "Research Education at University Libraries workshops equip researchers with the tools, concepts, and skills needed for every stage of the research lifecycle.", category: "Learning" },
+    { name: "Intro to R", date: "Mar 05", time: "12:00pm - 1:30pm", description: "The Data Science/GIS workshop series is powered by GIS and Data Service Center, and Research Education at University Libraries.", category: "Learning" },
+    { name: "Trade Secrets & Trademarks", date: "Mar 05", time: "12:00pm - 1:00pm", description: "Trade Secrets & Trademarks (and the Costly Mistakes Founders Make)", category: "Learning" },
+    { name: "Getting Creative with Media Access", date: "Mar 05", time: "12:00pm - 1:15pm", location: "Cole Student Activities Building", category: "Learning" },
+    { name: "Make Your Panopto Videos Accessible with Captions and Audio Description", date: "Mar 05", time: "12:00pm - 1:00pm", description: "Learn how to make videos more accessible by enabling and editing automatic captions and adding audio descriptions in Panopto.", category: "Learning" },
+    { name: "Spring Steps", date: "Mar 05", time: "12:00pm - 1:00pm", location: "McKeldin Mall", description: "Lunchtime laps around Mckeldin Mall.", category: "Sports" },
+    { name: "GIS and Data Help Desk", date: "Mar 05", time: "1:00pm - 3:00pm", description: "The Data Science/GIS workshop series is powered by GIS and Data Service Center, and Research Education at University Libraries.", category: "Learning" },
+    { name: "The Wellness Series: Dealing with Disappointment", date: "Mar 05", time: "4:00pm - 5:00pm", category: "Community" },
+    { name: "Multiculturalism and Building Peace Roundtable", date: "Mar 05", time: "5:00pm - 8:00pm", description: "This event explores how several diverse nations are engaged in learning how to foster peaceful and cohesive societies.", category: "Community" },
+    { name: "Mario Kart World Tournament", date: "Mar 05", time: "7:00pm - 9:00pm", location: "Adele H. Stamp Student Union", description: "Come to the TerpZone to show off your Mario Kart skills!", category: "Sports" },
+    { name: "America Will Be! Exhibition", date: "Feb 09", endDate: "May 15", time: "12:00am - 11:59pm", location: "Cole Student Activities Building", description: "Visit the David C. Driskell Center's Spring 2026 Exhibition!", category: "Arts & Culture" },
+    { name: "Intro to Mindfulness with Faculty Staff Assistance Program", date: "Mar 02", endDate: "Mar 30", time: "2:00pm - 3:15pm", description: "The Faculty Staff Assistance Program will be teaching an Intro to Mindfulness Class in March for Employee Appreciation Month.", category: "Community" },
+    { name: "EnTERPreneur Conference", date: "Mar 06", time: "9:00am - 5:30pm", location: "Samuel Riggs IV Alumni Center", description: "Whether you’re starting to explore entrepreneurship, working to strengthen a growing venture, or ready to scale what you’ve built, the EnTERPreneur Conference is designed to meet you where you are and help you take the next step.", category: "Tech" },
+    { name: "Seminar: Strengthening Resilience and Adaptation in the Built Environment", date: "Mar 06", time: "11:30am - 1:00pm", location: "Martin Hall", description: "Join Dr. Aslihan Karatas for a presentation on strengthening resilience and adaptation in the built environment.", category: "Learning" },
+    { name: "Data Wrangling with Python", date: "Mar 06", time: "12:00pm - 1:30pm", description: "The Data Science/GIS workshop series.", category: "Learning" },
+    { name: "Careers in Think Tanks", date: "Mar 06", time: "12:00pm - 1:00pm", description: "Panel to learn more about future careers in Think Tanks.", category: "Community" },
+    { name: "How to Prepare for an Interview workshop", date: "Mar 06", time: "12:00pm - 1:00pm", location: "Hornbake Library", description: "Insightful session to prepare for interviews.", category: "Learning" },
+    { name: "Getting Started with Your Teaching Philosophy Statement", date: "Mar 06", time: "1:00pm - 2:30pm", location: "Edward St. John Learning and Teaching Center", description: "Workshop to get guidance and clarity on articulating an effective teaching philosophy.", category: "Learning" },
+    { name: "International Terp Career Development: Global Advantage", date: "Mar 06", time: "2:00pm - 3:00pm", description: "Panel highlighting diverse perspectives.", category: "Learning" },
+    { name: "Friday Flower Power Hour", date: "Mar 06", time: "2:00pm - 3:00pm", location: "Arboretum Outreach Center", description: "Join us Friday afternoons for fresh air, good vibes, & garden therapy", category: "Community" },
+    { name: "Maryland Softball v. Rutgers", date: "Mar 06", time: "6:00pm - 8:00pm", location: "Bob \"Turtle\" Smith Stadium at Shipley Field", category: "Sports" },
+    { name: "Open Mic Night", date: "Mar 06", time: "6:30pm - 8:00pm", location: "Tawes Hall", description: "Join the LGBTQ+ Equity Center for an Open Mic Night!", category: "Arts & Culture" },
+    { name: "Macbeth", date: "Mar 06", time: "7:30pm - 9:00pm", location: "The Clarice Smith Performing Arts Center", category: "Arts & Culture" },
+    { name: "Baltimore Symphony Orchestra: Mahler’s Das Lied von der Erde", date: "Mar 06", time: "8:00pm - 10:00pm", location: "The Clarice Smith Performing Arts Center", category: "Music" },
+    { name: "Weed Warriors on Campus", date: "Mar 07", time: "10:30am - 12:00pm", location: "Arboretum Outreach Center", description: "Volunteer event for educational invasive species removal.", category: "Community" },
+    { name: "Women's Lacrosse v. James Madison", date: "Mar 07", time: "12:00pm - 2:00pm", location: "Bob \"Turtle\" Smith Stadium at Shipley Field", category: "Sports" },
+    { name: "Macbeth", date: "Mar 07", time: "2:00pm - 4:30pm", location: "The Clarice Smith Performing Arts Center", category: "Arts & Culture" },
+    { name: "Maryland Softball v. Rutgers", date: "Mar 07", time: "2:00pm - 5:00pm", location: "Bob \"Turtle\" Smith Stadium at Shipley Field", category: "Sports" },
+    { name: "Macbeth", date: "Mar 07", time: "7:30pm - 9:30pm", location: "The Clarice Smith Performing Arts Center", category: "Arts & Culture" },
+    { name: "Maryland Softball v. Rutgers", date: "Mar 08", time: "12:00pm - 3:00pm", location: "Bob \"Turtle\" Smith Stadium at Shipley Field", category: "Sports" },
+    { name: "Richard Goode, piano", date: "Mar 08", time: "3:00pm - 5:00pm", location: "The Clarice Smith Performing Arts Center", category: "Music" },
+    { name: "Men's Basketball vs. Illinois", date: "Mar 08", time: "3:00pm - 6:00pm", location: "Xfinity Center", category: "Sports" },
+    { name: "Overview of the Ally ELMS-Canvas Accessibility Tool", date: "Mar 09", time: "11:00am - 12:00pm", category: "Learning" },
+    { name: "Jam Session with the LGBTQ+ Equity Center", date: "Mar 09", time: "12:00pm - 2:00pm", location: "Marie Mount Hall", category: "Music" },
+    { name: "Language House Language Chats", date: "Mar 09", time: "4:00pm - 5:30pm", location: "St. Mary's Hall", category: "Learning" },
+    { name: "Intro to Python", date: "Mar 10", time: "12:00pm - 1:00pm", category: "Learning" },
+    { name: "ChilLACS", date: "Mar 10", time: "2:00pm - 4:00pm", location: "H.J. Patterson Hall", category: "Arts & Culture" },
+    { name: "Irving and Renee Milchberg Endowed Lecture: Missy Cummings", date: "Mar 10", time: "3:30pm - 5:00pm", location: "John S. Toll Physics Building", category: "Learning" },
+    { name: "Virtual NYC Networking Night", date: "Mar 10", time: "6:00pm - 7:00pm", category: "Community" },
+    { name: "Global Karaoke Night at the Language House", date: "Mar 10", time: "6:00pm - 7:30pm", location: "St. Mary's Hall", category: "Music" },
+    { name: "Language House International Film Series: \"The Twelve Chairs\"", date: "Mar 10", time: "7:30pm - 9:30pm", location: "St. Mary's Hall", category: "Arts & Culture" },
+    { name: "UMD University Orchestra March Concert", date: "Mar 10", time: "8:00pm - 9:30pm", location: "The Clarice Smith Performing Arts Center", category: "Music" },
+    { name: "Introduction to Zotero", date: "Mar 11", time: "12:00pm - 1:00pm", category: "Learning" },
+    { name: "Mindful Moments Walking Tour", date: "Mar 11", time: "12:00pm - 1:00pm", location: "Tawes Plaza", category: "Community" },
+    { name: "Spring Into STAMP's Living Room ft. victhekidd", date: "Mar 11", time: "12:30pm - 1:30pm", location: "Adele H. Stamp Student Union", category: "Arts & Culture" },
+    { name: "2026 Virtual Spring Career & Internship Fair", date: "Mar 11", time: "1:00pm - 4:00pm", category: "Community" },
+    { name: "Weed It Wednesdays", date: "Mar 11", time: "1:30pm - 3:00pm", location: "Arboretum Outreach Center", category: "Community" },
+    { name: "xFOUNDRY Mental Health Xperience MiXer", date: "Mar 11", time: "5:30pm - 6:30pm", location: "E.A. Fernandez IDEA Factory", category: "Community" },
+    { name: "German Studies Department Film Series", date: "Mar 11", time: "6:30pm - 9:00pm", location: "Jimenez Hall", category: "Arts & Culture" },
+    { name: "Memorial Chapel Open House", date: "Mar 14", time: "12:00pm - 2:00pm", location: "Memorial Chapel", category: "Community" },
+    { name: "Men's Lacrosse v. Virginia", date: "Mar 14", time: "1:00pm - 3:00pm", location: "Bob \"Turtle\" Smith Stadium at Shipley Field", category: "Sports" },
+    { name: "Maryland Baseball v. Purdue", date: "Mar 14", time: "2:00pm - 5:00pm", location: "Bob \"Turtle\" Smith Stadium at Shipley Field", category: "Sports" },
+    { name: "Maryland Baseball v. Purdue", date: "Mar 15", time: "1:00pm - 4:00pm", location: "Bob \"Turtle\" Smith Stadium at Shipley Field", category: "Sports" },
 ];
 
 async function seed() {
-    try {
-        const userRecord = await auth.getUserByEmail('bk@email.com');
-        const uid = userRecord.uid;
-        const dbUser = await db.collection('users').doc(uid).get();
-        const userData = dbUser.data() || {};
-        const userName = userData.displayName || userData.name || "BK";
+    const batch = db.batch();
+    for (const item of SEED_DATA) {
+        const docRef = db.collection("events").doc();
+        const isVirtual = !item.location;
 
-        console.log(`Authenticated as ${userName} (${uid})`);
+        const times = item.time.split(" - ");
+        const startTimeStr = timeTo24h(times[0].trim());
+        const endTimeStr = times.length > 1 ? timeTo24h(times[1].trim()) : undefined;
 
-        // Cleanup: Remove existing seed events from this user to prevent duplicates
-        const existingEvents = await db.collection('events').where('createdBy', '==', uid).get();
-        if (!existingEvents.empty) {
-            console.log(`Cleaning up ${existingEvents.size} existing seed events...`);
-            const batch = db.batch();
-            existingEvents.docs.forEach(doc => batch.delete(doc.ref));
-            await batch.commit();
+        const event: any = {
+            title: item.name,
+            name: item.name,
+            date: formatCustomDate(item.date),
+            time: startTimeStr,
+            eventType: isVirtual ? "virtual" : "in-person",
+            location: item.location || "Virtual",
+            description: item.description || "",
+            category: item.category,
+            sport: item.category,
+            createdBy: "UMD_SEEDER",
+            organizerName: "UMD Org",
+            players: [],
+            currentPlayers: Math.floor(Math.random() * 20) + 1,
+            maxPlayers: 50,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            checkInOpen: false,
+            isBoosted: false,
+            isPrivate: false,
+        };
+
+        if (endTimeStr) {
+            event.endTime = endTimeStr;
         }
 
-        for (const loc of umdLocations) {
-            // Adding some minor random variance to coordinates to spread them out slightly even if at same building
-            const lat = loc.lat + (Math.random() * 0.001 - 0.0005);
-            const lng = loc.lng + (Math.random() * 0.001 - 0.0005);
-            const geohash = geofire.geohashForLocation([lat, lng]);
-
-            const eventData = {
-                name: loc.event,
-                title: loc.event,
-                category: loc.category,
-                sport: loc.category,
-                location: loc.name,
-                venue: loc.name,
-                maxPlayers: Math.floor(Math.random() * 15) + 5,
-                currentPlayers: 1,
-                description: `Join us for ${loc.event} at ${loc.name}. Hosted by ${loc.organization}. Go Terps!`,
-                createdBy: uid,
-                organizerName: loc.organization || userName,
-                players: [uid],
-                geopoint: new GeoPoint(lat, lng),
-                geohash,
-                date: loc.dateStr,
-                time: loc.timeStr,
-                createdAt: Timestamp.now(),
-                isPrivate: false,
-            };
-
-            await db.collection('events').add(eventData);
-            console.log(`Created: ${loc.event} at ${loc.name}`);
+        if (item.endDate) {
+            event.endDate = formatCustomDate(item.endDate);
         }
 
-        console.log("UMD Seeding complete!");
-        process.exit(0);
-    } catch (error) {
-        console.error("Error seeding UMD data:", error);
-        process.exit(1);
+        if (isVirtual) {
+            event.virtualLink = "https://umd.zoom.us/j/testlink";
+        } else {
+            const locCoords = getEventLocation(item.location);
+            if (locCoords) {
+                event.geopoint = new admin.firestore.GeoPoint(locCoords.lat, locCoords.lng);
+                event.geohash = geohashForLocation([locCoords.lat, locCoords.lng]);
+            }
+        }
+        batch.set(docRef, event);
     }
+
+    await batch.commit();
+    console.log("Successfully seeded 54+ UMD Events to Firebase!");
 }
 
-seed();
-
-/*
-*NOTE: if any of the details are missing you can add it yourself*
-*for example if the end time of the event is missing keep it as 3 hours*
-*if the organization is missing keep it as "Huddle" or "UMD"*
-*if the location is missing keep it as "UMD"*
-*if the venue is missing keep it as "UMD"*
-*if the category is missing keep it as "Community"*
-*if the sport is missing keep it as "Community"*
-*if the description is missing keep it as "Join us for [event] at [location]. Go Terps!"*
-
-MARCH EVENTS
-
-Mon, Mar 2
-
-
-MCB Real Estate – Development and Acquisition
-5:00 PM EST · Van Munching Hall Room 1335
-The Real Estate Club
-
-
-Iftar at Stamp – Free!
-5:30 PM EST · Colony Ballroom, STAMP
-Hosted by 2 organizations
-
-
-
-Tue, Mar 3
-
-Guest Speaker Event
-6:00 PM EST · Room 1303
-Collegiate Financial Management Association
-
-
-Wed, Mar 4
-
-
-Restorative Rest Session: Yoga
-11:00 AM EST · McKeldin Library 4123
-Hosted by 2 organizations
-
-
-Snack and Study
-1:00 PM EST · STAMP Student Engagement Suite
-Hosted by 3 organizations
-
-
-Tea Club Meeting
-5:00 PM EST · St. Mary’s Hall Multipurpose Room
-Tea Club at UMD
-
-
-
-Thu, Mar 5
-
-Lunch and Learn: Job & Internship Search Strategies
-12:00 PM EST · STAMP Juan Jimenez Room
-Hosted by 2 organizations
-
-
-Fri, Mar 6
-
-
-Recovery Brunch
-11:00 AM EST · University Health Center
-Hosted by 2 organizations
-
-
-Coffee @ UMD — Social
-2:00 PM EST · STAMP Student Union
-Coffee @ UMD
-
-
-
-Mon, Mar 9
-
-Argus Workshop with Connor Lenox
-5:00 PM EDT · Van Munching Hall Room 1335
-The Real Estate Club
-
-
-Tue, Mar 10
-
-
-GRadulting: From No Credit to Great Credit Score
-12:30 PM EDT · Stamp Student Union (room emailed to registrants)
-Graduate Student Legal Aid
-
-
-New Student Mixer: No Small Talk Required
-5:00 PM EDT · In‑Person (Exact Space TBA)
-STRONG Connections
-
-
-Personal Finance Foundations — Budgets & Balance
-6:00 PM EDT · Room 1303
-Collegiate Financial Management Association
-
-
-
-Wed, Mar 11
-
-
-Good Morning, Commuters!
-9:00 AM EDT · STAMP Atrium
-Hosted by 2 organizations
-
-
-(duplicate listing) Good Morning, Commuters!
-9:00 AM EDT · STAMP Atrium
-Hosted by 2 organizations
-
-
-Wellness Course: Academic Wellness Session 1
-12:00 PM EDT · Lee Building (2124)
-Graduate Pathways
-
-
-Leadership Lunch: Neurodivergent Women & Leadership
-12:00 PM EDT · The Vista — The Unity Center
-Leadership & Community Service‑Learning
-
-
-Free Iftar & Late‑Night Study Zone at Stamp
-6:30 PM EDT · Grand Ballroom Lounge, STAMP
-Memorial Chapel
-
-
-
-Thu, Mar 12
-
-Nestlé Guest Speaker & Chocolate Tasting
-5:00 PM EDT · 3112 Marie Mount Hall
-Food Science Club
-
-
-Fri, Mar 13
-
-Coffee @ UMD — Social
-2:00 PM EDT · STAMP Student Union
-Coffee @ UMD
-
-
-Fri, Mar 20
-
-Coffee @ UMD — Social
-2:00 PM EDT · STAMP Student Union
-Coffee @ UMD
-
-
-Mon, Mar 23
-
-Real Estate 101 with John Newman
-5:00 PM EDT · Van Munching Hall Room 1335
-The Real Estate Club
-
-
-Wed, Mar 25
-
-
-Wellness Course: Academic Wellness Session Two
-12:00 PM EDT · Lee Building (2124)
-Graduate Pathways
-
-
-Tea Club Meeting
-5:00 PM EDT · St. Mary’s Hall Multipurpose Room
-Tea Club at UMD
-
-
-BBB General Body Meeting
-7:00 PM EDT · VMH 1335
-Business Beyond Borders
-
-
-
-Thu, Mar 26
-
-Tea with TFR
-10:00 AM EDT · UHC Ground Floor Drop‑in Space
-Hosted by 2 organizations
-
-
-Fri, Mar 27
-
-
-Coffee @ UMD — Social
-2:00 PM EDT · STAMP Student Union
-Coffee @ UMD
-
-
-Eat, Grow & Learn: Connecting with Alum
-6:30 PM EDT · Thurgood Marshall Hall (Atrium)
-Graduate Pathways
-
-
-
-Tue, Mar 31
-
-GRadulting: Why Create a Will & Estate Plan Now?
-12:30 PM EDT · Stamp Student Union (room emailed to registrants)
-Graduate Student Legal Aid
-
-
-*/
+seed().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1) });

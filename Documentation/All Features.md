@@ -82,6 +82,12 @@ Phase 4 — UX Polish, Virtual Events & Personalization (DONE)
 11. Navbar Optimization: Height reduced ~15% (w-14/h-14 tabs, smaller icons/text). Z-index hierarchy: navbar z-[60], dialog/drawer z-[70], select dropdown z-[80].
 12. Pin Reliability: Initial fetch on map mount ensures pins always load without requiring manual zoom.
 
+Phase 4.5 — "Sunset Transit" UX Upgrade & Organization HQs (DONE)
+1. Transit-Inspired Color Palette: Introduced a vibrant, high-contrast "Sunset Transit" theme to logically color-code event categories globally across the map pins, Discover tags, and the deep Event Card linear gradients.
+2. Multi-Location Organization Events: Traveling campus organizations can now define an "Org HQ" parameter when hosting an event. Minimum distance calculation integrates both points to ensure nearby users discover the localized org despite a distant venue.
+3. Mobile Gestures & Pin Logic: Unlocked the event creation modal map to allow native pinch-to-zoom on mobile devices. Hover tooltips on map pins dynamically identify the end date/time if differing from the event start.
+4. Emoji Edit Parity: Backend API validations corrected to allow edits on all supplementary metadata fields directly matching the base level event creation logic (e.g., Emojis, isBoosted statuses).
+5. Robust Preset Control: Saved organizer presets (e.g. Transit Tips) can be actively deleted with intuitive inline UI toggles.
 Phase 5 — Social Graph & The Serendipity Engine (DONE)
 1. Foundational Follow System: Atomic Firestore transactions reliably handle Follow/Unfollow/Block interactions. Custom `useFollowing` React Context stores the user's network in a local runtime `Set` for `O(1)` list lookups.
 2. Network Building CTA: Profile pages show a sleek Call-to-Action to "Build your network" when a user has fewer than 5 followers, driving social engagement.

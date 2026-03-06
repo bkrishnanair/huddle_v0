@@ -37,9 +37,13 @@ Huddle utilizes Firebase Cloud Firestore, a NoSQL database. Data is organized in
 *   `category` / `sport` (string): Event categorization (e.g., "Sports", "Tech").
 *   `description` (string, optional): Full event description.
 *   `date` (string): ISO format date (YYYY-MM-DD).
+*   `endDate` (string, optional): ISO format date (YYYY-MM-DD) for multi-day events.
 *   `time` (string): Time string (HH:mm).
+*   `endTime` (string, optional): Time string (HH:mm).
 *   `geopoint` (Firestore GeoPoint): The exact coordinates (`latitude`, `longitude`).
 *   `geohash` (string): Geofire geohash string for performant radial proximity queries.
+*   `orgLocation` (string, optional): The name of the organization's HQ, if applicable.
+*   `orgGeopoint` (Firestore GeoPoint, optional): The exact coordinates of the organization's HQ.
 *   `createdBy` (string): `uid` of the event organizer.
 *   `organizerName` (string): Display name of the organizer.
 *   `maxPlayers` (number): Capacity limit for the event.
