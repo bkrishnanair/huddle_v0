@@ -13,6 +13,7 @@ import { GameEvent } from "@/lib/types"
 import LocationSearchInput from "./location-search"
 import { isToday, isWeekend, isBefore, addHours, isFuture, addDays } from "date-fns"
 import { toast } from "sonner"
+import { formatTime, getCategoryColor } from "@/lib/utils"
 
 interface MapViewProps {
   user: any
@@ -65,22 +66,8 @@ const MapRenderer = ({ onMapLoad, children, isDarkMode }: { onMapLoad: (map: goo
 };
 
 const CATEGORIES = ['All', 'Joined', 'Recommended', '🖥️ Virtual', 'Sports', 'Music', 'Community', 'Learning', 'Food & Drink', 'Tech', 'Arts & Culture', 'Outdoors']
-const TIMES = ['All', 'Live', 'This Week', 'Today', 'This Weekend']
+const TIMES = ['All', 'Live', 'Today', '48 Hours', 'This Week', 'This Weekend', 'This Month']
 
-const getCategoryColor = (category: string): string => {
-  const colors: { [key: string]: string } = {
-    Sports: "#f59e0b", // Amber
-    Music: "#10b981", // Emerald
-    Community: "#0ea5e9", // Sky
-    Learning: "#6366f1", // Indigo
-    "Food & Drink": "#f43f5e", // Rose
-    Tech: "#06b6d4", // Cyan
-    "Arts & Culture": "#d946ef", // Fuchsia
-    Outdoors: "#84cc16", // Lime
-    default: "#f59e0b",
-  }
-  return colors[category] || colors.default
-}
 
 const getCategoryIcon = (category: string): string => {
   const icons: { [key: string]: string } = {
@@ -95,6 +82,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const router = useRouter()
   const isProcessingDeepLink = useRef(!!eventId)
   const deepLinkProcessed = useRef(false)
+  const profileFetchAttempted = useRef(false)
   const [events, setEvents] = useState<GameEvent[]>([])
   const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null)
   const [hoveredEvent, setHoveredEvent] = useState<GameEvent | null>(null)
@@ -103,7 +91,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>(initialCenter || { lat: 38.9897, lng: -76.9378 }) // College Park, MD
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [activeCategory, setActiveCategory] = useState("All");
-  const [activeTime, setActiveTime] = useState("All");
+  const [activeTime, setActiveTime] = useState("48 Hours");
   const [currentZoom, setCurrentZoom] = useState(initialCenter ? 17 : 13);
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
@@ -145,7 +133,8 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
     const bounds = map.getBounds();
     if (!bounds) return;
 
-    if (user?.uid && !userProfile) {
+    if (user?.uid && !userProfile && !profileFetchAttempted.current) {
+      profileFetchAttempted.current = true;
       try {
         const token = await user.getIdToken();
         const res = await fetch(`/api/users/${user.uid}/profile`, {
@@ -291,6 +280,13 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
         if (map) {
           const z = map.getZoom() || 18;
           setCurrentZoom(z);
+
+          if (z > 18) {
+            if (map.getTilt() !== 45) map.setTilt(45);
+          } else {
+            if (map.getTilt() !== 0) map.setTilt(0);
+          }
+
           const c = map.getCenter();
           if (c) {
             sessionStorage.setItem('huddleMapCenter', JSON.stringify({ lat: c.lat(), lng: c.lng() }));
@@ -439,11 +435,12 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
       result = result.filter(event => event.category === activeCategory);
     }
 
-    if (activeTime !== 'All') {
-      const now = new Date();
-      result = result.filter(event => {
-        if (!event.date || event.date.includes('/')) return true; // skip badly formatted legacy data
+    const now = new Date();
 
+    // Time filter logic
+    if (activeTime !== 'All') {
+      result = result.filter(event => {
+        if (!event.date || event.date.includes('/')) return true;
         try {
           const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
           if (isNaN(eventDateTime.getTime())) return true;
@@ -452,19 +449,23 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             const isStartingSoon = isBefore(eventDateTime, addHours(now, 1)) && isFuture(eventDateTime);
             return isEventOngoing(event) || isStartingSoon;
           }
-          if (activeTime === 'This Week') {
-            const thisWeekEnd = addDays(now, 7);
-            return isBefore(eventDateTime, thisWeekEnd) && isFuture(eventDateTime);
-          }
-          if (activeTime === 'Today') {
-            return isToday(eventDateTime);
-          }
-          if (activeTime === 'This Weekend') {
-            return isWeekend(eventDateTime) && isFuture(eventDateTime);
-          }
-        } catch (e) {
-          // ignore parsing error
-        }
+          if (activeTime === 'Today') return isToday(eventDateTime);
+          if (activeTime === '48 Hours') return isBefore(eventDateTime, addHours(now, 48)) && isFuture(eventDateTime);
+          if (activeTime === 'This Week') return isBefore(eventDateTime, addDays(now, 7)) && isFuture(eventDateTime);
+          if (activeTime === 'This Weekend') return isWeekend(eventDateTime) && isFuture(eventDateTime);
+          if (activeTime === 'This Month') return isBefore(eventDateTime, addDays(now, 30)) && isFuture(eventDateTime);
+        } catch (e) { }
+        return true;
+      });
+    } else {
+      // Limit "All" on Map to 30 days
+      result = result.filter(event => {
+        if (!event.date || event.date.includes('/')) return true;
+        try {
+          const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
+          if (isNaN(eventDateTime.getTime())) return true;
+          return isBefore(eventDateTime, addDays(now, 30));
+        } catch (e) { }
         return true;
       });
     }
@@ -600,7 +601,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                                 <span className="text-[11px] font-black text-white whitespace-nowrap leading-none mb-1">{event.name}</span>
                                 <div className="flex items-center gap-2">
                                   <span className="text-[9px] text-slate-300 font-bold leading-none">
-                                    {getDisplayDate(event.date)} • {event.time}{event.endTime ? ` - ${event.endTime}` : ''}
+                                    {getDisplayDate(event.date)}{event.endDate && event.endDate !== event.date ? ` - ${getDisplayDate(event.endDate)}` : ''} • {formatTime(event.time)}{event.endTime ? ` - ${formatTime(event.endTime)}` : ''}
                                   </span>
                                   {isEventOngoing(event) && (
                                     <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 rounded font-black flex items-center gap-1 animate-pulse border border-emerald-500/30">
@@ -620,27 +621,65 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                                 {/* Pulse effect for hovered OR ongoing pins */}
                                 {(isHovered || isEventOngoing(event)) && (
                                   <div
-                                    className={`absolute ${isEventOngoing(event) && !isHovered ? '-inset-1 animate-[ping_2.5s_cubic-bezier(0,0,0.2,1)_infinite] opacity-60' : 'inset-0 animate-ping opacity-40'} rounded-full`}
+                                    className={`absolute ${isEventOngoing(event) && !isHovered ? '-inset-1 live-glow-ring opacity-60' : 'inset-0 animate-ping opacity-40'} rounded-full`}
                                     style={{ backgroundColor: isEventOngoing(event) && !isHovered ? '#10b981' : categoryColor }}
                                   />
                                 )}
 
-                                <div
-                                  className={`
-                                  relative ${pinSize} flex items-center justify-center
-                                  rounded-full rounded-br-none rotate-45
-                                  border-2 ${isEventOngoing(event) ? 'border-emerald-400' : 'border-white'} transition-all duration-300
-                                  ${isFutureEvent ? 'opacity-70 saturate-50' : 'opacity-100'}
-                                `}
-                                  style={{
-                                    background: `linear-gradient(135deg, ${categoryColor}, ${categoryColor}dd)`,
-                                    boxShadow: isHovered ? `0 0 25px ${categoryColor}aa` : (isEventOngoing(event) ? `0 0 15px rgba(16, 185, 129, 0.6), 0 4px 10px rgba(0,0,0,0.4)` : `0 4px 10px rgba(0,0,0,0.4)`)
-                                  }}
-                                >
-                                  <div className={`-rotate-45 ${emojiSize} filter drop-shadow-sm brightness-110`}>
-                                    {event.icon || getCategoryIcon(event.category)}
-                                  </div>
-                                </div>
+                                {(() => {
+                                  // Determine animation class
+                                  let animClass = "";
+                                  if (!isHovered) {
+                                    if (isEventOngoing(event)) {
+                                      animClass = "live-glow-ring border-emerald-400";
+                                    } else {
+                                      let isWithin6h = false;
+                                      if (event.date && event.time) {
+                                        try {
+                                          const d = new Date(`${event.date}T${event.time}`);
+                                          isWithin6h = isBefore(d, addHours(new Date(), 6)) && isFuture(d);
+                                        } catch (e) { }
+                                      }
+                                      if (isWithin6h) {
+                                        const isSoonest = filteredEvents.find(e => {
+                                          if (!e.date || !e.time) return false;
+                                          try {
+                                            const ed = new Date(`${e.date}T${e.time}`);
+                                            return isBefore(ed, addHours(new Date(), 6)) && isFuture(ed);
+                                          } catch (e) { }
+                                          return false;
+                                        })?.id === event.id; // true since filteredEvents is sorted
+                                        if (isSoonest) {
+                                          animClass = "soonest-bounce animate-yellow-pulse border-yellow-400";
+                                        } else {
+                                          animClass = "animate-yellow-pulse border-yellow-400";
+                                        }
+                                      } else {
+                                        animClass = "border-white";
+                                      }
+                                    }
+                                  } else {
+                                    animClass = isEventOngoing(event) ? "border-emerald-400" : "border-white";
+                                  }
+                                  return (
+                                    <div
+                                      className={`
+                                      relative ${pinSize} flex items-center justify-center
+                                      rounded-full rounded-br-none rotate-45
+                                      border-2 ${animClass} transition-all duration-300
+                                      ${isFutureEvent ? 'opacity-70 saturate-50' : 'opacity-100'}
+                                    `}
+                                      style={{
+                                        background: `linear-gradient(135deg, ${categoryColor}, ${categoryColor}dd)`,
+                                        boxShadow: isHovered ? `0 0 25px ${categoryColor}aa` : (isEventOngoing(event) ? `0 4px 10px rgba(0,0,0,0.4)` : `0 4px 10px rgba(0,0,0,0.4)`)
+                                      }}
+                                    >
+                                      <div className={`-rotate-45 ${emojiSize} filter drop-shadow-sm brightness-110`}>
+                                        {event.icon || getCategoryIcon(event.category)}
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
 
                                 {/* Hybrid badge on the marker */}
                                 {event.eventType === 'hybrid' && (

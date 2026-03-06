@@ -15,6 +15,7 @@ const eventSchema = z.object({
   icon: z.string().max(2, "Icon must be a single emoji").optional(),
   tags: z.array(z.string()).optional(),
   date: z.string().min(1, "Date is required"),
+  endDate: z.string().optional(),
   time: z.string().min(1, "Time is required"),
   endTime: z.string().optional(),
   location: z.string().optional(),
@@ -35,6 +36,15 @@ const eventSchema = z.object({
   })).optional(),
   stayUntil: z.string().optional(),
   transitTips: z.string().optional(),
+  orgLocation: z.string().optional(),
+  orgGeopoint: z.object({
+    latitude: z.number(),
+    longitude: z.number(),
+  }).optional(),
+  recurrence: z.object({
+    type: z.enum(["weekly", "biweekly", "monthly"]),
+    endDate: z.string()
+  }).optional(),
 }).refine(data => {
   // Virtual and hybrid events must have a meeting link
   if ((data.eventType === "virtual" || data.eventType === "hybrid") && !data.virtualLink) return false;
@@ -104,7 +114,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validation.error.format() }, { status: 400 })
     }
 
-    const { geopoint, ...rest } = validation.data
+    const { geopoint, recurrence, ...rest } = validation.data
 
     // Conditionally compute geohash only for events with a physical location
     const geohash = geopoint
@@ -121,33 +131,91 @@ export async function POST(request: NextRequest) {
     const userData = userDoc.data()
     const organizerName = userData?.name || user.name || user.email?.split("@")[0] || "User"
 
-    const newEvent: Record<string, any> = {
-      ...rest,
-      title: rest.name, // Ensure title is set for component compatibility
-      sport: rest.category, // Ensure sport is set for component compatibility
-      location: rest.location || null,
-      eventType: rest.eventType || "in-person",
-      virtualLink: rest.virtualLink || null,
-      createdBy: user.uid,
-      organizerName,
-      players: [user.uid],
-      currentPlayers: 1,
-      createdAt: Timestamp.now(),
-      checkInOpen: false,
+    // compute recurrence dates
+    const dates = [rest.date];
+    if (recurrence && recurrence.endDate && recurrence.endDate > rest.date) {
+      let currentDate = new Date(`${rest.date}T00:00:00`);
+      const endDate = new Date(`${recurrence.endDate}T00:00:00`);
+      let maxInstances = 20; // safe limit
+
+      while (currentDate < endDate && dates.length < maxInstances) {
+        if (recurrence.type === "weekly") {
+          currentDate.setDate(currentDate.getDate() + 7);
+        } else if (recurrence.type === "biweekly") {
+          currentDate.setDate(currentDate.getDate() + 14);
+        } else if (recurrence.type === "monthly") {
+          currentDate.setMonth(currentDate.getMonth() + 1);
+        }
+        if (currentDate <= endDate) {
+          dates.push(currentDate.toISOString().split("T")[0]);
+        }
+      }
     }
 
-    // Only set geopoint/geohash for events with a physical location
-    if (geopoint) {
-      newEvent.geopoint = new GeoPoint(geopoint.latitude, geopoint.longitude);
-      newEvent.geohash = geohash;
+    const batch = adminDb.batch()
+    const parentRef = adminDb.collection("events").doc()
+    const parentId = parentRef.id
+
+    const createdEvents = [];
+
+    // Diff in milliseconds for endDate if present
+    let endDiff = 0;
+    if (rest.endDate) {
+      const sDate = new Date(`${rest.date}T00:00:00`).getTime();
+      const eDate = new Date(`${rest.endDate}T00:00:00`).getTime();
+      endDiff = eDate - sDate;
     }
 
-    const docRef = await adminDb.collection("events").add(newEvent)
-    const createdEvent = { id: docRef.id, ...newEvent }
+    for (let i = 0; i < dates.length; i++) {
+      const isParent = i === 0;
+      const docRef = isParent ? parentRef : adminDb.collection("events").doc();
+
+      const eventDateStr = dates[i];
+      let eventEndDateStr = rest.endDate;
+      if (!isParent && endDiff > 0) {
+        const newSDate = new Date(`${eventDateStr}T00:00:00`).getTime();
+        eventEndDateStr = new Date(newSDate + endDiff).toISOString().split("T")[0];
+      }
+
+      const newEvent: Record<string, any> = {
+        ...rest,
+        date: eventDateStr,
+        endDate: eventEndDateStr || "",
+        title: rest.name,
+        sport: rest.category,
+        location: rest.location || null,
+        eventType: rest.eventType || "in-person",
+        virtualLink: rest.virtualLink || null,
+        createdBy: user.uid,
+        organizerName,
+        players: [user.uid],
+        currentPlayers: 1,
+        createdAt: Timestamp.now(),
+        checkInOpen: false,
+        parentEventId: dates.length > 1 ? parentId : null,
+        recurrence: dates.length > 1 ? recurrence : null,
+      }
+
+      if (geopoint) {
+        newEvent.geopoint = new GeoPoint(geopoint.latitude, geopoint.longitude);
+        newEvent.geohash = geohash;
+      }
+
+      if (rest.orgGeopoint) {
+        newEvent.orgGeopoint = new GeoPoint(rest.orgGeopoint.latitude, rest.orgGeopoint.longitude);
+      }
+
+      batch.set(docRef, newEvent);
+      if (isParent) {
+        createdEvents.push({ id: parentId, ...newEvent });
+      }
+    }
+
+    await batch.commit();
 
     return NextResponse.json({
       message: "Event created successfully",
-      event: createdEvent,
+      event: createdEvents[0],
     })
   } catch (error) {
     console.error("Error creating event:", error)

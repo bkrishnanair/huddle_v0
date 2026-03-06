@@ -17,8 +17,10 @@ export function generateGoogleCalendarUrl(event: GameEvent): string {
 
         const startStr = formatGCalDate(startDate);
         const endStr = formatGCalDate(endDate);
+        const eventUrl = `https://huddlev1.vercel.app/map?eventId=${event.id}`;
+        const finalDetails = details ? `${details}%0A%0A${encodeURIComponent(eventUrl)}` : encodeURIComponent(eventUrl);
 
-        return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startStr}/${endStr}&details=${details}&location=${location}`;
+        return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startStr}/${endStr}&details=${finalDetails}&location=${location}`;
     } catch (e) {
         console.error("Error generating Google Calendar URL", e);
         return "";
@@ -55,7 +57,7 @@ export function generateIcsContent(event: GameEvent): string {
             `DTEND:${formatIcsDate(endDate)}`,
             `DTSTAMP:${formatIcsDate(now)}`,
             `LOCATION:${locationStr}`,
-            `DESCRIPTION:${details.replace(/\n/g, "\\n")}`,
+            `DESCRIPTION:${details.replace(/\n/g, "\\n")}\\n\\nhttps://huddlev1.vercel.app/map?eventId=${event.id}`,
             "END:VEVENT",
             "END:VCALENDAR"
         ].join("\r\n");
