@@ -30,18 +30,31 @@ const chipVariants = cva(
 
 export interface ChipProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof chipVariants> {
+  VariantProps<typeof chipVariants> {
   isActive?: boolean
+  color?: string
 }
 
 const Chip = React.forwardRef<HTMLButtonElement, ChipProps>(
-  ({ className, variant, size, isActive, ...props }, ref) => {
+  ({ className, variant, size, isActive, color, style, ...props }, ref) => {
+
+    let inlineStyle: React.CSSProperties = { ...style };
+    if (color && isActive) {
+      inlineStyle.backgroundColor = color;
+      inlineStyle.color = "#ffffff";
+      inlineStyle.borderColor = color;
+    } else if (color && !isActive) {
+      // Add subtle tint border when inactive
+      inlineStyle.borderColor = `${color}40`;
+    }
+
     return (
       <button
         className={cn(
           chipVariants({ variant: isActive ? "primary" : "default", size }),
           className
         )}
+        style={inlineStyle}
         ref={ref}
         {...props}
       />

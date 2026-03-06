@@ -61,6 +61,10 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   const [conflictWarning, setConflictWarning] = useState<string | null>(null)
   const [organizerEvents, setOrganizerEvents] = useState<any[]>([])
 
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [recurrenceType, setRecurrenceType] = useState<"weekly" | "biweekly" | "monthly">("weekly")
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState("")
+
   // Presets State
   const { user } = useAuth()
   const [savedQuestions, setSavedQuestions] = useState<string[]>([])
@@ -69,6 +73,8 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
 
   const [mapCenter, setMapCenter] = useState(userLocation || { lat: 37.7749, lng: -122.4194 })
   const [markerPosition, setMarkerPosition] = useState(userLocation || { lat: 37.7749, lng: -122.4194 })
+  const [orgLocationName, setOrgLocationName] = useState("")
+  const [orgMarkerPosition, setOrgMarkerPosition] = useState<{ lat: number, lng: number } | null>(null)
   const [isFullscreenMap, setIsFullscreenMap] = useState(false)
 
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -137,6 +143,17 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
           setMapCenter(userLocation)
           setMarkerPosition(userLocation)
         }
+
+        if (initialData.orgGeopoint) {
+          setOrgMarkerPosition({
+            lat: Number(initialData.orgGeopoint.latitude),
+            lng: Number(initialData.orgGeopoint.longitude)
+          })
+          setOrgLocationName(initialData.orgLocation || "")
+        } else {
+          setOrgMarkerPosition(null)
+          setOrgLocationName("")
+        }
       } else {
         // Reset form for fresh creation
         setFormData({
@@ -145,6 +162,9 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         })
         setIsPrivate(false)
         setBoostEvent(false)
+        setIsRecurring(false)
+        setRecurrenceType("weekly")
+        setRecurrenceEndDate("")
         setEventType("in-person")
         setVirtualLink("")
         setAskRide(false)
@@ -154,6 +174,8 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         setStayUntil("")
         setTransitTips("")
         setScheduledBroadcasts([])
+        setOrgLocationName("")
+        setOrgMarkerPosition(null)
 
         if (userLocation) {
           setMapCenter(userLocation)
@@ -292,6 +314,17 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
     }
   }
 
+  const handleOrgPlaceSelect = (place: google.maps.places.PlaceResult | null) => {
+    if (place?.geometry?.location) {
+      const newPosition = {
+        lat: place.geometry.location.lat(),
+        lng: place.geometry.location.lng(),
+      }
+      setOrgLocationName(place.formatted_address || place.name || "")
+      setOrgMarkerPosition(newPosition)
+    }
+  }
+
   const handleUseCurrentLocation = () => {
     if (!navigator.geolocation) {
       toast.error("Geolocation is not supported by your browser.")
@@ -410,7 +443,23 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         pickupPoints,
         stayUntil,
         transitTips,
-        ...(scheduledMessagesPayload.length > 0 && { scheduledMessages: scheduledMessagesPayload })
+        ...(scheduledMessagesPayload.length > 0 && { scheduledMessages: scheduledMessagesPayload }),
+        ...(isRecurring && recurrenceEndDate && !isEditMode && {
+          recurrence: {
+            type: recurrenceType,
+            endDate: recurrenceEndDate
+          }
+        })
+      }
+
+      // Only include geopoint for events with a physical location
+      if (needsLocation && markerPosition) {
+        payload.geopoint = { latitude: markerPosition.lat, longitude: markerPosition.lng }
+      }
+
+      if (orgMarkerPosition) {
+        payload.orgGeopoint = { latitude: orgMarkerPosition.lat, longitude: orgMarkerPosition.lng }
+        payload.orgLocation = orgLocationName
       }
 
       // Only include geopoint for events with a physical location
@@ -577,12 +626,14 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                         <Navigation className="w-4 h-4" />
                       </Button>
                     </div>
-                    <div className={`${isFullscreenMap ? "flex-1 mt-4" : "h-48 mt-2"} w-full rounded-lg overflow-hidden relative border border-border`} style={{ touchAction: "none" }}>
+                    <div className={`${isFullscreenMap ? "flex-1 mt-4" : "h-48 mt-2"} w-full rounded-lg overflow-hidden relative border border-border`}>
                       <Map
                         center={mapCenter}
                         defaultZoom={15}
-                        gestureHandling={"greedy"}
-                        disableDefaultUI={true}
+                        gestureHandling={"auto"}
+                        disableDefaultUI={false}
+                        mapTypeControl={false}
+                        streetViewControl={false}
                         mapId={mapId}
                       >
                         <AdvancedMarker position={markerPosition} draggable={true} onDragEnd={(e) => setMarkerPosition({ lat: e.latLng!.lat(), lng: e.latLng!.lng() })} />
@@ -606,6 +657,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                         Confirm Location Pin
                       </Button>
                     )}
+
                   </APIProvider>
                 ) : (
                   <div className="h-48 w-full rounded-lg mt-2 border border-border flex items-center justify-center text-center bg-slate-800/50">
@@ -638,6 +690,44 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                   <Input id="endTime" type="time" value={formData.endTime} onChange={(e) => handleInputChange("endTime", e.target.value)} style={{ colorScheme: "white" }} className="w-full pr-3 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:brightness-150 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-90" />
                 </div>
               </div>
+
+              {/* Repeat Toggle (Only on creation) */}
+              {!isEditMode && (
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5">
+                    <span className="text-sm font-medium text-slate-200">Repeat Event</span>
+                    <Switch checked={isRecurring} onCheckedChange={setIsRecurring} />
+                  </div>
+                  {isRecurring && (
+                    <div className="grid grid-cols-2 gap-4 p-3 rounded-lg bg-black/20 border border-primary/20">
+                      <div>
+                        <Label htmlFor="recurrenceType">Frequency</Label>
+                        <Select value={recurrenceType} onValueChange={(v: any) => setRecurrenceType(v)}>
+                          <SelectTrigger className="mt-1 bg-slate-800 border-none"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="weekly">Weekly</SelectItem>
+                            <SelectItem value="biweekly">Every 2 Weeks</SelectItem>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="recurrenceEndDate">Until Date</Label>
+                        <Input
+                          id="recurrenceEndDate"
+                          type="date"
+                          value={recurrenceEndDate}
+                          onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                          min={formData.date}
+                          style={{ colorScheme: "white" }}
+                          className="mt-1 w-full bg-slate-800 border-none pr-3 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:brightness-150 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-90"
+                          required={isRecurring}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {
@@ -736,6 +826,19 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
               </div>
 
               <div className="space-y-3 pb-2 pt-2 border-t border-white/5">
+                <Label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Organization HQ (Optional)</Label>
+                <div className="p-3 bg-black/20 rounded-lg border border-primary/20">
+                  <p className="text-[10px] text-slate-500 mb-2 mt-1">If your club is travelling, add your campus HQ here so local members can discover this trip.</p>
+                  {mapsApiKey && (
+                    <APIProvider apiKey={mapsApiKey}>
+                      <LocationSearchInput onPlaceSelect={handleOrgPlaceSelect} insideModal={true} />
+                    </APIProvider>
+                  )}
+                  {orgLocationName && <p className="text-xs text-emerald-400 mt-2 font-medium">✅ HQ Set: {orgLocationName}</p>}
+                </div>
+              </div>
+
+              <div className="space-y-3 pb-2 pt-2 border-t border-white/5">
                 <Label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Schedule & Transit</Label>
                 <div className="space-y-1">
                   <Label htmlFor="stayUntil" className="text-xs text-slate-500">Stay Until (Optional Note)</Label>
@@ -744,11 +847,16 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                 <div className="space-y-1 mt-2">
                   <Label htmlFor="transitTips" className="text-xs text-slate-500">Transit Tips</Label>
                   {savedTransitTips.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-2">
+                    <div className="flex flex-col gap-1.5 mb-2">
                       {savedTransitTips.map(tip => (
-                        <button key={tip} type="button" onClick={() => setTransitTips(tip)} className="text-[10px] px-2 py-1 rounded-full bg-primary/20 text-primary-foreground hover:bg-primary/30 border border-primary/30 transition-colors">
-                          {tip}
-                        </button>
+                        <div key={tip} className="flex items-center text-[10px] rounded bg-primary/20 border border-primary/30 overflow-hidden w-full max-w-full group">
+                          <button type="button" onClick={() => setTransitTips(tip)} className="px-2 py-1.5 text-primary-foreground hover:bg-primary/30 transition-colors truncate text-left flex-1" title={tip}>
+                            {tip}
+                          </button>
+                          <button type="button" onClick={() => handleDeletePreset('transitTips', tip)} className="px-2 py-1.5 text-slate-400 hover:bg-red-500/20 hover:text-red-400 transition-colors border-l border-primary/30 opacity-70 group-hover:opacity-100 shrink-0">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       ))}
                     </div>
                   )}

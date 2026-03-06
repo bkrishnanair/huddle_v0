@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 import Link from "next/link";
 import { useFollowing } from "@/hooks/use-following";
+import { getCategoryColor } from "@/lib/utils";
 
 const getCategoryIcon = (category: string): string => {
   const icons: { [key: string]: string } = {
@@ -76,11 +77,11 @@ export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = fal
   const ongoing = isEventOngoing();
 
   return (
-    <Card className="glass-surface border-white/15 overflow-hidden flex flex-col">
-      <CardContent className="p-4 flex-grow">
+    <Card className="glass-surface overflow-hidden flex flex-col" style={{ border: '1px solid rgba(255,255,255,0.15)', borderLeft: `6px solid ${getCategoryColor(event.category)}` }}>
+      <CardContent className="p-4 flex-grow relative transition-colors duration-300" style={{ background: `linear-gradient(135deg, ${getCategoryColor(event.category)}b3 0%, ${getCategoryColor(event.category)}1a 100%)` }}>
         <div className="flex justify-between items-start mb-3">
           <div className="flex items-center gap-2 pr-2 overflow-hidden">
-            <h3 className="font-bold text-lg text-slate-50 truncate">
+            <h3 className="font-bold text-lg text-white drop-shadow-md truncate">
               <span className="mr-1.5">{event.icon || getCategoryIcon(event.category)}</span>
               {event.name}
             </h3>
@@ -110,14 +111,14 @@ export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = fal
                 {event.eventType === 'virtual' ? '🖥️ Virtual' : '📡 Hybrid'}
               </Badge>
             )}
-            <Badge variant="secondary" className="bg-white/10 text-slate-300 border-none whitespace-nowrap shrink-0">
+            <span className="whitespace-nowrap shrink-0 text-xs font-bold drop-shadow-md text-white/90">
               {event.category}
-            </Badge>
+            </span>
           </div>
         </div>
-        <div className="space-y-2 text-sm text-slate-300">
+        <div className="space-y-2 text-sm text-white/90 drop-shadow-sm font-medium">
           <div className="flex items-center">
-            <Clock className="w-4 h-4 mr-2 text-emerald-400" />
+            <Clock className="w-4 h-4 mr-2 opacity-80" />
             <span>{getTimeDifference(event.date, event.time)} • {event.time}</span>
           </div>
           <div className="flex items-center">
@@ -128,7 +129,7 @@ export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = fal
               </>
             ) : (
               <>
-                <MapPin className="w-4 h-4 mr-2 text-emerald-400" />
+                <MapPin className="w-4 h-4 mr-2 opacity-80" />
                 <span className="truncate">{event.distance ? `${event.distance.toFixed(1)} miles away` : (event.venue || event.location || 'Location TBD')}</span>
               </>
             )}
