@@ -31,7 +31,13 @@ export interface GameEvent {
     longitude: number;
   };
   description?: string;
+  orgLocation?: string;
+  orgGeopoint?: {
+    latitude: number;
+    longitude: number;
+  };
   date: string;
+  endDate?: string;
   time: string;
   endTime?: string;
   maxPlayers: number;
@@ -64,6 +70,12 @@ export interface GameEvent {
   }[];
   status?: "active" | "past"; // To allow organizers to explicitly close events
   checkInOpen?: boolean;
+  createdAt?: any;
+  parentEventId?: string;
+  recurrence?: {
+    type: "weekly" | "biweekly" | "monthly";
+    endDate: string;
+  };
 }
 
 export interface AppNotification {

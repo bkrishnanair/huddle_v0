@@ -9,11 +9,20 @@ import * as geofire from "geofire-common"
 const editEventSchema = z.object({
     name: z.string().min(1, "Event name is required").optional(),
     category: z.string().min(1, "Category is required").optional(),
+    eventType: z.enum(["in-person", "virtual", "hybrid"]).optional(),
+    virtualLink: z.string().url("Please enter a valid URL").optional().nullable(),
+    icon: z.string().max(2, "Icon must be a single emoji").optional(),
+    tags: z.array(z.string()).optional(),
     date: z.string().min(1, "Date is required").optional(),
+    endDate: z.string().optional(),
     time: z.string().min(1, "Time is required").optional(),
+    endTime: z.string().optional(),
     location: z.string().min(1, "Location is required").optional(),
     maxPlayers: z.number().min(1, "At least one player is required").optional(),
+    minPlayers: z.number().optional(),
     description: z.string().optional(),
+    isBoosted: z.boolean().optional(),
+    isPrivate: z.boolean().optional(),
     geopoint: z.object({
         latitude: z.number(),
         longitude: z.number(),
@@ -26,6 +35,11 @@ const editEventSchema = z.object({
     })).optional(),
     stayUntil: z.string().optional(),
     transitTips: z.string().optional(),
+    orgLocation: z.string().optional(),
+    orgGeopoint: z.object({
+        latitude: z.number(),
+        longitude: z.number(),
+    }).optional(),
 })
 
 export async function DELETE(
