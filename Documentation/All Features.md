@@ -88,7 +88,6 @@ Phase 4.5 — "Sunset Transit" UX Upgrade & Organization HQs (DONE)
 3. Mobile Gestures & Pin Logic: Unlocked the event creation modal map to allow native pinch-to-zoom on mobile devices. Hover tooltips on map pins dynamically identify the end date/time if differing from the event start.
 4. Emoji Edit Parity: Backend API validations corrected to allow edits on all supplementary metadata fields directly matching the base level event creation logic (e.g., Emojis, isBoosted statuses).
 5. Robust Preset Control: Saved organizer presets (e.g. Transit Tips) can be actively deleted with intuitive inline UI toggles.
-
 Phase 5 — Social Graph & The Serendipity Engine (DONE)
 1. Foundational Follow System: Atomic Firestore transactions reliably handle Follow/Unfollow/Block interactions. Custom `useFollowing` React Context stores the user's network in a local runtime `Set` for `O(1)` list lookups.
 2. Network Building CTA: Profile pages show a sleek Call-to-Action to "Build your network" when a user has fewer than 5 followers, driving social engagement.

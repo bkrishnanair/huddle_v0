@@ -19,7 +19,7 @@ This production-ready application features a complete authentication system, rea
 ### 🌍 Frictionless Guest Access & Discovery
 *   **Live Interactive Map**: Unauthenticated users can instantly explore the live map and Discover feed. 
 *   **Transit-Inspired Color Theming**: A vibrant "Sunset Transit" color palette universally paints event cards, discovery filters, and map pins based on category for rapid visual scanning.
-*   **Premium Map Pins**: Custom React teardrop nodes featuring rich gradients, drop shadows, and scale-on-hover micro-animations. Categorizes events via custom emojis. **Zoom-adaptive sizing** — pins shrink at low zoom to reduce overlap.
+*   **Premium Map Pins**: Custom React teardrop nodes featuring rich gradients, drop shadows, and scale-on-hover micro-animations. Categorizes events via custom emojis. **Zoom-adaptive sizing** — pins shrink at low zoom to reduce overlap and improve click accuracy.
 *   **Discovery Filters**: Surface events happening "Live", "This Week", or "This Weekend" with a single tap. Collapsible "More Filters" panel for Range and Date Range to keep the UI clean.
 *   **Virtual & Hybrid Events**: Create events as In-Person, Virtual (Zoom/Meet link), or Hybrid. Virtual events hide the map picker and show a meeting link field instead.
 *   **Cloud Console Styling**: Map visual themes (like Dark Mode and Point of Interest decluttering) are natively controlled via Google Cloud Map IDs without local style overrides.
