@@ -7,10 +7,11 @@ import { useMapsLibrary } from "@vis.gl/react-google-maps";
 // SEARCH: Define the props for our new component.
 interface LocationSearchInputProps {
   onPlaceSelect: (place: google.maps.places.PlaceResult | null) => void;
+  onAiSearch?: (query: string) => void;
   insideModal?: boolean;
 }
 
-export default function LocationSearchInput({ onPlaceSelect, insideModal = false }: LocationSearchInputProps) {
+export default function LocationSearchInput({ onPlaceSelect, onAiSearch, insideModal = false }: LocationSearchInputProps) {
   // SEARCH: Get a reference to the input element.
   const inputRef = useRef<HTMLInputElement>(null);
   // SEARCH: Load the 'places' library from Google Maps.
@@ -49,8 +50,15 @@ export default function LocationSearchInput({ onPlaceSelect, insideModal = false
     <div className="relative">
       <Input
         ref={inputRef}
-        placeholder="Search for an address or place..."
+        placeholder="Search for an address, place, or event vibe..."
         className="glass border-white/30 text-white placeholder:text-white/60 w-full"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && onAiSearch && inputRef.current?.value) {
+            // Check if dropdown is not active (basic heuristic: we just grab the value)
+            onAiSearch(inputRef.current.value);
+            inputRef.current.blur();
+          }
+        }}
       />
     </div>
   );

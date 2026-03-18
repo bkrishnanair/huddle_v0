@@ -8,18 +8,18 @@ import { EventCard, EventCardSkeleton } from "@/components/events/event-card"
 import EventDetailsDrawer from "@/components/event-details-drawer"
 import CreateEventModal from "@/components/create-event-modal"
 import { Chip } from "@/components/ui/chip"
-import { Search, SlidersHorizontal, PlusCircle, Star, LogOut, Calendar, X } from "lucide-react"
+import { Search, SlidersHorizontal, PlusCircle, Star, LogOut, Calendar, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { GameEvent } from "@/lib/types"
 import { signOut } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
-import { isToday, isWeekend, isBefore, addHours, isFuture, addDays } from "date-fns"
+import { isToday, isWeekend, isBefore, addHours, isFuture, addDays, endOfWeek, startOfDay } from "date-fns"
 import { getCategoryColor } from "@/lib/utils"
 
 const CATEGORY_FILTERS = ["All", "Recommended", "🖥️ Virtual", "Sports", "Music", "Community", "Learning", "Food & Drink", "Tech", "Arts & Culture", "Outdoors"];
-const TIME_FILTERS = ["All", "Live", "Next 2 Hrs", "Today", "This Weekend"];
+const TIME_FILTERS = ["All", "Live", "Today", "This Week", "This Weekend"];
 
 const ActionableEmptyState = ({ onOpenCreateModal }: { onOpenCreateModal: () => void }) => (
     <div className="text-center glass-surface border-white/15 rounded-2xl p-8 mt-8">
@@ -45,11 +45,14 @@ export default function DiscoverPage() {
 
     const [searchQuery, setSearchQuery] = useState("");
     const [activeCategory, setActiveCategory] = useState("All");
-    const [activeTime, setActiveTime] = useState("All");
+    const [activeTime, setActiveTime] = useState("This Week");
     const [activeRange, setActiveRange] = useState("50 Miles");
     const [sortBy, setSortBy] = useState("soonest");
     const [filterStartDate, setFilterStartDate] = useState("");
     const [filterEndDate, setFilterEndDate] = useState("");
+
+    const [isAiSearching, setIsAiSearching] = useState(false);
+    const [aiKeywords, setAiKeywords] = useState<string[]>([]);
     const [showMoreFilters, setShowMoreFilters] = useState(false);
 
     useEffect(() => {
@@ -110,6 +113,46 @@ export default function DiscoverPage() {
         fetchInitialData();
     }, [user?.uid, userLocation]);
 
+    const handleAiSearch = async (query: string) => {
+      setIsAiSearching(true);
+      setAiKeywords([]);
+      try {
+        const res = await fetch('/api/ai/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query })
+        });
+        if (!res.ok) throw new Error('Search failed');
+        const data = await res.json();
+        const filters = data.filters;
+
+        if (filters.categories && filters.categories.length > 0) {
+          setActiveCategory(filters.categories[0]);
+        } else {
+          setActiveCategory('All');
+        }
+
+        if (filters.timeFilter) {
+           const timeMap: Record<string, string> = {
+              'live': 'Live', 'today': 'Today', 'this_week': 'This Week', 'this_weekend': 'This Weekend', 'this_month': 'This Month'
+           };
+           setActiveTime(timeMap[filters.timeFilter] || 'All');
+        } else {
+           setActiveTime('All');
+        }
+
+        if (filters.keywords && filters.keywords.length > 0) {
+          setAiKeywords(filters.keywords);
+        }
+        
+        toast.success(`AI Search: Filtered for "${query}" ✨`);
+      } catch (e) {
+        toast.error('AI Search failed. Try a regular search.');
+      } finally {
+        setIsAiSearching(false);
+      }
+    };
+
     const handleLogout = async () => {
         try {
             await signOut(auth)
@@ -127,6 +170,13 @@ export default function DiscoverPage() {
                 event.name.toLowerCase().includes(searchLower) ||
                 (typeof event.category === 'string' && event.category.toLowerCase().includes(searchLower)) ||
                 (typeof event.location === 'string' && event.location.toLowerCase().includes(searchLower));
+
+            let matchesAi = true;
+            if (aiKeywords.length > 0) {
+              const fullText = `${event.name} ${event.description || ''} ${event.category}`.toLowerCase();
+              matchesAi = aiKeywords.some(kw => fullText.includes(kw.toLowerCase()));
+            }
+
             let eventDistance = event.distance;
             let matchesRange = true;
 
@@ -214,11 +264,11 @@ export default function DiscoverPage() {
                                 const isOngoing = now >= eventDateTime && now <= endTime;
                                 const isStartingSoon = isBefore(eventDateTime, addHours(now, 1)) && isFuture(eventDateTime);
                                 matchesTime = isOngoing || isStartingSoon;
-                            } else if (activeTime === 'Next 2 Hrs') {
-                                const twoHoursFromNow = addHours(now, 2);
-                                matchesTime = isBefore(eventDateTime, twoHoursFromNow) && isFuture(eventDateTime);
                             } else if (activeTime === 'Today') {
                                 matchesTime = isToday(eventDateTime);
+                            } else if (activeTime === 'This Week') {
+                                const weekEnd = endOfWeek(now, { weekStartsOn: 0 }); // Sunday
+                                matchesTime = eventDateTime >= startOfDay(now) && eventDateTime <= weekEnd;
                             } else if (activeTime === 'This Weekend') {
                                 matchesTime = isWeekend(eventDateTime) && isFuture(eventDateTime);
                             }
@@ -239,7 +289,7 @@ export default function DiscoverPage() {
                 }
             }
 
-            return matchesSearch && matchesRange && matchesTime && isNotPast && matchesDateRange;
+            return matchesSearch && matchesAi && matchesRange && matchesTime && isNotPast && matchesDateRange;
         });
 
         const favoriteCategories = userProfile?.favoriteCategories || [];
@@ -269,7 +319,7 @@ export default function DiscoverPage() {
         });
 
         return { recommendedEvents: recommended, otherEvents: others };
-    }, [allNearbyEvents, searchQuery, activeCategory, activeTime, activeRange, userLocation, userProfile, sortBy, filterStartDate, filterEndDate]);
+    }, [allNearbyEvents, searchQuery, aiKeywords, activeCategory, activeTime, activeRange, userLocation, userProfile, sortBy, filterStartDate, filterEndDate]);
 
     const renderContent = () => {
         if (!initialLoadComplete) {
@@ -327,13 +377,19 @@ export default function DiscoverPage() {
                 {/* Search & Sort Group */}
                 <div className="flex flex-col md:flex-row items-center gap-4 w-full">
                     <div className="relative flex-1 w-full group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors z-10" />
                         <Input
-                            placeholder="Search by name or category..."
+                            placeholder="Search by name, category, or event vibe..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            className="pl-12 glass-surface border-white/10 h-14 rounded-2xl shadow-2xl text-lg focus:ring-primary/20"
+                            onKeyDown={e => {
+                                if (e.key === 'Enter' && searchQuery.trim()) {
+                                    handleAiSearch(searchQuery);
+                                }
+                            }}
+                            className="pl-12 pr-12 glass-surface border-white/10 h-14 rounded-2xl shadow-2xl text-lg focus:ring-primary/20"
                         />
+                        {isAiSearching && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-teal-400 animate-spin" />}
                     </div>
                     <div className="w-full md:w-auto shrink-0">
                         <Select value={sortBy} onValueChange={setSortBy}>

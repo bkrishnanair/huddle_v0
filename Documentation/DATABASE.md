@@ -60,6 +60,11 @@ Huddle utilizes Firebase Cloud Firestore, a NoSQL database. Data is organized in
 *   `pickupPoints` (array of objects): Locations organizers set for meeting logic.
 *   `transitTips` (string, optional): Instructions on how to get to the location.
 *   `isPrivate` (boolean, optional): If `true`, the event is hidden from the global Discover feed.
+*   `viewCount` (number, optional): Incremented atomically via `POST /api/events/[id]/view`. Tracks unique views per session.
+*   `source` (string, optional): Origin of the event — `"manual"` (user-created) or `"terplink"` (scraped from TerpLink).
+*   `sourceUrl` (string, optional): Link back to the source event page (e.g., TerpLink URL).
+*   `isScraped` (boolean, optional): `true` for auto-imported events from external sources.
+*   `status` (string, optional): `"active"` | `"past"` | `"archived"`. Archived events are cleaned up by the nightly cron.
 *   `createdAt` (Firestore Timestamp): The time the event was created.
 
 *   **Subcollections**:
