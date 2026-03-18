@@ -7,13 +7,17 @@ import { Chip } from "@/components/ui/chip"
 import { Plus, MapPin, LocateFixed, AlertCircle, Loader2, Star, Calendar, Clock, Map as MapIcon, List, Sun, Moon } from "lucide-react"
 import EventDetailsDrawer from "./event-details-drawer"
 import CreateEventModal from "./create-event-modal"
+import OnboardingTooltip from "./onboarding-tooltip"
 import { EventCard } from "@/components/events/event-card"
 import { APIProvider, Map, AdvancedMarker, Pin, useMap, InfoWindow } from "@vis.gl/react-google-maps"
 import { GameEvent } from "@/lib/types"
 import LocationSearchInput from "./location-search"
-import { isToday, isWeekend, isBefore, addHours, isFuture, addDays } from "date-fns"
+import { isToday, isWeekend, isBefore, addHours, isFuture, addDays, endOfWeek, startOfDay } from "date-fns"
 import { toast } from "sonner"
 import { formatTime, getCategoryColor } from "@/lib/utils"
+import DotPin from "./map-pins/dot-pin"
+import MediumPin from "./map-pins/medium-pin"
+import LivePin from "./map-pins/live-pin"
 
 interface MapViewProps {
   user: any
@@ -66,7 +70,7 @@ const MapRenderer = ({ onMapLoad, children, isDarkMode }: { onMapLoad: (map: goo
 };
 
 const CATEGORIES = ['All', 'Joined', 'Recommended', '🖥️ Virtual', 'Sports', 'Music', 'Community', 'Learning', 'Food & Drink', 'Tech', 'Arts & Culture', 'Outdoors']
-const TIMES = ['All', 'Live', 'Today', '48 Hours', 'This Week', 'This Weekend', 'This Month']
+const TIMES = ['All', 'Live', 'Today', 'This Week', 'This Weekend', 'This Month']
 
 
 const getCategoryIcon = (category: string): string => {
@@ -91,13 +95,26 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>(initialCenter || { lat: 38.9897, lng: -76.9378 }) // College Park, MD
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [activeCategory, setActiveCategory] = useState("All");
-  const [activeTime, setActiveTime] = useState("48 Hours");
+  const [activeTime, setActiveTime] = useState("This Week");
   const [currentZoom, setCurrentZoom] = useState(initialCenter ? 17 : 13);
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [hasCenteredDefault, setHasCenteredDefault] = useState(!!initialCenter);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isAiSearching, setIsAiSearching] = useState(false);
+  const [aiKeywords, setAiKeywords] = useState<string[]>([]);
+
+  // Session-level deduplication for view tracking (also fires in event-details-drawer as backup)
+  const viewedEventIds = useRef<Set<string>>(new Set());
+
+  const trackEventView = useCallback((eventId: string) => {
+    if (!viewedEventIds.current.has(eventId)) {
+      viewedEventIds.current.add(eventId);
+      fetch(`/api/events/${eventId}/view`, { method: 'POST' }).catch(() => {});
+    }
+  }, []);
 
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID;
@@ -271,6 +288,14 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
     }
   }, [map, fetchEventsInView]);
 
+  // Show onboarding for first-time visitors after map loads
+  useEffect(() => {
+    if (map && !localStorage.getItem('huddle_onboarding_complete')) {
+      const timer = setTimeout(() => setShowOnboarding(true), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [map]);
+
   // Debounce the map idle event to prevent spamming the API when dragging/zooming rapidly
   const debouncedFetchEventsInView = useMemo(() => {
     let timeout: ReturnType<typeof setTimeout>;
@@ -310,6 +335,46 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
     },
     [map]
   );
+
+  const handleAiSearch = async (query: string) => {
+    setIsAiSearching(true);
+    setAiKeywords([]);
+    try {
+      const res = await fetch('/api/ai/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
+      });
+      if (!res.ok) throw new Error('Search failed');
+      const data = await res.json();
+      const filters = data.filters;
+
+      if (filters.categories && filters.categories.length > 0) {
+        setActiveCategory(filters.categories[0]);
+      } else {
+        setActiveCategory('All');
+      }
+
+      if (filters.timeFilter) {
+         const timeMap: Record<string, string> = {
+            'live': 'Live', 'today': 'Today', 'this_week': 'This Week', 'this_weekend': 'This Weekend', 'this_month': 'This Month'
+         };
+         setActiveTime(timeMap[filters.timeFilter] || 'All');
+      } else {
+         setActiveTime('All');
+      }
+
+      if (filters.keywords && filters.keywords.length > 0) {
+        setAiKeywords(filters.keywords);
+      }
+      
+      toast.success(`AI Search: Filtered for "${query}" ✨`);
+    } catch (e) {
+      toast.error('AI Search failed. Try a regular search.');
+    } finally {
+      setIsAiSearching(false);
+    }
+  };
 
   const dismissPrompt = useCallback(() => {
     setShowLocationPrompt(false);
@@ -435,6 +500,13 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
       result = result.filter(event => event.category === activeCategory);
     }
 
+    if (aiKeywords.length > 0) {
+      result = result.filter(event => {
+        const searchText = `${event.name} ${event.description || ''} ${event.category}`.toLowerCase();
+        return aiKeywords.some(kw => searchText.includes(kw.toLowerCase()));
+      });
+    }
+
     const now = new Date();
 
     // Time filter logic
@@ -450,8 +522,10 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             return isEventOngoing(event) || isStartingSoon;
           }
           if (activeTime === 'Today') return isToday(eventDateTime);
-          if (activeTime === '48 Hours') return isBefore(eventDateTime, addHours(now, 48)) && isFuture(eventDateTime);
-          if (activeTime === 'This Week') return isBefore(eventDateTime, addDays(now, 7)) && isFuture(eventDateTime);
+          if (activeTime === 'This Week') {
+            const weekEnd = endOfWeek(now, { weekStartsOn: 0 }); // Sunday
+            return eventDateTime >= startOfDay(now) && eventDateTime <= weekEnd;
+          }
           if (activeTime === 'This Weekend') return isWeekend(eventDateTime) && isFuture(eventDateTime);
           if (activeTime === 'This Month') return isBefore(eventDateTime, addDays(now, 30)) && isFuture(eventDateTime);
         } catch (e) { }
@@ -571,22 +645,59 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                         const categoryColor = getCategoryColor(event.category);
 
                         let isFutureEvent = false;
+                        let pinTier: 'live' | 'imminent' | 'future' = 'future';
                         if (!event.date || event.date.includes('/')) {
                           isFutureEvent = false;
                         } else {
                           try {
                             const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
-                            isFutureEvent = !isToday(eventDateTime) && eventDateTime > new Date();
+                            const now = new Date();
+                            if (isEventOngoing(event)) {
+                              pinTier = 'live';
+                            } else if (isBefore(eventDateTime, addHours(now, 6)) && isFuture(eventDateTime)) {
+                              pinTier = 'imminent';
+                            } else {
+                              pinTier = 'future';
+                              isFutureEvent = !isToday(eventDateTime) && eventDateTime > now;
+                            }
                           } catch (e) {
                             isFutureEvent = false;
                           }
+                        }
+
+                        // At low zoom, use simplified pin tiers for cleaner map
+                        if (currentZoom <= 13 && !isHovered) {
+                          return (
+                            <AdvancedMarker
+                              key={event.id}
+                              position={{ lat: event.geopoint.latitude, lng: event.geopoint.longitude }}
+                              onClick={() => {
+                                setSelectedEvent(event);
+                                trackEventView(event.id);
+                              }}
+                              onMouseEnter={() => setHoveredEvent(event)}
+                              onMouseLeave={() => setHoveredEvent(null)}
+                              style={{ zIndex: pinTier === 'live' ? 30 : pinTier === 'imminent' ? 20 : 0 }}
+                            >
+                              {pinTier === 'live' ? (
+                                <LivePin category={event.category} icon={event.icon} size={36} />
+                              ) : pinTier === 'imminent' ? (
+                                <MediumPin category={event.category} icon={event.icon} size={24} />
+                              ) : (
+                                <DotPin category={event.category} size={10} />
+                              )}
+                            </AdvancedMarker>
+                          );
                         }
 
                         return (
                           <AdvancedMarker
                             key={event.id}
                             position={{ lat: event.geopoint.latitude, lng: event.geopoint.longitude }}
-                            onClick={() => setSelectedEvent(event)}
+                            onClick={() => {
+                              setSelectedEvent(event);
+                              trackEventView(event.id);
+                            }}
                             onMouseEnter={() => setHoveredEvent(event)}
                             onMouseLeave={() => setHoveredEvent(null)}
                             style={{ zIndex: isHovered ? 50 : (showDetails ? 10 : 0) }}
@@ -709,8 +820,11 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             {/* Header: Search Bar & Toggle */}
             <div className="flex items-center gap-3 w-full pointer-events-auto">
               {/* Search Bar */}
-              <div className="flex-1 glass-surface border border-white/10 rounded-2xl overflow-hidden shadow-2xl p-1">
-                <LocationSearchInput onPlaceSelect={handleGlobalSearchSelect} />
+              <div className="flex-1 flex items-center gap-2 bg-slate-900/60 backdrop-blur-md rounded-2xl shadow-lg border border-white/10 p-[1px]">
+                <div className="flex-1 relative z-10">
+                  <LocationSearchInput onPlaceSelect={handleGlobalSearchSelect} onAiSearch={handleAiSearch} />
+                </div>
+                {isAiSearching && <Loader2 className="w-5 h-5 text-teal-400 animate-spin mr-2" />}
               </div>
 
               {/* View Toggle */}
@@ -880,7 +994,15 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
         {selectedEvent && <EventDetailsDrawer event={selectedEvent} isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} onEventUpdated={() => { }} />
         }
         {showCreateModal && <CreateEventModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onEventCreated={() => { }} userLocation={userLocation || mapCenter} />}
-      </APIProvider >
-    </div >
+      </APIProvider>
+
+      {/* First-visit onboarding */}
+      {showOnboarding && (
+        <OnboardingTooltip onComplete={() => {
+          setShowOnboarding(false);
+          localStorage.setItem('huddle_onboarding_complete', 'true');
+        }} />
+      )}
+    </div>
   )
 }

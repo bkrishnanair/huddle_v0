@@ -2,7 +2,7 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, MapPin, Users, CalendarPlus, Monitor } from "lucide-react";
+import { Clock, MapPin, Users, CalendarPlus, Monitor, Eye } from "lucide-react";
 import { GameEvent } from "@/lib/types";
 import { formatDistanceToNow } from 'date-fns';
 
@@ -137,11 +137,19 @@ export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = fal
         </div>
       </CardContent>
       <div className="bg-white/5 px-4 py-3 flex justify-between items-center gap-3">
-        <div className="flex items-center">
-          <Users className="w-4 h-4 mr-2 text-slate-400" />
-          <span className="text-slate-300 font-medium">
-            {event.currentPlayers} / {event.maxPlayers}
-          </span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center">
+            <Users className="w-4 h-4 mr-2 text-slate-400" />
+            <span className="text-slate-300 font-medium">
+              {event.currentPlayers} / {event.maxPlayers}
+            </span>
+          </div>
+          {(event.viewCount ?? 0) > 0 && (
+            <div className="flex items-center">
+              <Eye className="w-3.5 h-3.5 mr-1 text-slate-500" />
+              <span className="text-slate-500 text-xs font-medium">{event.viewCount}</span>
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
           {showMapButton && (

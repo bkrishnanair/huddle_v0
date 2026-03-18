@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { MapPin, Calendar, Search, User } from "lucide-react"
 import { useFirebase } from "@/lib/firebase-context"
 import { toast } from "sonner"
+import { useState, useEffect } from "react"
 
 const HuddleLogo = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-primary">
@@ -12,10 +13,47 @@ const HuddleLogo = () => (
   </svg>
 )
 
+// Checks if an event is currently happening
+function isEventLive(event: any): boolean {
+  if (!event.date || !event.time) return false;
+  try {
+    const start = new Date(`${event.date}T${event.time}`);
+    if (isNaN(start.getTime())) return false;
+    const now = new Date();
+    if (now < start) return false;
+    const end = event.endTime
+      ? new Date(`${event.date}T${event.endTime}`)
+      : new Date(start.getTime() + 3 * 60 * 60 * 1000); // default 3hr
+    return now <= end;
+  } catch {
+    return false;
+  }
+}
+
 export default function BottomNavigation() {
   const pathname = usePathname()
   const router = useRouter()
   const { user } = useFirebase()
+  const [liveCount, setLiveCount] = useState(0)
+
+  useEffect(() => {
+    async function fetchLiveCount() {
+      try {
+        // Use UMD campus center + 50km radius as a reasonable default
+        const res = await fetch(`/api/events?lat=38.9897&lon=-76.9378&radius=50000`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const count = (data.events || []).filter(isEventLive).length;
+        setLiveCount(count);
+      } catch {
+        // Fail silently — badge just won't show
+      }
+    }
+
+    fetchLiveCount();
+    const interval = setInterval(fetchLiveCount, 5 * 60 * 1000); // every 5 min
+    return () => clearInterval(interval);
+  }, []);
 
   const tabs = [
     { id: "map", label: "Map", icon: MapPin, href: "/map" },
@@ -54,7 +92,19 @@ export default function BottomNavigation() {
                 ${isActive ? "bg-white/10" : "text-slate-400 hover:bg-white/5"}
               `}
             >
-              <Icon className={`w-5 h-5 mb-0.5 ${isActive ? "text-primary" : "text-slate-400"}`} />
+              {/* Map tab gets the live badge */}
+              {tab.id === "map" ? (
+                <div className="relative">
+                  <Icon className={`w-5 h-5 mb-0.5 ${isActive ? "text-primary" : "text-slate-400"}`} />
+                  {liveCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-black rounded-full min-w-[16px] h-4 flex items-center justify-center px-0.5 leading-none shadow-lg shadow-red-500/40">
+                      {liveCount > 9 ? "9+" : liveCount}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <Icon className={`w-5 h-5 mb-0.5 ${isActive ? "text-primary" : "text-slate-400"}`} />
+              )}
               <span className={`text-[10px] font-light ${isActive ? "text-primary" : "text-slate-400"}`}>{tab.label}</span>
             </Link>
           )
