@@ -6,9 +6,18 @@ import { getFirebaseAdminDb } from '@/lib/firebase-admin';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  // Gate with Vercel cron secret
+  // Auth: Vercel cron sends Authorization header automatically in production.
+  // Query param ?secret= is allowed ONLY in development for manual testing.
   const authHeader = req.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  let isAuthorized = authHeader === `Bearer ${process.env.CRON_SECRET}`;
+
+  if (!isAuthorized && process.env.NODE_ENV === 'development') {
+    const { searchParams } = new URL(req.url);
+    const querySecret = searchParams.get('secret');
+    isAuthorized = !!(process.env.CRON_SECRET && querySecret === process.env.CRON_SECRET);
+  }
+
+  if (!isAuthorized) {
     return new NextResponse('Unauthorized', { status: 401 });
   }
 
@@ -44,8 +53,8 @@ export async function GET(req: NextRequest) {
       archived: staleSnap.size,
       message: `Archived ${staleSnap.size} stale events`,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Cleanup cron error:', error);
-    return NextResponse.json({ error: 'Cleanup failed' }, { status: 500 });
+    return NextResponse.json({ error: 'Cleanup failed', message: error.message || String(error) }, { status: 500 });
   }
 }
