@@ -1,4 +1,4 @@
-# Huddle - V3.0 Enhanced
+# Huddle - V3.5 Pre-Competition Sprint
 
 Huddle is a modern, full-stack web application designed to help users discover, create, and join local pickup sports events. Centered around an interactive map, it provides a seamless experience for finding nearby games, creating events, and engaging with other participants through real-time chat, social profiles, and automated reminders.
 
@@ -20,7 +20,11 @@ This production-ready application features a complete authentication system, rea
 *   **Live Interactive Map**: Unauthenticated users can instantly explore the live map and Discover feed. 
 *   **Transit-Inspired Color Theming**: A vibrant "Sunset Transit" color palette universally paints event cards, discovery filters, and map pins based on category for rapid visual scanning.
 *   **Premium Map Pins**: Custom React teardrop nodes featuring rich gradients, drop shadows, and scale-on-hover micro-animations. Categorizes events via custom emojis. **Zoom-adaptive sizing** — pins shrink at low zoom to reduce overlap and improve click accuracy.
-*   **Discovery Filters**: Surface events happening "Live", "This Week", or "This Weekend" with a single tap. Collapsible "More Filters" panel for Range and Date Range to keep the UI clean.
+*   **Discovery Filters**: Surface events happening "Live", "Today", "This Week", or "This Weekend" with a single tap. Defaults to "This Week" for best initial relevance. Collapsible "More Filters" panel for Range and Date Range to keep the UI clean.
+*   **👁️ View Count Tracking**: Every unique event view is tracked via `POST /api/events/[id]/view` with session-level deduplication. View counts appear on event cards alongside RSVP counts.
+*   **🔴 "Happening Now" Live Badge**: The Map tab in the bottom navigation displays a real-time red badge showing the count of currently live events, refreshing every 5 minutes.
+*   **💡 First-Visit Onboarding**: A 3-step walkthrough tooltip guides new users through map exploration, filter usage, and event creation. Dismissed via skip or completion, persisted in localStorage.
+*   **🌙 Night-Light Pin Tiers**: At low zoom levels, the map simplifies to three visual tiers: glowing dot pins (future), medium emoji pins (imminent ≤6h), and pulsing live pins (ongoing) — reducing visual clutter while preserving at-a-glance information.
 *   **Virtual & Hybrid Events**: Create events as In-Person, Virtual (Zoom/Meet link), or Hybrid. Virtual events hide the map picker and show a meeting link field instead.
 *   **Cloud Console Styling**: Map visual themes (like Dark Mode and Point of Interest decluttering) are natively controlled via Google Cloud Map IDs without local style overrides.
 
@@ -54,6 +58,13 @@ This production-ready application features a complete authentication system, rea
 *   **Live Event Chat**: Instant messaging for all confirmed participants with **Pinned Announcements** from the host.
 *   **In-App Notifications**: Near real-time alerts for waitlist promotions, event changes, and host updates.
 *   **Automated Scheduling (Cron)**: Vercel Cron jobs automatically broadcast scheduled messages to the event chat at pre-defined intervals.
+*   **🧹 Event Expiry Auto-Cleanup**: Nightly cron (`/api/cron/cleanup`) auto-archives events older than 48 hours to keep the feed fresh.
+*   **⏱️ Event Countdown Timer**: Events starting within 6 hours show a live "Starts in Xh Ym" countdown pill in the event details drawer, updating every minute.
+*   **🎉 Post-Creation Share Card**: After creating an event, a glassmorphic overlay displays the deep link with one-tap copy and native share support for instant distribution.
+*   **🌐 TerpLink Event Scraper**: `POST /api/scrape/terplink` imports upcoming campus events from UMD's TerpLink Engage API, with automatic category mapping and deduplication.
+*   **📊 Admin Dashboard**: Protected `/admin` page displaying platform-wide metrics (total events, users, views, RSVPs, live count) with category distribution charts and one-click TerpLink import.
+*   **✨ AI Description Enhancer**: Click the ✨ button in the event creation modal to automatically rewrite rough descriptions into engaging, structured text (powered by Gemini) and receive suggested transit tips & RSVP questions.
+*   **🤖 Natural Language Vibe Search**: Search for "free food near me" or "coding workshop this weekend" and watch the AI parse intent into precise category, time, location, and keyword filters.
 
 ---
 

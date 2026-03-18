@@ -102,6 +102,17 @@ Handles joining, waitlisting, and leaving an event. This route utilizes a secure
 
 ---
 
+### `POST /api/events/[id]/view`
+Tracks a unique view for the given event. No authentication required.
+
+*   **Authentication**: None.
+*   **URL Parameter**: `id` - The Event ID.
+*   **Behavior**: Atomically increments the event's `viewCount` field using `FieldValue.increment(1)`. The client should deduplicate calls per session.
+*   **Response (200 OK)**: Empty body.
+*   **Errors**: `400 Bad Request` (missing id), `404 Not Found`, `503 Service Unavailable`.
+
+---
+
 ## 👤 Users Subsystem
 
 ### `GET /api/users/[id]/dashboard`
@@ -169,3 +180,48 @@ Scans the database for specific scheduled messages and dispatches them to their 
 *   **Trigger**: Configured in `vercel.json` (`schedule: "0 0 * * *"`).
 *   **Behavior**: Searches the `scheduledMessages` schema array on events. If `scheduledFor` is in the past, and `sent === false`, it generates a new document in the `events/{id}/chat` subcollection. If `isAnnouncement` is true, updates the parent event's `pinnedMessage`.
 *   **Response**: Standard `200 OK` upon successful execution.
+
+### `GET /api/cron/cleanup`
+Archives stale events that have ended more than 48 hours ago.
+
+*   **Authentication**: Handled via Vercel Cron Secret authorization header.
+*   **Trigger**: Configured in `vercel.json` (`schedule: "0 6 * * *"`).
+*   **Behavior**: Queries events where `date < (now - 48h)` and `status != 'archived'`. Batch-updates up to 100 events per run, setting `status: 'archived'`.
+*   **Response (200 OK)**:
+    ```json
+    {
+      "archived": 5,
+      "message": "Archived 5 stale events"
+    }
+    ```
+
+---
+
+### `POST /api/scrape/terplink`
+Imports upcoming events from UMD's TerpLink Engage API.
+
+*   **Authentication**: Requires a valid Firebase user (admin preferred).
+*   **Request Body** (optional): `{ "apiUrl": "..." }` to override the default TerpLink API URL.
+*   **Behavior**: Fetches events from TerpLink, maps categories, deduplicates by `sourceUrl`, batch-creates up to 20 events per run. Events are tagged with `isScraped: true`, `source: "terplink"`.
+*   **Response (200 OK)**:
+    ```json
+    { "imported": 5, "message": "Imported 5 events from TerpLink" }
+    ```
+
+---
+
+### `GET /api/admin/metrics`
+Returns platform-wide aggregate metrics.
+
+*   **Authentication**: Requires a valid Firebase user whose UID is in the `ADMIN_UIDS` set (configured via `ADMIN_UID` env var).
+*   **Response (200 OK)**:
+    ```json
+    {
+      "metrics": {
+        "totalEvents": 42, "totalUsers": 150, "totalViews": 1200,
+        "totalRSVPs": 300, "liveEvents": 3, "archivedEvents": 10,
+        "scrapedEvents": 15,
+        "categoryDistribution": [{ "name": "Sports", "count": 18 }]
+      }
+    }
+    ```

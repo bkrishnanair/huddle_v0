@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   Drawer,
   DrawerContent,
@@ -40,6 +40,34 @@ import { ReportModal } from "./modals/report-modal"
 import { ShieldAlert, Ban, ImageIcon } from "lucide-react"
 import EventGallery from "./events/event-gallery"
 
+function EventCountdown({ date, time }: { date: string; time: string }) {
+  const [label, setLabel] = useState("");
+
+  useEffect(() => {
+    function compute() {
+      try {
+        const start = new Date(`${date}T${time}`);
+        const msUntil = start.getTime() - Date.now();
+        if (msUntil <= 0) { setLabel(""); return; }
+        const totalMins = Math.floor(msUntil / 60000);
+        const h = Math.floor(totalMins / 60);
+        const m = totalMins % 60;
+        setLabel(h > 0 ? `Starts in ${h}h ${m}m` : `Starts in ${m}m`);
+      } catch { setLabel(""); }
+    }
+    compute();
+    const id = setInterval(compute, 60_000);
+    return () => clearInterval(id);
+  }, [date, time]);
+
+  if (!label) return null;
+  return (
+    <div className="bg-teal-500/10 border border-teal-500/20 rounded-xl p-3 flex items-center justify-center gap-2">
+      <span className="text-teal-400 text-sm font-black">⏱ {label}</span>
+    </div>
+  );
+}
+
 const getCategoryIcon = (category: string): string => {
   const icons: { [key: string]: string } = {
     Sports: "⚽", Music: "🎵", Community: "🤝", Learning: "📚",
@@ -77,6 +105,15 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
   const [reportName, setReportName] = useState("")
 
   const isOrganizer = user && event?.createdBy === user.uid
+
+  // Track view once per session per event (no auth required)
+  const viewedEvents = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (isOpen && initialEvent?.id && !viewedEvents.current.has(initialEvent.id)) {
+      viewedEvents.current.add(initialEvent.id);
+      fetch(`/api/events/${initialEvent.id}/view`, { method: 'POST' }).catch(() => {});
+    }
+  }, [isOpen, initialEvent?.id]);
 
   useEffect(() => {
     const fetchAttendees = async () => {
@@ -646,6 +683,19 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                   </Button>
                 </div>
               )}
+
+              {/* Countdown — only shown for events starting within 6 hours */}
+              {(() => {
+                if (!event.date || !event.time) return null;
+                try {
+                  const start = new Date(`${event.date}T${event.time}`);
+                  const now = new Date();
+                  const msUntil = start.getTime() - now.getTime();
+                  const sixHours = 6 * 60 * 60 * 1000;
+                  if (msUntil <= 0 || msUntil > sixHours) return null;
+                } catch { return null; }
+                return <EventCountdown date={event.date} time={event.time} />;
+              })()}
 
               {/* Capacity Meter */}
               <div className="bg-slate-900/40 p-4 rounded-xl border border-white/5 space-y-2">

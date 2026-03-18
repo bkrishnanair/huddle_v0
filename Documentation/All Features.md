@@ -95,3 +95,20 @@ Phase 5 — Social Graph & The Serendipity Engine (DONE)
    - Interest Match: The follower must have the Event's category in their `favoriteSports` array (or have no filters set).
    - Distance Match: Utilizing `geofire-common`, the follower's `lastKnownLocation` must be within 25 miles of the Event.
 4. Smart Location Debouncing: Custom background map-layer caches the `lastLocationSync` payload in `localStorage` and utilizes Google Maps Geometry to calculate real-world movement. It only POSTs to the DB if the user has physically moved >500 meters, saving massive horizontal scaling costs.
+
+Phase 6 — Pre-Competition Polish (Sprint: March 2026)
+
+1. Filter Chip Cleanup: Removed "48 Hours" from map and Discover time filters. Default changed to "This Week" with proper end-of-week (Sunday) boundary using `date-fns` `endOfWeek`.
+2. Event View Count Tracking: `POST /api/events/[id]/view` increments `viewCount` via `FieldValue.increment(1)`. Session-level deduplication via `useRef<Set<string>>` in both `map-view.tsx` and `event-details-drawer.tsx`. Eye icon + count visible on event cards.
+3. "Happening Now" Live Badge: Bottom navigation Map tab shows a red badge with live event count (refreshes every 5 min). Client-side filter checks event start/end times against current time.
+4. Post-Creation Share Card: After creating a new event, a glassmorphic overlay card displays the `huddlemap.live` deep link with copy button (using `navigator.clipboard`) and optional native `navigator.share` action.
+5. Event Countdown Timer: Inline `EventCountdown` component in the event details drawer for events starting within 6 hours. Uses `setInterval(60s)` for live "Starts in Xh Ym" pill.
+6. Event Expiry Auto-Cleanup Cron: `GET /api/cron/cleanup` route gated by `CRON_SECRET`. Batch archives up to 100 events older than 48 hours. Scheduled daily at 6 AM UTC via `vercel.json`.
+7. Extended `GameEvent` Interface: Added `viewCount`, `source` (terplink/manual), `sourceUrl`, `isScraped`, and extended `status` union to include `'archived'`.
+8. First-Visit Onboarding Tooltips: 3-step glassmorphic walkthrough (Explore, Filter, Create) shown 1.5s after first map load. Uses `localStorage` for persistence. Component: `components/onboarding-tooltip.tsx`.
+9. Night-Light Dot Pin System: Tiered pin rendering at low zoom (≤13): `DotPin` (10px glowing dot) for future events, `MediumPin` (24px emoji circle) for imminent (≤6h), `LivePin` (36px pulsing glow ring) for ongoing. Components in `components/map-pins/`.
+10. TerpLink Event Scraper: `POST /api/scrape/terplink` fetches from UMD TerpLink Engage API. Maps categories via `mapTerpLinkCategory()`. Deduplicates by `sourceUrl`. Batch imports up to 20 events per run.
+11. Admin Metrics Dashboard: `GET /api/admin/metrics` (gated by `ADMIN_UID`) returns total events/users/views/RSVPs/live/archived/scraped + category distribution. Client page at `/admin` with stat cards and bar chart.
+12. Shared Gemini Client: `lib/gemini.ts` implementing `@google/generative-ai` SDK (`gemini-2.0-flash` model) with strict server-only boundaries. Handles `generateText` and structured JSON `generateStructured<T>`.
+13. AI Description Enhancer (`POST /api/ai/enhance-description`): Gemini-powered endpoint that rewrites event descriptions and returns JSON with the `enhanced` text, a `transitTip`, and `suggestedQuestions`. Integrated with a ✨ button in `create-event-modal.tsx`.
+14. Natural Language Vibe Search (`POST /api/ai/search`): Parses conversational queries ("basketball tonight") into structured filters (`{"categories":["Sports"],"timeFilter":"today","keywords":["basketball"]}`). Integrated into `LocationSearchInput` via 'Enter' key and map-view/discover pages.
