@@ -68,7 +68,11 @@ export interface GameEvent {
     sent: boolean;
     isAnnouncement: boolean; // if true, pin it when sent
   }[];
-  status?: "active" | "past"; // To allow organizers to explicitly close events
+  viewCount?: number; // incremented via POST /api/events/[id]/view
+  source?: "terplink" | "manual"; // origin of the event
+  sourceUrl?: string; // link back to source (e.g. TerpLink event page)
+  isScraped?: boolean; // true for auto-imported events
+  status?: "active" | "archived" | "past"; // archived = expired by cleanup cron
   checkInOpen?: boolean;
   createdAt?: any;
   parentEventId?: string;
