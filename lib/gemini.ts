@@ -2,7 +2,7 @@ import 'server-only';
 
 import { GoogleGenerativeAI, type GenerationConfig } from '@google/generative-ai';
 
-const MODEL_NAME = 'gemini-2.0-flash';
+const MODEL_NAME = 'gemini-2.5-flash-preview-04-17';
 
 let genAIInstance: GoogleGenerativeAI | null = null;
 

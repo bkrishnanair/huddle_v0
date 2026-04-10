@@ -85,7 +85,7 @@ export interface GameEvent {
 export interface AppNotification {
   id: string;
   userId: string;
-  type: "waitlist_promo" | "event_update" | "event_announcement" | "general" | "rsvp_update";
+  type: "waitlist_promo" | "event_update" | "event_announcement" | "general" | "rsvp_update" | "serendipity_nudge" | "friend_attending";
   message: string;
   eventId?: string;
   read: boolean;
