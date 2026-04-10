@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, TrendingUp, Users, CalendarCheck, Download, BarChart3, AlertCircle } from "lucide-react";
+import { Loader2, TrendingUp, Users, CalendarCheck, Download, BarChart3, AlertCircle, CalendarPlus } from "lucide-react";
 import { toast } from "sonner";
 import { format, subDays, isAfter, parseISO } from "date-fns";
+import ScheduleImportModal from "@/components/schedule-import-modal";
 
 export default function DashboardPage() {
     const { user, loading: authLoading } = useAuth();
@@ -16,6 +17,7 @@ export default function DashboardPage() {
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [timeRange, setTimeRange] = useState<30 | 60 | 90>(30); // days
+    const [showImportModal, setShowImportModal] = useState(false);
 
     const fetchDashboardData = useCallback(async () => {
         if (!user) return;
@@ -109,7 +111,15 @@ export default function DashboardPage() {
                         </h1>
                         <p className="text-slate-400 mt-1">Track your community's growth and engagement.</p>
                     </div>
-
+                    <div className="flex items-center gap-2">
+                        <Button
+                            onClick={() => setShowImportModal(true)}
+                            className="bg-violet-500 hover:bg-violet-600 text-white font-bold rounded-xl h-10 px-4 gap-2"
+                        >
+                            <CalendarPlus className="w-4 h-4" />
+                            Import Schedule
+                        </Button>
+                    </div>
                     <div className="flex items-center gap-2 self-end md:self-auto bg-slate-900/50 p-1 rounded-xl border border-white/5">
                         {[30, 60, 90].map((days) => (
                             <Button
@@ -241,6 +251,13 @@ export default function DashboardPage() {
                 </Card>
 
             </div>
+            {showImportModal && (
+                <ScheduleImportModal
+                    isOpen={showImportModal}
+                    onClose={() => setShowImportModal(false)}
+                    onEventsCreated={fetchDashboardData}
+                />
+            )}
         </div>
     );
 }
