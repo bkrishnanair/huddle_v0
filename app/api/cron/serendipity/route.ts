@@ -45,9 +45,8 @@ export async function GET(request: NextRequest) {
   const now = new Date();
   const in48Hours = new Date(now.getTime() + 48 * 60 * 60 * 1000);
 
-  // Scan all active events in the next 48 hours
+  // Scan all events — filter status in-memory since some events may not have a status field
   const eventsSnap = await adminDb.collection('events')
-    .where('status', 'in', ['active', undefined])
     .get();
 
   const atRiskEvents: AtRiskEvent[] = [];

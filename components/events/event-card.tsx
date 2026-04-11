@@ -2,7 +2,7 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, MapPin, Users, CalendarPlus, Monitor, Eye } from "lucide-react";
+import { Clock, MapPin, Users, CalendarPlus, Monitor, Eye, Repeat, Megaphone } from "lucide-react";
 import { GameEvent } from "@/lib/types";
 import { formatDistanceToNow } from 'date-fns';
 
@@ -27,9 +27,10 @@ interface EventCardProps {
   onSelectEvent: (event: GameEvent) => void;
   showMapButton?: boolean;
   onUnjoin?: (eventId: string) => void;
+  hasNewUpdate?: boolean;
 }
 
-export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = false, onUnjoin }: EventCardProps) => {
+export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = false, onUnjoin, hasNewUpdate }: EventCardProps) => {
   const isFull = event.currentPlayers >= event.maxPlayers;
   const { followingSet } = useFollowing();
 
@@ -91,6 +92,12 @@ export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = fal
                 Ongoing
               </Badge>
             )}
+            {event.recurrence && (
+              <Badge className="bg-teal-500/20 text-teal-400 border border-teal-500/30 whitespace-nowrap text-[9px] font-black uppercase tracking-wider px-1.5 shadow-sm gap-0.5">
+                <Repeat className="w-2.5 h-2.5" />
+                {event.recurrence.type}{(event as any).recurringCount > 1 ? ` · ${(event as any).recurringCount} upcoming` : ''}
+              </Badge>
+            )}
             {event.maxPlayers - event.currentPlayers > 0 && event.maxPlayers - event.currentPlayers <= 3 && (
               <Badge variant="destructive" className="bg-red-500/20 text-red-400 border border-red-500/30 whitespace-nowrap text-[9px] font-black uppercase tracking-wider px-1.5 shadow-sm">
                 Limited Seating
@@ -148,6 +155,15 @@ export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = fal
             <div className="flex items-center">
               <Eye className="w-3.5 h-3.5 mr-1 text-slate-500" />
               <span className="text-slate-500 text-xs font-medium">{event.viewCount}</span>
+            </div>
+          )}
+          {hasNewUpdate && (
+            <div className="flex items-center gap-1.5">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500"></span>
+              </span>
+              <span className="text-[10px] font-bold text-orange-400 uppercase tracking-wider">New update</span>
             </div>
           )}
         </div>

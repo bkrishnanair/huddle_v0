@@ -58,7 +58,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
       }
 
-      await eventRef.update({ pinnedMessage: message });
+      await eventRef.update({ pinnedMessage: message, lastAnnouncementAt: new Date().toISOString() });
 
       // Notify users about the pinned announcement
       const eventData = eventDoc.data();

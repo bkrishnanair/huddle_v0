@@ -15,6 +15,7 @@ import { signOut } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { isToday, isWeekend, isBefore, addHours, isFuture, addDays, endOfWeek, startOfDay } from "date-fns"
 import { getCategoryColor } from "@/lib/utils"
 
@@ -55,6 +56,10 @@ export default function DiscoverPage() {
     const [aiKeywords, setAiKeywords] = useState<string[]>([]);
     const [showMoreFilters, setShowMoreFilters] = useState(false);
 
+    // Organizer search
+    const [orgResults, setOrgResults] = useState<any[]>([]);
+    const [isOrgSearching, setIsOrgSearching] = useState(false);
+
     useEffect(() => {
         navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -83,7 +88,7 @@ export default function DiscoverPage() {
                 const radius = 5000000;
 
                 const fetchPromises: Promise<Response>[] = [
-                    fetch(`/api/events?lat=${userLocation.lat}&lon=${userLocation.lng}&radius=${radius}`)
+                    fetch(`/api/events?lat=${userLocation.lat}&lon=${userLocation.lng}&radius=${radius}&groupRecurring=true`)
                 ];
 
                 if (user?.uid) {
@@ -152,6 +157,25 @@ export default function DiscoverPage() {
         setIsAiSearching(false);
       }
     };
+
+    // Debounced organizer search
+    useEffect(() => {
+        if (searchQuery.trim().length < 2) { setOrgResults([]); return; }
+        const timer = setTimeout(async () => {
+            setIsOrgSearching(true);
+            try {
+                const res = await fetch(`/api/users/search?q=${encodeURIComponent(searchQuery.trim())}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setOrgResults(data.users || []);
+                } else {
+                    setOrgResults([]);
+                }
+            } catch { setOrgResults([]); }
+            finally { setIsOrgSearching(false); }
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
 
     const handleLogout = async () => {
         try {
@@ -341,6 +365,33 @@ export default function DiscoverPage() {
 
         return (
             <>
+                {/* Organizer search results */}
+                {orgResults.length > 0 && searchQuery.trim().length >= 2 && (
+                    <section className="mb-8">
+                        <h2 className="text-lg font-black text-slate-50 mb-3 uppercase tracking-wider">Organizers</h2>
+                        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-1 px-1">
+                            {orgResults.map((org) => (
+                                <Link
+                                    key={org.uid}
+                                    href={`/profile/${org.uid}`}
+                                    className="shrink-0 w-[200px] glass-surface border border-white/10 rounded-xl p-3 hover:bg-white/5 transition-all flex items-center gap-3"
+                                >
+                                    {org.photoURL ? (
+                                        <img src={org.photoURL} alt={org.displayName} className="w-10 h-10 rounded-full object-cover" />
+                                    ) : (
+                                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
+                                            {org.displayName?.charAt(0) || '?'}
+                                        </div>
+                                    )}
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-sm font-bold text-white truncate">{org.displayName}</p>
+                                        <p className="text-[10px] text-slate-400 truncate">{org.bio || 'Organizer'}</p>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </section>
+                )}
                 {hasRecommended && (
                     <section className="mb-8">
                         <h2 className="text-2xl font-bold text-slate-50 mb-4 flex items-center gap-2"><Star className="w-6 h-6 text-yellow-400" /> Recommended For You</h2>

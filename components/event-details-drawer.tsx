@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { GameEvent } from "@/lib/types"
-import { Users, Calendar, Clock, MapPin, Loader2, Share, Trash2, Download, Copy, MessageCircle, AlertTriangle, Info, CalendarPlus, CheckCircle2, Video, Monitor, ExternalLink } from "lucide-react"
+import { Users, Calendar, Clock, MapPin, Loader2, Share, Trash2, Download, Copy, MessageCircle, AlertTriangle, Info, CalendarPlus, CheckCircle2, Video, Monitor, ExternalLink, Crown, Mail } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import EventChat from "./event-chat"
@@ -93,8 +93,11 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
   const [isFetchingAttendees, setIsFetchingAttendees] = useState(false)
   const [isCloning, setIsCloning] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+  const [isClaiming, setIsClaiming] = useState(false)
   const [showRsvpPrompt, setShowRsvpPrompt] = useState(false)
   const [guestName, setGuestName] = useState("")
+  const [guestEmail, setGuestEmail] = useState("")
+  const [shareContact, setShareContact] = useState(false)
   const [rsvpNote, setRsvpNote] = useState("")
   const [rsvpAnswers, setRsvpAnswers] = useState<Record<string, string>>({})
   const [rsvpPickupId, setRsvpPickupId] = useState("")
@@ -495,7 +498,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
           "Content-Type": "application/json",
           "Authorization": `Bearer ${idToken}`
         },
-        body: JSON.stringify({ action, note, answers: rsvpAnswers, pickupPointId: rsvpPickupId }),
+        body: JSON.stringify({ action, note, answers: rsvpAnswers, pickupPointId: rsvpPickupId, guestContactEmail: shareContact ? guestEmail : undefined, guestContactShared: shareContact }),
         credentials: "include"
       })
 
@@ -626,6 +629,49 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                   </div>
                 ))}
               </div>
+
+              {/* Claim This Event CTA for scraped events */}
+              {(event.source === 'terplink' || event.isScraped) && user && !isOrganizer && (
+                <div className="bg-gradient-to-r from-violet-500/10 to-primary/10 border border-violet-500/20 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Crown className="w-5 h-5 text-violet-400" />
+                    <h4 className="text-sm font-black text-white">Are you the organizer?</h4>
+                  </div>
+                  <p className="text-xs text-slate-400 mb-3">
+                    Claim this event to enable RSVPs, manage attendance, and send announcements to your attendees.
+                  </p>
+                  <Button
+                    onClick={async () => {
+                      setIsClaiming(true);
+                      try {
+                        const idToken = await user.getIdToken();
+                        const res = await fetch('/api/events/claim', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                          body: JSON.stringify({ scrapedEventId: event.id }),
+                        });
+                        if (res.ok) {
+                          const data = await res.json();
+                          toast.success('🎉 Event claimed! You now own this event.');
+                          onEventUpdated(data.event);
+                          onClose();
+                        } else {
+                          toast.error('Failed to claim event');
+                        }
+                      } catch {
+                        toast.error('Something went wrong');
+                      } finally {
+                        setIsClaiming(false);
+                      }
+                    }}
+                    disabled={isClaiming}
+                    className="w-full h-10 bg-violet-500 hover:bg-violet-600 text-white font-bold text-sm gap-2"
+                  >
+                    {isClaiming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Crown className="w-4 h-4" />}
+                    {isClaiming ? 'Claiming...' : 'Claim This Event'}
+                  </Button>
+                </div>
+              )}
 
               {/* Join Meeting Button — Virtual/Hybrid events, RSVP'd users only */}
               {(event.eventType === 'virtual' || event.eventType === 'hybrid') && event.virtualLink && (hasJoined || isOrganizer) && (
@@ -1128,6 +1174,35 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                 className="bg-slate-900/50 border-white/10 text-white placeholder:text-slate-500 min-h-[80px]"
               />
             </div>
+
+            {/* Guest contact sharing toggle */}
+            {!user && (
+              <div className="grid gap-2 bg-white/5 border border-white/5 rounded-xl p-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-slate-400" />
+                    Share my email with the organizer?
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={() => setShareContact(!shareContact)}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${shareContact ? 'bg-primary' : 'bg-slate-700'}`}
+                  >
+                    <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform ${shareContact ? 'translate-x-4' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+                {shareContact && (
+                  <Input
+                    type="email"
+                    value={guestEmail}
+                    onChange={(e) => setGuestEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    className="bg-slate-900/50 border-white/10 text-white placeholder:text-slate-500 h-9 text-sm"
+                  />
+                )}
+                <p className="text-[10px] text-slate-600">Off by default. The organizer can reach out if you opt in.</p>
+              </div>
+            )}
           </div>
 
           <DialogFooter>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bell, CheckCircle2, ChevronRight, Speaker, TagIcon, Edit, Clock, Sparkles, Users } from "lucide-react";
+import { Bell, CheckCircle2, ChevronRight, Speaker, TagIcon, Edit, Clock, Sparkles, Users, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     Drawer,
@@ -80,6 +80,7 @@ export function NotificationBell() {
             case "event_update": return <Edit className="w-4 h-4 text-blue-500" />;
             case "serendipity_nudge": return <Sparkles className="w-4 h-4 text-teal-400" />;
             case "friend_attending": return <Users className="w-4 h-4 text-violet-400" />;
+            case "post_event": return <ClipboardList className="w-4 h-4 text-orange-400" />;
             default: return <Bell className="w-4 h-4 text-slate-500" />;
         }
     };
