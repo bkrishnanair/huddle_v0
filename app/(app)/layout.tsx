@@ -7,6 +7,8 @@ import { useRouter, usePathname } from "next/navigation"
 import { useFirebase } from "@/lib/firebase-context"
 import BottomNavigation from "@/components/bottom-navigation"
 import { FollowingProvider } from "@/hooks/use-following"
+import { NotificationBell } from "@/components/notification-bell"
+import Link from "next/link"
 
 export default function AppLayout({
   children,
@@ -45,9 +47,21 @@ export default function AppLayout({
   return (
     <div className="relative">
       <FollowingProvider>
-        {children}
+        {/* Global top header — logo + notification bell */}
+        {user && (
+          <header className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-4 py-2.5 bg-slate-950/80 backdrop-blur-md border-b border-white/5">
+            <Link href="/home" className="flex items-center gap-2">
+              <span className="text-lg font-black text-white tracking-tight">Huddle</span>
+            </Link>
+            <NotificationBell />
+          </header>
+        )}
+        <div className={user ? "pt-12" : ""}>
+          {children}
+        </div>
         <BottomNavigation />
       </FollowingProvider>
     </div>
   )
 }
+

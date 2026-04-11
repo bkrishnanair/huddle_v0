@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { MapPin, Calendar, Search, User } from "lucide-react"
+import { MapPin, Calendar, Search, User, Home } from "lucide-react"
 import { useFirebase } from "@/lib/firebase-context"
 import { toast } from "sonner"
 import { useState, useEffect } from "react"
@@ -56,6 +56,7 @@ export default function BottomNavigation() {
   }, []);
 
   const tabs = [
+    { id: "home", label: "Home", icon: Home, href: "/home" },
     { id: "map", label: "Map", icon: MapPin, href: "/map" },
     { id: "discover", label: "Discover", icon: Search, href: "/discover" },
     { id: "my-events", label: "My Events", icon: Calendar, href: "/my-events" },
@@ -65,7 +66,7 @@ export default function BottomNavigation() {
   return (
     <div className="fixed bottom-4 inset-x-0 z-[60] flex justify-center px-4 pointer-events-none">
       <div className="flex items-center justify-around gap-1.5 rounded-full p-1.5 glass-surface border-white/15 w-full max-w-md pointer-events-auto shadow-[0_0_30px_rgba(0,0,0,0.6)]">
-        <Link href={user ? "/map" : "/"} className="w-9 h-9 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
+        <Link href={user ? "/home" : "/"} className="w-9 h-9 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
           <HuddleLogo />
         </Link>
         {tabs.map((tab) => {

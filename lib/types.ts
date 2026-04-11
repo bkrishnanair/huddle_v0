@@ -69,11 +69,15 @@ export interface GameEvent {
     isAnnouncement: boolean; // if true, pin it when sent
   }[];
   viewCount?: number; // incremented via POST /api/events/[id]/view
-  source?: "terplink" | "manual"; // origin of the event
+  source?: "terplink" | "manual" | "claimed"; // origin of the event
   sourceUrl?: string; // link back to source (e.g. TerpLink event page)
+  claimedFrom?: string; // original scraped event ID if claimed
   isScraped?: boolean; // true for auto-imported events
   status?: "active" | "archived" | "past"; // archived = expired by cleanup cron
   checkInOpen?: boolean;
+  lastAnnouncementAt?: string; // ISO — updated when organizer pins announcement
+  postEventPromptSent?: boolean; // true after post-event cron prompts organizer
+  reportedAttendance?: number; // organizer-reported actual attendance
   createdAt?: any;
   parentEventId?: string;
   recurrence?: {
@@ -85,9 +89,11 @@ export interface GameEvent {
 export interface AppNotification {
   id: string;
   userId: string;
-  type: "waitlist_promo" | "event_update" | "event_announcement" | "general" | "rsvp_update" | "serendipity_nudge" | "friend_attending";
+  type: "waitlist_promo" | "event_update" | "event_announcement" | "general" | "rsvp_update" | "serendipity_nudge" | "friend_attending" | "post_event";
   message: string;
   eventId?: string;
+  eventName?: string;
+  actions?: string[];
   read: boolean;
   createdAt: string; // ISO String
 }
