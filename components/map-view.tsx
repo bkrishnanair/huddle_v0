@@ -4,12 +4,13 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Chip } from "@/components/ui/chip"
-import { Plus, MapPin, LocateFixed, AlertCircle, Loader2, Star, Calendar, Clock, Map as MapIcon, List, Sun, Moon } from "lucide-react"
+import { Plus, MapPin, LocateFixed, AlertCircle, Loader2, Star, Calendar, Clock, Map as MapIcon, List } from "lucide-react"
+import { useTheme } from "next-themes"
 import EventDetailsDrawer from "./event-details-drawer"
 import CreateEventModal from "./create-event-modal"
 import OnboardingTooltip from "./onboarding-tooltip"
 import { EventCard } from "@/components/events/event-card"
-import { APIProvider, Map, AdvancedMarker, Pin, useMap, InfoWindow } from "@vis.gl/react-google-maps"
+import { Map, AdvancedMarker, Pin, useMap, InfoWindow } from "@vis.gl/react-google-maps"
 import { GameEvent } from "@/lib/types"
 import LocationSearchInput from "./location-search"
 import { isToday, isWeekend, isBefore, addHours, isFuture, addDays, endOfWeek, startOfDay } from "date-fns"
@@ -18,6 +19,7 @@ import { formatTime, getCategoryColor } from "@/lib/utils"
 import DotPin from "./map-pins/dot-pin"
 import MediumPin from "./map-pins/medium-pin"
 import LivePin from "./map-pins/live-pin"
+import { MapListPanel } from "@/components/map-list-panel"
 
 interface MapViewProps {
   user: any
@@ -95,12 +97,13 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>(initialCenter || { lat: 38.9897, lng: -76.9378 }) // College Park, MD
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [activeCategory, setActiveCategory] = useState("All");
-  const [activeTime, setActiveTime] = useState("This Week");
+  const [activeTime, setActiveTime] = useState("All");
   const [currentZoom, setCurrentZoom] = useState(initialCenter ? 17 : 13);
-  const [viewMode, setViewMode] = useState<"map" | "list">("map");
+  const [showListPanel, setShowListPanel] = useState(false);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [hasCenteredDefault, setHasCenteredDefault] = useState(!!initialCenter);
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const { theme } = useTheme();
+  const isDarkMode = theme === 'dark' || theme === 'system';
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isAiSearching, setIsAiSearching] = useState(false);
@@ -118,6 +121,26 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID;
+
+  // External Header Search Listener
+  useEffect(() => {
+    const handleHeaderSearch = (e: any) => {
+        const place = e.detail.place;
+        if (place?.geometry?.location) {
+            handleGlobalSearchSelect(place);
+        }
+    };
+    const handleHeaderAiSearch = (e: any) => {
+        handleAiSearch(e.detail.query);
+    };
+
+    window.addEventListener('huddle-map-search', handleHeaderSearch);
+    window.addEventListener('huddle-map-ai-search', handleHeaderAiSearch);
+    return () => {
+        window.removeEventListener('huddle-map-search', handleHeaderSearch);
+        window.removeEventListener('huddle-map-ai-search', handleHeaderAiSearch);
+    };
+  }, [map]);
 
   useEffect(() => {
     // Show prompt if we aren't deep linking
@@ -597,9 +620,8 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
   return (
     <div className="h-screen flex flex-col liquid-gradient" id="map-view">
-      <APIProvider apiKey={mapsApiKey} libraries={['geometry', 'places']}>
         <div className="flex-1 relative">
-          <div className={`w-full h-full transition-opacity duration-300 ${viewMode === 'map' ? 'opacity-100 relative z-0' : 'opacity-0 absolute -z-10 pointer-events-none'}`}>
+          <div className="w-full h-full opacity-100 relative z-0">
             <Map
               onIdle={debouncedFetchEventsInView}
               defaultCenter={mapCenter}
@@ -635,9 +657,13 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                     )}
                     {filteredEvents
                       .filter((event: GameEvent) => event.eventType !== 'virtual' && event.geopoint)
-                      .map((event: GameEvent) => {
+                      .slice(0, 40) // Limit total markers for performance
+                      .map((event: GameEvent, index: number) => {
                         const isHovered = hoveredEvent?.id === event.id;
-                        const showDetails = isHovered || currentZoom >= 16;
+                        // Ranking system: Only show teardrops for the first 15 events 
+                        const rankLimit = 15;
+                        const isPrimaryPin = index < rankLimit || !event.isScraped;
+                        const showDetails = isHovered || (currentZoom >= 16 && isPrimaryPin);
                         // Zoom-based pin sizing — smaller pins at low zoom reduce overlap
                         const pinSize = currentZoom <= 13 ? 'w-7 h-7' : currentZoom <= 15 ? 'w-8 h-8' : 'w-10 h-10';
                         const emojiSize = currentZoom <= 13 ? 'text-sm' : currentZoom <= 15 ? 'text-base' : 'text-xl';
@@ -665,8 +691,8 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                           }
                         }
 
-                        // At low zoom, use simplified pin tiers for cleaner map
-                        if (currentZoom <= 13 && !isHovered) {
+                        // "Map Dots" requirement: show simplified pins for distant or secondary events even when zoomed in
+                        if (!isHovered && (!showDetails || currentZoom <= 13)) {
                           return (
                             <AdvancedMarker
                               key={event.id}
@@ -680,11 +706,11 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                               style={{ zIndex: pinTier === 'live' ? 30 : pinTier === 'imminent' ? 20 : 0 }}
                             >
                               {pinTier === 'live' ? (
-                                <LivePin category={event.category} icon={event.icon} size={36} />
+                                <LivePin category={event.category} icon={event.icon} size={30} />
                               ) : pinTier === 'imminent' ? (
-                                <MediumPin category={event.category} icon={event.icon} size={24} />
+                                <MediumPin category={event.category} icon={event.icon} size={20} />
                               ) : (
-                                <DotPin category={event.category} size={10} />
+                                <DotPin category={event.category} size={8} />
                               )}
                             </AdvancedMarker>
                           );
@@ -816,23 +842,15 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             </Map >
           </div >
 
-          <div className="absolute top-4 left-4 right-4 z-20 flex flex-col gap-3 pointer-events-none">
-            {/* Header: Search Bar & Toggle */}
-            <div className="flex items-center gap-3 w-full pointer-events-auto">
-              {/* Search Bar */}
-              <div className="flex-1 flex items-center gap-2 bg-slate-900/60 backdrop-blur-md rounded-2xl shadow-lg border border-white/10 p-[1px]">
-                <div className="flex-1 relative z-10">
-                  <LocationSearchInput onPlaceSelect={handleGlobalSearchSelect} onAiSearch={handleAiSearch} />
-                </div>
-                {isAiSearching && <Loader2 className="w-5 h-5 text-teal-400 animate-spin mr-2" />}
-              </div>
-
+          <div className="absolute top-0 left-4 right-4 z-20 flex flex-col gap-3 pointer-events-none">
+            {/* Header: Secondary Controls */}
+            <div className="flex items-center justify-end gap-3 w-full pointer-events-auto">
               {/* View Toggle */}
               <div className="flex items-center p-1 glass-surface border border-white/10 rounded-2xl shadow-2xl shrink-0">
-                <Button variant="ghost" size="icon" className={`rounded-xl h-10 w-10 ${viewMode === 'map' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-slate-300 hover:text-white'} ${viewMode === 'list' ? 'animate-pulse' : ''}`} onClick={() => setViewMode('map')}>
+                <Button variant="ghost" size="icon" className={`rounded-xl h-10 w-10 ${!showListPanel ? 'bg-primary text-primary-foreground shadow-lg' : 'text-slate-300 hover:text-white'} ${showListPanel ? 'animate-pulse' : ''}`} onClick={() => setShowListPanel(false)}>
                   <MapIcon className="w-5 h-5" />
                 </Button>
-                <Button variant="ghost" size="icon" className={`rounded-xl h-10 w-10 ${viewMode === 'list' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-slate-300 hover:text-white'}`} onClick={() => setViewMode('list')}>
+                <Button variant="ghost" size="icon" className={`rounded-xl h-10 w-10 ${showListPanel ? 'bg-primary text-primary-foreground shadow-lg' : 'text-slate-300 hover:text-white'}`} onClick={() => setShowListPanel(true)}>
                   <List className="w-5 h-5" />
                 </Button>
               </div>
@@ -905,32 +923,21 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             )}
           </div>
 
-          {
-            viewMode === 'list' && (
-              <div
-                className="absolute inset-0 z-10 pt-[190px] px-4 pb-[var(--safe-bottom)] overflow-y-auto no-scrollbar pointer-events-auto bg-slate-950/60 backdrop-blur-md cursor-pointer"
-                onClick={() => setViewMode('map')}
-              >
-                <div className="max-w-4xl mx-auto cursor-default" onClick={(e) => e.stopPropagation()}>
-                  {filteredEvents.length === 0 ? (
-                    <div className="text-center text-slate-400 mt-10">
-                      <p>No events found in this area.</p>
-                      <p className="text-sm mt-2 opacity-70">Try zooming out on the map or searching a new location.</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-4">
-                      {filteredEvents.map(event => (
-                        <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} showMapButton={true} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )
-          }
+          <MapListPanel
+             events={filteredEvents.filter(e => e.eventType !== 'virtual').slice(0, 15)}
+             onSelectEvent={(event) => {
+                 setSelectedEvent(event);
+                 if (event.geopoint) {
+                     map?.panTo({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
+                     setCurrentZoom(16);
+                 }
+             }}
+             onClose={() => setShowListPanel(false)}
+             isVisible={showListPanel}
+          />
 
           {
-            viewMode === 'map' && (
+            !showListPanel && (
               <Button
                 id="create-event-button"
                 onClick={() => {
@@ -963,7 +970,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           }
 
           {
-            viewMode === 'map' && (
+            !showListPanel && (
               <Button
                 onClick={handleRecenter}
                 onTouchEnd={(e) => { e.preventDefault(); handleRecenter(); }}
@@ -976,25 +983,12 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             )
           }
 
-          {
-            viewMode === 'map' && (
-              <Button
-                onClick={() => setIsDarkMode(!isDarkMode)}
-                onTouchEnd={(e) => { e.preventDefault(); setIsDarkMode(!isDarkMode); }}
-                variant="default"
-                size="lg"
-                className="absolute bottom-60 md:bottom-44 right-6 h-14 w-14 rounded-full bg-slate-900 text-white shadow-lg border border-white/20 hover:scale-110 transition-all z-40 pointer-events-auto cursor-pointer"
-              >
-                {isDarkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
-              </Button>
-            )
-          }
+
         </div >
 
         {selectedEvent && <EventDetailsDrawer event={selectedEvent} isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} onEventUpdated={() => { }} />
         }
         {showCreateModal && <CreateEventModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onEventCreated={() => { }} userLocation={userLocation || mapCenter} />}
-      </APIProvider>
 
       {/* First-visit onboarding */}
       {showOnboarding && (

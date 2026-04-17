@@ -2,7 +2,7 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, MapPin, Users, CalendarPlus, Monitor, Eye } from "lucide-react";
+import { Clock, MapPin, Users, CalendarPlus, Monitor, Eye, Repeat, Megaphone, BadgeCheck } from "lucide-react";
 import { GameEvent } from "@/lib/types";
 import { formatDistanceToNow } from 'date-fns';
 
@@ -27,9 +27,10 @@ interface EventCardProps {
   onSelectEvent: (event: GameEvent) => void;
   showMapButton?: boolean;
   onUnjoin?: (eventId: string) => void;
+  hasNewUpdate?: boolean;
 }
 
-export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = false, onUnjoin }: EventCardProps) => {
+export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = false, onUnjoin, hasNewUpdate }: EventCardProps) => {
   const isFull = event.currentPlayers >= event.maxPlayers;
   const { followingSet } = useFollowing();
 
@@ -81,14 +82,23 @@ export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = fal
       <CardContent className="p-4 flex-grow relative transition-colors duration-300" style={{ background: `linear-gradient(135deg, ${getCategoryColor(event.category)}b3 0%, ${getCategoryColor(event.category)}1a 100%)` }}>
         <div className="flex justify-between items-start mb-3">
           <div className="flex items-center gap-2 pr-2 overflow-hidden">
-            <h3 className="font-bold text-lg text-white drop-shadow-md truncate">
+            <h3 className="font-bold text-lg text-white drop-shadow-md truncate flex items-center pr-1">
               <span className="mr-1.5">{event.icon || getCategoryIcon(event.category)}</span>
               {event.name}
+              {event.isOrganizerVerified && (
+                <BadgeCheck className="w-4 h-4 ml-1.5 text-blue-400 shrink-0" />
+              )}
             </h3>
             {ongoing && (
               <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 whitespace-nowrap text-[9px] font-black uppercase tracking-wider px-1.5 shadow-sm animate-pulse">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-ping"></span>
                 Ongoing
+              </Badge>
+            )}
+            {event.recurrence && (
+              <Badge className="bg-teal-500/20 text-teal-400 border border-teal-500/30 whitespace-nowrap text-[9px] font-black uppercase tracking-wider px-1.5 shadow-sm gap-0.5">
+                <Repeat className="w-2.5 h-2.5" />
+                {event.recurrence.type}{(event as any).recurringCount > 1 ? ` · ${(event as any).recurringCount} upcoming` : ''}
               </Badge>
             )}
             {event.maxPlayers - event.currentPlayers > 0 && event.maxPlayers - event.currentPlayers <= 3 && (
@@ -114,6 +124,11 @@ export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = fal
             <span className="whitespace-nowrap shrink-0 text-xs font-bold drop-shadow-md text-white/90">
               {event.category}
             </span>
+            {event.tags && event.tags.length > 0 && event.tags.map(tag => (
+              <span key={tag} className="whitespace-nowrap text-[8px] font-bold bg-white/10 text-white/60 px-1.5 py-0.5 rounded-md border border-white/10">
+                {tag}
+              </span>
+            ))}
           </div>
         </div>
         <div className="space-y-2 text-sm text-white/90 drop-shadow-sm font-medium">
@@ -148,6 +163,15 @@ export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = fal
             <div className="flex items-center">
               <Eye className="w-3.5 h-3.5 mr-1 text-slate-500" />
               <span className="text-slate-500 text-xs font-medium">{event.viewCount}</span>
+            </div>
+          )}
+          {hasNewUpdate && (
+            <div className="flex items-center gap-1.5">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500"></span>
+              </span>
+              <span className="text-[10px] font-bold text-orange-400 uppercase tracking-wider">New update</span>
             </div>
           )}
         </div>

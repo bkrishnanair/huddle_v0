@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
             if (needsUpdate) {
                 await doc.ref.update({
                     scheduledMessages: updatedMessages,
-                    ...(newPinnedMessage !== event.pinnedMessage ? { pinnedMessage: newPinnedMessage } : {})
+                    ...(newPinnedMessage !== event.pinnedMessage ? { pinnedMessage: newPinnedMessage, lastAnnouncementAt: new Date().toISOString() } : {})
                 })
             }
         }

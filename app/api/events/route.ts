@@ -69,24 +69,27 @@ export async function GET(request: NextRequest) {
     const lat = searchParams.get('lat')
     const lon = searchParams.get('lon')
     const radius = searchParams.get('radius')
+    const groupRecurring = searchParams.get('groupRecurring') === 'true'
+
+    let events: any[];
 
     if (lat && lon && radius) {
-      const events = await getNearbyEvents(
+      events = await getNearbyEvents(
         [parseFloat(lat), parseFloat(lon)],
         parseFloat(radius)
       )
-
-      // Return only actual Firebase events (exclude private ones)
-      const combinedEvents = events.filter((e: any) => !e.isPrivate)
-
-      return NextResponse.json(
-        { events: combinedEvents },
-        { headers: { 'Cache-Control': 'no-store, max-age=0' } }
-      )
+    } else {
+      events = await getEvents()
     }
 
-    const events = await getEvents()
-    const combinedEvents = events.filter((e: any) => !e.isPrivate)
+    // Filter out private events
+    let combinedEvents = events.filter((e: any) => !e.isPrivate)
+
+    // Group recurring events — only return the soonest future instance per series
+    if (groupRecurring) {
+      combinedEvents = deduplicateRecurring(combinedEvents)
+    }
+
     return NextResponse.json(
       { events: combinedEvents },
       { headers: { 'Cache-Control': 'no-store, max-age=0' } }
@@ -97,11 +100,71 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/**
+ * Groups events sharing the same `parentEventId`.
+ * For each group, returns only the soonest future instance
+ * and attaches `recurringCount` (total future instances)
+ * and `recurrenceType` (weekly/biweekly/monthly) for UI badges.
+ */
+function deduplicateRecurring(events: any[]): any[] {
+  const now = new Date();
+  const recurringGroups = new Map<string, any[]>();
+  const standalone: any[] = [];
+
+  for (const event of events) {
+    const parentId = event.parentEventId;
+    if (parentId) {
+      if (!recurringGroups.has(parentId)) {
+        recurringGroups.set(parentId, []);
+      }
+      recurringGroups.get(parentId)!.push(event);
+    } else {
+      standalone.push(event);
+    }
+  }
+
+  // For each recurring group, pick the soonest future instance
+  for (const [parentId, group] of recurringGroups) {
+    // Sort by date ascending
+    group.sort((a: any, b: any) => {
+      const dateA = a.date || '';
+      const dateB = b.date || '';
+      return dateA.localeCompare(dateB);
+    });
+
+    // Find the soonest instance that hasn't passed yet
+    const todayStr = now.toISOString().split('T')[0];
+    const futureInstances = group.filter((e: any) => e.date >= todayStr);
+    const chosen = futureInstances.length > 0 ? futureInstances[0] : group[group.length - 1];
+
+    // Attach recurring metadata for the UI badge
+    const recurrenceType = chosen.recurrence?.type || group[0]?.recurrence?.type || 'weekly';
+    chosen.recurringCount = futureInstances.length;
+    chosen.recurrenceType = recurrenceType;
+    chosen.recurringSeriesTotal = group.length;
+
+    standalone.push(chosen);
+  }
+
+  return standalone;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const user = await getServerCurrentUser()
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Gate event creation behind email verification
+    // Google sign-in users are pre-verified; anonymous/guest users are exempt
+    const isGoogleUser = user.firebase?.sign_in_provider === 'google.com';
+    const isAnonymous = user.firebase?.sign_in_provider === 'anonymous';
+    if (!isAnonymous && !isGoogleUser && !user.email_verified) {
+      return NextResponse.json(
+        { error: "Please verify your email before creating events. Check your inbox for a verification link." },
+        { status: 403 }
+      )
     }
 
     const body = await request.json()
@@ -130,6 +193,7 @@ export async function POST(request: NextRequest) {
     const userDoc = await adminDb.collection("users").doc(user.uid).get()
     const userData = userDoc.data()
     const organizerName = userData?.name || user.name || user.email?.split("@")[0] || "User"
+    const isOrganizerVerified = userData?.verificationStatus === 'verified'
 
     // compute recurrence dates
     const dates = [rest.date];
@@ -188,6 +252,7 @@ export async function POST(request: NextRequest) {
         virtualLink: rest.virtualLink || null,
         createdBy: user.uid,
         organizerName,
+        isOrganizerVerified,
         players: [user.uid],
         currentPlayers: 1,
         createdAt: Timestamp.now(),
