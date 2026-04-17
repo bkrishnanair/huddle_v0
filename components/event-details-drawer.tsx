@@ -69,34 +69,6 @@ function EventCountdown({ date, time }: { date: string; time: string }) {
   );
 }
 
-function EventCountdown({ date, time }: { date: string; time: string }) {
-  const [label, setLabel] = useState("");
-
-  useEffect(() => {
-    function compute() {
-      try {
-        const start = new Date(`${date}T${time}`);
-        const msUntil = start.getTime() - Date.now();
-        if (msUntil <= 0) { setLabel(""); return; }
-        const totalMins = Math.floor(msUntil / 60000);
-        const h = Math.floor(totalMins / 60);
-        const m = totalMins % 60;
-        setLabel(h > 0 ? `Starts in ${h}h ${m}m` : `Starts in ${m}m`);
-      } catch { setLabel(""); }
-    }
-    compute();
-    const id = setInterval(compute, 60_000);
-    return () => clearInterval(id);
-  }, [date, time]);
-
-  if (!label) return null;
-  return (
-    <div className="bg-teal-500/10 border border-teal-500/20 rounded-xl p-3 flex items-center justify-center gap-2">
-      <span className="text-teal-400 text-sm font-black">⏱ {label}</span>
-    </div>
-  );
-}
-
 const getCategoryIcon = (category: string): string => {
   const icons: { [key: string]: string } = {
     Sports: "⚽", Music: "🎵", Community: "🤝", Learning: "📚",
