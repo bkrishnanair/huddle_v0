@@ -40,7 +40,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   })
   const [copied, setCopied] = useState(false)
   const [formData, setFormData] = useState({
-    name: "", category: "", tags: [], location: "",
+    name: "", category: "", tags: [] as string[], location: "",
     date: "", endDate: "", time: "", endTime: "", maxPlayers: 10, description: "", icon: ""
   })
   const [isAiLoading, setIsAiLoading] = useState(false)
@@ -698,6 +698,38 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                 />
               </div>
             </div>
+
+            {/* Additional Tags Multi-Select */}
+            {formData.category && (
+              <div className="space-y-2">
+                <Label className="text-xs text-slate-400">Additional Tags <span className="text-slate-600 font-normal">(Optional — helps cross-category discovery)</span></Label>
+                <div className="flex flex-wrap gap-2">
+                  {CATEGORIES.filter(c => c !== formData.category).map(tag => {
+                    const isSelected = formData.tags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            handleInputChange("tags", formData.tags.filter((t: string) => t !== tag));
+                          } else {
+                            handleInputChange("tags", [...formData.tags, tag]);
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                          isSelected
+                            ? 'bg-primary/20 border-primary/40 text-primary'
+                            : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
+                        }`}
+                      >
+                        {isSelected ? '✓ ' : ''}{tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Meeting Link for Virtual/Hybrid */}
             {(isVirtual || isHybrid) && (

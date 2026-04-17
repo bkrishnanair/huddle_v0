@@ -1,12 +1,18 @@
 "use client"
 
 import type React from "react"
-
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useFirebase } from "@/lib/firebase-context"
 import BottomNavigation from "@/components/bottom-navigation"
 import { FollowingProvider } from "@/hooks/use-following"
+import { NotificationBell } from "@/components/notification-bell"
+import Link from "next/link"
+import { AuthGateModal } from "@/components/auth-gate-modal"
+import { HuddleLogo } from "@/components/huddle-logo"
+import { ThemeProvider } from "next-themes"
+import { APIProvider } from "@vis.gl/react-google-maps"
+import { TopNavbar } from "@/components/top-navbar"
 
 export default function AppLayout({
   children,
@@ -16,14 +22,21 @@ export default function AppLayout({
   const { user, loading } = useFirebase()
   const router = useRouter()
   const pathname = usePathname()
+  
+  const [showAuthGate, setShowAuthGate] = useState(false)
   const isPublicRoute = pathname === "/map" || pathname === "/discover" || pathname === "/login"
+  const showTopNav = pathname === "/map" || pathname === "/home" || pathname === "/"
 
   useEffect(() => {
-    // Only redirect if they are not loading, not logged in, and NOT on a public route
+    // Intercept redirect for unauthenticated users visiting protected routes
     if (!loading && !user && !isPublicRoute) {
-      router.push("/login")
+      if (!showAuthGate) {
+        setShowAuthGate(true)
+      }
+    } else {
+      setShowAuthGate(false)
     }
-  }, [user, loading, router, isPublicRoute])
+  }, [user, loading, isPublicRoute, showAuthGate])
 
   if (loading) {
     return (
@@ -36,18 +49,34 @@ export default function AppLayout({
     )
   }
 
-  // If there's no user, but they are on a public route, STILL render the layout
+  // If there's no user, but they are on a protected route, we STILL render the layout
   // (which includes the bottom navigation below), so they can navigate public areas.
-  if (!user && !isPublicRoute) {
-    return null
-  }
+  // The AuthGateModal will overlay it.
+
+  const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
   return (
     <div className="relative">
-      <FollowingProvider>
-        {children}
+      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+        <APIProvider apiKey={mapsApiKey} libraries={['geometry', 'places']}>
+          <FollowingProvider>
+            {/* Global top header — refined design with search and theme */}
+            {showTopNav && <TopNavbar />}
+            <div className={showTopNav ? "pt-16" : ""}>
+              {children}
+            </div>
         <BottomNavigation />
-      </FollowingProvider>
+        {showAuthGate && (
+          <AuthGateModal 
+            isOpen={showAuthGate} 
+            onClose={() => setShowAuthGate(false)} 
+            triggerContext={pathname?.includes("/my-events") ? "events" : pathname?.includes("/profile") ? "profile" : "general"}
+          />
+        )}
+          </FollowingProvider>
+        </APIProvider>
+      </ThemeProvider>
     </div>
   )
 }
+

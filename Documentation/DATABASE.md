@@ -23,9 +23,11 @@ Huddle utilizes Firebase Cloud Firestore, a NoSQL database. Data is organized in
 *   **Subcollections**:
     *   `connections/{userId}`: Stores connection requests and statuses between users.
     *   `notifications/{notifId}`: In-app notification documents.
-        *   `type` (string): `"waitlist_promo" | "event_update" | "event_announcement" | "rsvp_update"`.
+        *   `type` (string): `"waitlist_promo" | "event_update" | "event_announcement" | "rsvp_update" | "serendipity_nudge" | "friend_attending" | "post_event"`.
         *   `message` (string): Display text.
         *   `eventId` (string, optional): Linked event.
+        *   `eventName` (string, optional): Display name of linked event (for `post_event` type).
+        *   `actions` (array of strings, optional): Available actions (e.g., `"report_attendance"`, `"clone_event"`).
         *   `read` (boolean): Read/unread status.
         *   `createdAt` (string): ISO timestamp.
 
@@ -61,10 +63,14 @@ Huddle utilizes Firebase Cloud Firestore, a NoSQL database. Data is organized in
 *   `transitTips` (string, optional): Instructions on how to get to the location.
 *   `isPrivate` (boolean, optional): If `true`, the event is hidden from the global Discover feed.
 *   `viewCount` (number, optional): Incremented atomically via `POST /api/events/[id]/view`. Tracks unique views per session.
-*   `source` (string, optional): Origin of the event — `"manual"` (user-created) or `"terplink"` (scraped from TerpLink).
+*   `source` (string, optional): Origin of the event — `"manual"` (user-created), `"terplink"` (scraped from TerpLink), or `"claimed"` (scraped event claimed by organizer).
 *   `sourceUrl` (string, optional): Link back to the source event page (e.g., TerpLink URL).
+*   `claimedFrom` (string, optional): If `source === "claimed"`, the document ID of the original scraped event.
 *   `isScraped` (boolean, optional): `true` for auto-imported events from external sources.
 *   `status` (string, optional): `"active"` | `"past"` | `"archived"`. Archived events are cleaned up by the nightly cron.
+*   `lastAnnouncementAt` (string, optional): ISO timestamp updated when organizer pins an announcement. Used for "New update" indicator on event cards.
+*   `postEventPromptSent` (boolean, optional): Set to `true` after the hourly cron sends the organizer a post-event feedback prompt.
+*   `reportedAttendance` (number, optional): Organizer-reported actual attendance count. Feeds show-rate metrics.
 *   `createdAt` (Firestore Timestamp): The time the event was created.
 
 *   **Subcollections**:

@@ -16,6 +16,7 @@ Fetches a list of events. Supports both global fetching and radial geospacial qu
     *   `lat` (string, optional): Center latitude for search.
     *   `lon` (string, optional): Center longitude for search.
     *   `radius` (string, optional): Search radius in meters.
+    *   `groupRecurring` (string, optional): Set to `"true"` to deduplicate recurring event series. Returns only the soonest future instance per `parentEventId` group with `recurringCount`, `recurrenceType`, and `recurringSeriesTotal` metadata.
 *   **Response (200 OK)**:
     ```json
     {
@@ -113,6 +114,46 @@ Tracks a unique view for the given event. No authentication required.
 
 ---
 
+### `POST /api/events/claim`
+Lets an authenticated user "claim" a scraped TerpLink event, converting it into an organizer-owned event.
+
+*   **Authentication**: **Required**.
+*   **Body**:
+    ```json
+    { "scrapedEventId": "event_id_string" }
+    ```
+*   **Behavior**: Copies the scraped event data into a new document owned by the requesting user (sets `source: "claimed"`, `claimedFrom: scrapedEventId`). Archives the original scraped doc. Atomic batch write.
+*   **Response (200 OK)**: `{ "message": "Event claimed successfully!", "eventId": "new_id", "event": { ... } }`
+*   **Errors**: `401 Unauthorized`, `404 Not Found` (scraped event doesn't exist).
+
+---
+
+### `GET /api/events/featured`
+Aggregation endpoint for the Home feed. Returns curated event sections.
+
+*   **Authentication**: None (public).
+*   **Response (200 OK)**:
+    ```json
+    {
+      "happeningNow": [ /* events currently live */ ],
+      "popularThisWeek": [ /* sorted by currentPlayers desc */ ],
+      "newOnHuddle": [ /* sorted by createdAt desc */ ],
+      "categoryCounts": [ { "name": "Sports", "count": 12 } ]
+    }
+    ```
+
+---
+
+### `POST /api/events/[id]/attendance`
+Allows the event organizer to report actual attendance count after the event ends.
+
+*   **Authentication**: **Required** (organizer-only).
+*   **Body**: `{ "reportedAttendance": 25 }`
+*   **Response (200 OK)**: `{ "message": "Attendance reported successfully", "reportedAttendance": 25 }`
+*   **Errors**: `401 Unauthorized`, `403 Forbidden` (not organizer), `404 Not Found`.
+
+---
+
 ## 👤 Users Subsystem
 
 ### `GET /api/users/[id]/dashboard`
@@ -147,6 +188,22 @@ Fetches the user's latest in-app notifications.
 
 ### `PATCH /api/users/[id]/notifications`
 Marks a specific notification or all notifications as read.
+
+---
+
+### `GET /api/users/search`
+Searches users by display name (case-insensitive) for the "Search by Organizer" feature.
+
+*   **Authentication**: None.
+*   **Query Parameters**: `q` (string, required, 1-100 chars).
+*   **Response (200 OK)**:
+    ```json
+    {
+      "users": [
+        { "uid": "user_id", "displayName": "Running Club", "photoURL": "...", "bio": "..." }
+      ]
+    }
+    ```
 
 ---
 
@@ -193,6 +250,17 @@ Archives stale events that have ended more than 48 hours ago.
       "archived": 5,
       "message": "Archived 5 stale events"
     }
+    ```
+
+### `GET /api/cron/post-event-prompt`
+Scans events that ended in the last 3 hours and sends the organizer a notification prompting for attendance data and offering to clone the event.
+
+*   **Authentication**: Handled via Vercel Cron Secret or `?secret=` parameter.
+*   **Trigger**: Configured in `vercel.json` (`schedule: "0 * * * *"` — every hour).
+*   **Behavior**: Finds events where the end time is between now and 3 hours ago and `postEventPromptSent !== true`. Writes a `post_event` notification to the organizer and marks the event.
+*   **Response (200 OK)**:
+    ```json
+    { "message": "Post-event prompts sent: 3", "promptsSent": 3 }
     ```
 
 ---

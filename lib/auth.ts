@@ -7,6 +7,7 @@ import {
   GoogleAuthProvider,
   signInAnonymously,
   signOut,
+  sendEmailVerification,
   type User,
 } from "firebase/auth";
 import { auth } from "./firebase";
@@ -27,7 +28,13 @@ export const signUpWithEmail = async (email: string, password: string, name: str
   const user = userCredential.user;
   // Use the more specific createUser function from db.ts
   await createUser(user.uid, { email: user.email!, name });
-  return { uid: user.uid, email: user.email!, name };
+  // Send verification email
+  try {
+    await sendEmailVerification(user);
+  } catch (e) {
+    console.warn('Email verification send failed:', e);
+  }
+  return { uid: user.uid, email: user.email!, name, emailVerified: false };
 };
 
 export const signInWithEmail = async (email: string, password: string) => {

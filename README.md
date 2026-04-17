@@ -1,6 +1,6 @@
-# Huddle - V3.5 Pre-Competition Sprint
+# Huddle - V4.0 Platform Maturity Release
 
-Huddle is a modern, full-stack web application designed to help users discover, create, and join local pickup sports events. Centered around an interactive map, it provides a seamless experience for finding nearby games, creating events, and engaging with other participants through real-time chat, social profiles, and automated reminders.
+Huddle is a modern, full-stack web application designed to help users discover, create, and join local events. Centered around an interactive map and a curated Home feed, it provides a seamless experience for finding nearby events, creating events, and engaging with other participants through real-time chat, social profiles, and automated reminders.
 
 This production-ready application features a complete authentication system, real-time event management, and interactive social features, creating an engaging and reliable user experience for sports enthusiasts.
 
@@ -65,6 +65,19 @@ This production-ready application features a complete authentication system, rea
 *   **📊 Admin Dashboard**: Protected `/admin` page displaying platform-wide metrics (total events, users, views, RSVPs, live count) with category distribution charts and one-click TerpLink import.
 *   **✨ AI Description Enhancer**: Click the ✨ button in the event creation modal to automatically rewrite rough descriptions into engaging, structured text (powered by Gemini) and receive suggested transit tips & RSVP questions.
 *   **🤖 Natural Language Vibe Search**: Search for "free food near me" or "coding workshop this weekend" and watch the AI parse intent into precise category, time, location, and keyword filters.
+
+### 🏠 Home Feed & Discovery
+*   **Home Feed Page**: Dedicated `/home` page as the default authenticated landing page with curated sections: "Happening Now" (horizontal carousel with pulsing live indicators), "Browse by Category" (color-coded grid with event counts), "Popular This Week" (sorted by RSVPs), and "New on Huddle" (recently created).
+*   **Recurring Event Deduplication**: Server-side grouping via `?groupRecurring=true` — recurring event series show as a single card with a teal "🔁 Recurring: Weekly · N upcoming" badge instead of cluttering the feed with duplicates.
+*   **Search by Organizer Name**: Typing 2+ characters in the Discover search bar triggers a debounced organizer search, showing matching user profiles as clickable cards above event results.
+
+### 🎯 Organizer Acquisition & Retention
+*   **Claim This Event**: Scraped TerpLink events display a "Claim This Event" CTA in the event drawer. Club organizers can claim ownership with one tap — the scraped doc is archived and a new organizer-owned event doc is created with all data pre-filled.
+*   **Post-Event Attendance Prompt**: An hourly cron job detects recently-ended events and sends organizers a notification: "How many people showed up?" plus "Schedule again next week?" Builds the show-rate metric for every pitch.
+
+### 📢 Communication & Privacy
+*   **Announcement Update Indicator**: When an organizer pins an announcement, event cards on My Events show a pulsing orange "New update" dot with badge. `lastAnnouncementAt` timestamp drives the indicator.
+*   **Guest Contact Sharing Toggle**: Guest RSVP flow now includes an opt-in "Share my email with the organizer?" toggle (off by default). Respects guest privacy while enabling organizer-attendee communication when wanted.
 
 ---
 
