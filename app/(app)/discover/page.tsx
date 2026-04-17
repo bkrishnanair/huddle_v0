@@ -46,7 +46,7 @@ export default function DiscoverPage() {
 
     const [searchQuery, setSearchQuery] = useState("");
     const [activeCategory, setActiveCategory] = useState("All");
-    const [activeTime, setActiveTime] = useState("This Week");
+    const [activeTime, setActiveTime] = useState("All");
     const [activeRange, setActiveRange] = useState("50 Miles");
     const [sortBy, setSortBy] = useState("soonest");
     const [filterStartDate, setFilterStartDate] = useState("");

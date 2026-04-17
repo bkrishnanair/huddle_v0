@@ -1,12 +1,17 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/firebase-context"
 import { Button } from "@/components/ui/button"
 import CreateEventModal from "@/components/create-event-modal"
 import { EventList } from "@/components/profile/event-list"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Search, Plus } from "lucide-react"
+import { Search, Plus, BarChart3, CalendarDays } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import Link from "next/link"
+import { OrganizerStudio } from "@/components/organizer-studio"
+import { doc, getDoc } from "firebase/firestore"
+import { db } from "@/lib/firebase"
+import { GameEvent } from "@/lib/types"
 
 export default function MyEventsPage() {
   const { user, loading } = useAuth()
@@ -15,6 +20,27 @@ export default function MyEventsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [filterStartDate, setFilterStartDate] = useState("")
   const [filterEndDate, setFilterEndDate] = useState("")
+  const [activeTab, setActiveTab] = useState("joined")
+  const [showDashboard, setShowDashboard] = useState(false)
+  const [eventToClone, setEventToClone] = useState<GameEvent | null>(null)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        const searchParams = new URLSearchParams(window.location.search)
+        if (searchParams.get("tab") === "studio") {
+            setShowDashboard(true)
+        }
+        const cloneId = searchParams.get("cloneEventId")
+        if (cloneId) {
+            getDoc(doc(db, "events", cloneId)).then(snap => {
+                if (snap.exists()) {
+                    setEventToClone({ id: snap.id, ...snap.data() } as GameEvent)
+                    setShowCreateModal(true)
+                }
+            }).catch(err => console.error("Error fetching clone event", err))
+        }
+    }
+  }, [])
 
   if (loading) {
     return (
@@ -44,13 +70,26 @@ export default function MyEventsPage() {
           <h1 className="text-4xl font-extrabold text-slate-50 tracking-tight">My Events</h1>
           <p className="text-slate-400 font-medium text-lg">Manage your joined and hosted events.</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)} size="lg" className="h-12 px-6 rounded-2xl bg-primary text-primary-foreground shadow-2xl hover:scale-105 transition-all font-bold">
-          <Plus className="w-5 h-5 mr-2" />
-          Create Event
-        </Button>
+        <div className="flex flex-row items-center flex-wrap gap-3 w-full md:w-auto">
+          <Button onClick={() => setShowDashboard(!showDashboard)} variant={showDashboard ? "secondary" : "outline"} size="lg" className="h-12 px-5 md:px-6 rounded-2xl border-white/10 shadow-xl transition-all font-bold bg-slate-900/50 hover:bg-slate-800 text-white">
+            <BarChart3 className="w-5 h-5 md:mr-2" />
+            <span className="hidden md:inline">Dashboard</span>
+          </Button>
+          <Button onClick={() => setShowCreateModal(true)} size="lg" className="h-12 flex-1 md:flex-none px-6 rounded-2xl bg-primary text-primary-foreground shadow-2xl hover:scale-105 transition-all font-bold">
+            <Plus className="w-5 h-5 mr-2" />
+            <span className="hidden sm:inline">Create Event</span>
+            <span className="sm:hidden">Create</span>
+          </Button>
+        </div>
       </header>
 
-      <Tabs defaultValue="joined" key={refreshKey} className="space-y-8">
+      {showDashboard && (
+        <div className="mb-12 outline-none animate-in fade-in slide-in-from-top-4 duration-500">
+          <OrganizerStudio onTriggerCreate={() => setShowCreateModal(true)} />
+        </div>
+      )}
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} key={refreshKey} className="space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="max-w-max">
             <TabsList className="h-12 p-1 glass-surface border border-white/10 rounded-2xl shadow-2xl flex items-center bg-transparent">
@@ -124,9 +163,14 @@ export default function MyEventsPage() {
       {showCreateModal && (
         <CreateEventModal
           isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
+          onClose={() => {
+            setShowCreateModal(false);
+            setEventToClone(null);
+          }}
           onEventCreated={handleEventCreated}
           userLocation={null}
+          initialData={eventToClone || undefined}
+          isEditMode={false}
         />
       )}
     </div>

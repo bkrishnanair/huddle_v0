@@ -9,9 +9,10 @@ interface LocationSearchInputProps {
   onPlaceSelect: (place: google.maps.places.PlaceResult | null) => void;
   onAiSearch?: (query: string) => void;
   insideModal?: boolean;
+  className?: string;
 }
 
-export default function LocationSearchInput({ onPlaceSelect, onAiSearch, insideModal = false }: LocationSearchInputProps) {
+export default function LocationSearchInput({ onPlaceSelect, onAiSearch, insideModal = false, className }: LocationSearchInputProps) {
   // SEARCH: Get a reference to the input element.
   const inputRef = useRef<HTMLInputElement>(null);
   // SEARCH: Load the 'places' library from Google Maps.
@@ -51,7 +52,7 @@ export default function LocationSearchInput({ onPlaceSelect, onAiSearch, insideM
       <Input
         ref={inputRef}
         placeholder="Search for an address, place, or event vibe..."
-        className="glass border-white/30 text-white placeholder:text-white/60 w-full"
+        className={`glass border-white/30 text-white placeholder:text-white/60 w-full ${className || ''}`}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && onAiSearch && inputRef.current?.value) {
             // Check if dropdown is not active (basic heuristic: we just grab the value)

@@ -21,6 +21,7 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
   const [name, setName] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [showVerifyBanner, setShowVerifyBanner] = useState(false)
   const { user } = useAuth()
   const router = useRouter()
 
@@ -31,6 +32,7 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
       let user
       if (action === "signup") {
         user = await signUpWithEmail(email, password, name)
+        setShowVerifyBanner(true)
       } else {
         user = await signInWithEmail(email, password)
       }
@@ -75,6 +77,13 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
           Discover and join local events in real-time. Drop a pin, connect with your community, organize effortlessly, and never miss out on what's happening around you.
         </p>
       </div>
+
+      {showVerifyBanner && (
+        <div className="max-w-sm mx-auto mb-6 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 text-center">
+          <p className="text-emerald-400 text-sm font-bold mb-1">📧 Check your email!</p>
+          <p className="text-slate-400 text-xs">We sent a verification link to <span className="text-white font-medium">{email}</span>. Verify to unlock event creation.</p>
+        </div>
+      )}
 
       <Tabs defaultValue="login" className="w-full max-w-sm mx-auto">
         <TabsList className="grid w-full grid-cols-2 bg-white/10 border border-white/20 rounded-lg p-1 h-auto">

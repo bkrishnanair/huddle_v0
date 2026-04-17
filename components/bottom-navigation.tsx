@@ -6,12 +6,9 @@ import { MapPin, Calendar, Search, User, Home } from "lucide-react"
 import { useFirebase } from "@/lib/firebase-context"
 import { toast } from "sonner"
 import { useState, useEffect } from "react"
+import { HuddleLogo } from "./huddle-logo"
 
-const HuddleLogo = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-primary">
-    <path d="M4 4V20M20 4V20M4 12H20M12 4V12C12 14.2091 10.2091 16 8 16C5.79086 16 4 14.2091 4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-)
+
 
 // Checks if an event is currently happening
 function isEventLive(event: any): boolean {

@@ -29,23 +29,78 @@ interface TerpLinkEvent {
   organizationName?: string;
 }
 
+async function geocodeLocation(address: string) {
+  // Jitter helper to prevent exact stacking
+  const jitter = () => (Math.random() - 0.5) * 0.002;
+  const fallback = { lat: 38.9897 + jitter(), lng: -76.9378 + jitter() };
+
+  if (!address) return fallback;
+  
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) return fallback;
+
+  try {
+    // We append the city/state to help Google focus 
+    const query = `${address}, College Park, MD`;
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${apiKey}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    
+    if (data.results && data.results[0]) {
+       const loc = data.results[0].geometry.location;
+       // Add a tiny bit of jitter even to successful results to distinguish between events in the same building
+       return {
+         lat: loc.lat + (Math.random() - 0.5) * 0.0005,
+         lng: loc.lng + (Math.random() - 0.5) * 0.0005
+       };
+    }
+  } catch (e) {
+    console.error("Geocoding failed for", address, e);
+  }
+  return fallback;
+}
+
 function mapTerpLinkCategory(categories: string[]): string {
   const catMap: Record<string, string> = {
     'Athletics': 'Sports',
     'Sports': 'Sports',
     'Club Sports': 'Sports',
+    'Workout': 'Sports',
+    'Fitness': 'Sports',
+    'Training': 'Sports',
+    'Exercise': 'Sports',
     'Music': 'Music',
+    'Concert': 'Music',
+    'Rehearsal': 'Music',
+    'Performance': 'Music',
     'Arts': 'Arts & Culture',
     'Cultural': 'Arts & Culture',
+    'Artist': 'Arts & Culture',
+    'Creative': 'Arts & Culture',
     'Academic': 'Learning',
     'Workshop': 'Learning',
     'Professional Development': 'Learning',
+    'Science': 'Learning',
+    'Library': 'Learning',
+    'Research': 'Learning',
+    'Study': 'Learning',
     'Community Service': 'Community',
     'Social': 'Community',
+    'Philanthropy': 'Community',
+    'Meeting': 'Community',
+    'Club': 'Community',
     'Food': 'Food & Drink',
+    'Cooking': 'Food & Drink',
+    'Dining': 'Food & Drink',
     'Technology': 'Tech',
+    'Programming': 'Tech',
+    'Software': 'Tech',
+    'Engineering': 'Tech',
+    'Coding': 'Tech',
     'Outdoor': 'Outdoors',
     'Recreation': 'Outdoors',
+    'Nature': 'Outdoors',
+    'Adventure': 'Outdoors',
   };
 
   for (const cat of categories) {
@@ -71,7 +126,7 @@ export async function POST(req: NextRequest) {
     // Default TerpLink Engage API URL for UMD
     const apiUrl = validation.success && validation.data.apiUrl
       ? validation.data.apiUrl
-      : 'https://terplink.umd.edu/api/discovery/event/search?orderByField=endsOn&orderByDirection=ascending&status=Approved&take=20&query=';
+      : `https://terplink.umd.edu/api/discovery/event/search?orderByField=startsOn&orderByDirection=ascending&status=Approved&take=100&startsAfter=${new Date().toISOString()}&query=`;
 
     // Fetch from TerpLink API
     const response = await fetch(apiUrl, {
@@ -141,7 +196,14 @@ export async function POST(req: NextRequest) {
       if (!date) continue; // skip events without a valid date
 
       const category = mapTerpLinkCategory(te.categoryNames || []);
-      const geohash = geofire.geohashForLocation([UMD_LAT, UMD_LNG]);
+      const loc = te.location || 'University of Maryland';
+      const isOnline = loc.toLowerCase().includes('online') || 
+                       loc.toLowerCase().includes('zoom') || 
+                       loc.toLowerCase().includes('virtual') ||
+                       loc.toLowerCase().includes('remote');
+                       
+      const { lat, lng } = await geocodeLocation(loc);
+      const geohash = geofire.geohashForLocation([lat, lng]);
 
       const eventDoc: Record<string, any> = {
         name: te.name || 'TerpLink Event',
@@ -149,15 +211,16 @@ export async function POST(req: NextRequest) {
         description: te.description ? te.description.replace(/<[^>]*>/g, '').slice(0, 500) : '',
         category,
         sport: category,
+        eventType: isOnline ? 'virtual' : 'physical',
         date,
         time,
         endTime,
         endDate: '',
-        location: te.location || 'University of Maryland',
+        location: loc,
         maxPlayers: 50,
         currentPlayers: 0,
         players: [],
-        geopoint: new GeoPoint(UMD_LAT, UMD_LNG),
+        geopoint: new GeoPoint(lat, lng),
         geohash,
         createdBy: 'system',
         organizerName: te.organizationName || 'TerpLink',
@@ -172,8 +235,6 @@ export async function POST(req: NextRequest) {
       const docRef = adminDb.collection('events').doc();
       batch.set(docRef, eventDoc);
       importCount++;
-
-      if (importCount >= 20) break; // cap at 20 per run
     }
 
     if (importCount > 0) {

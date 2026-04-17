@@ -33,6 +33,7 @@ interface FeaturedData {
   popularThisWeek: GameEvent[];
   newOnHuddle: GameEvent[];
   categoryCounts: { name: string; count: number }[];
+  serendipityPicks?: GameEvent[];
 }
 
 export default function HomePage() {
@@ -81,6 +82,7 @@ export default function HomePage() {
   const popular = data?.popularThisWeek || [];
   const newEvents = data?.newOnHuddle || [];
   const categories = data?.categoryCounts || [];
+  const serendipityPicks = data?.serendipityPicks || [];
 
   return (
     <div className="min-h-screen bg-slate-950 pb-28">
@@ -94,6 +96,56 @@ export default function HomePage() {
             Discover what&apos;s happening around campus
           </p>
         </div>
+
+        {/* ============ SERENDIPITY PICKS ============ */}
+        {serendipityPicks.length > 0 && (
+          <section className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="relative">
+                <Sparkles className="w-5 h-5 text-teal-400" />
+              </div>
+              <h2 className="text-lg font-black text-white uppercase tracking-wider">
+                Serendipity Picks
+              </h2>
+              <span className="text-[10px] text-teal-400 font-bold bg-teal-400/10 px-2 py-0.5 rounded-full border border-teal-400/20">
+                Recommended for you
+              </span>
+            </div>
+            
+            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4 snap-x snap-mandatory">
+              {serendipityPicks.map((event) => (
+                <div
+                  key={`sp-${event.id}`}
+                  onClick={() => setSelectedEvent(event)}
+                  className="snap-start shrink-0 w-[280px] bg-teal-950/30 border border-teal-500/20 rounded-2xl p-4 cursor-pointer hover:bg-teal-900/40 transition-all group relative overflow-hidden"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xl">
+                      {CATEGORY_EMOJI[event.category || event.sport || ""] || "✨"}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-bold text-white truncate">
+                        {event.name || event.title}
+                      </h3>
+                      <p className="text-[10px] text-teal-400 font-bold uppercase tracking-wider">
+                        {event.category || event.sport}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between mt-3">
+                    <span className="text-xs text-slate-400 truncate max-w-[150px]">
+                      ⏱️ {event.date} {event.time}
+                    </span>
+                    <span className="text-xs text-white font-bold bg-white/10 px-2 py-0.5 rounded-full">
+                      {event.currentPlayers}/{event.maxPlayers}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ============ HAPPENING NOW ============ */}
         {happeningNow.length > 0 && (

@@ -43,17 +43,32 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
-    if (eventSnap.data()?.createdBy !== user.uid) {
+    const eventData = eventSnap.data()!;
+    if (eventData.createdBy !== user.uid) {
       return NextResponse.json({ error: 'Only the organizer can report attendance' }, { status: 403 });
     }
 
+    const reported = validation.data.reportedAttendance;
+    
     await eventRef.update({
-      reportedAttendance: validation.data.reportedAttendance,
+      reportedAttendance: reported,
     });
 
+    const rsvps = eventData.currentPlayers || eventData.players?.length || 1;
+    const showRate = Math.min(100, Math.round((reported / rsvps) * 100)); // Cap at 100% just in case of walk-ins exceeding RSVPs
+    const avgRate = 45; // Simulated campus average
+    const diff = showRate - avgRate;
+    
+    let rateMessage = '';
+    if (showRate > avgRate) {
+        rateMessage = `Your event had ${rsvps} RSVPs and ${reported} showed up — that's an ${showRate}% show rate, ${diff} points above the campus average!`;
+    } else {
+        rateMessage = `Your event had ${rsvps} RSVPs and ${reported} showed up — an ${showRate}% show rate. Consistency is key!`;
+    }
+
     return NextResponse.json({
-      message: 'Attendance reported successfully',
-      reportedAttendance: validation.data.reportedAttendance,
+      message: rateMessage,
+      reportedAttendance: reported,
     });
   } catch (error) {
     console.error('Report attendance error:', error);

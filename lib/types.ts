@@ -12,6 +12,8 @@ export interface UserProfile {
   photoURL?: string;
   savedQuestions?: string[];
   savedTransitTips?: string[];
+  accountType?: "individual" | "organization";
+  verificationStatus?: "pending" | "verified" | "rejected";
 }
 
 export interface GameEvent {
@@ -45,6 +47,7 @@ export interface GameEvent {
   createdBy: string;
   organizerName: string;
   organizerPhotoURL?: string;
+  isOrganizerVerified?: boolean;
   pinnedMessage?: string;
   players: string[];
   waitlist?: string[];

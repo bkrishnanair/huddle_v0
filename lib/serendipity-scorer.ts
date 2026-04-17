@@ -27,6 +27,7 @@ interface AtRiskEvent {
   id: string;
   name: string;
   category: string;
+  tags?: string[];
   date: string;
   time: string;
   currentPlayers: number;
@@ -66,6 +67,11 @@ export function scoreCandidate(
   } else if (userInterests.includes(event.category)) {
     interest = 30;
     reasons.push(`Interested in ${event.category}`);
+  } else if (event.tags && event.tags.some(tag => userInterests.includes(tag))) {
+    // User's interest matches an event tag (cross-category discovery)
+    const matchedTag = event.tags.find(tag => userInterests.includes(tag));
+    interest = 25;
+    reasons.push(`Tag match: interested in ${matchedTag}`);
   } else {
     // Check for related categories
     const relatedMap: Record<string, string[]> = {

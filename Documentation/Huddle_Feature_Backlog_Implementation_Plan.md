@@ -24,7 +24,7 @@ This document is designed to be fed directly into Antigravity (Gemini) or Claude
 
 ---
 
-### 0.1 — Favicon Update
+### 0.1 — Favicon Update (Completed)
 **What:** Replace the default Next.js favicon with the Huddle logo in the browser tab.
 **Why:** Default favicon = "student project." Custom favicon = "real product." Every judge, advisor, and user notices this.
 **How:** Place `favicon.ico` (32x32) and `icon.png` (192x192) in `app/` directory. Next.js App Router auto-detects files named `favicon.ico`, `icon.png`, and `apple-icon.png` in the `app/` root. Also add `opengraph-image.png` for social sharing previews.
@@ -106,7 +106,7 @@ This document is designed to be fed directly into Antigravity (Gemini) or Claude
 
 ---
 
-### 1.3 — Post-Event Attendance Prompt
+### 1.3 — Post-Event Attendance Prompt (Completed)
 **What:** After an event ends, prompt the organizer: "How many people actually showed up?" + "Want to schedule this again next week?"
 **Why:** This gives you the show-up rate metric (the single most important number for your pitch) and creates a one-tap retention loop for recurring organizers.
 **How:**
@@ -148,7 +148,7 @@ This document is designed to be fed directly into Antigravity (Gemini) or Claude
 
 ---
 
-### 1.5 — Individual vs. Organizational Event Distinction
+### 1.5 — Individual vs. Organizational Event Distinction (Completed)
 **What:** Visual and data distinction between events created by individuals (casual pickup games) and events created by verified organizations (official club events).
 **Why:** As the platform grows, users need to distinguish "random person's pickup basketball" from "UMD Intramural Sports official practice." Organizations get a blue check badge. Individual events are unmarked.
 **How:**
@@ -262,7 +262,7 @@ This document is designed to be fed directly into Antigravity (Gemini) or Claude
 
 ---
 
-### 2.5 — SEO for Event Pages
+### 2.5 — SEO for Event Pages (Completed)
 **What:** Make each event page discoverable on Google with proper meta tags, Open Graph data, and JSON-LD structured data.
 **Why:** When someone Googles "pickup basketball UMD" or "events near College Park tonight," your event pages should appear. This is free organic traffic.
 **How:**

@@ -39,6 +39,7 @@ import { generateGoogleCalendarUrl, downloadIcsFile } from "@/lib/calendar"
 import { ReportModal } from "./modals/report-modal"
 import { ShieldAlert, Ban, ImageIcon } from "lucide-react"
 import EventGallery from "./events/event-gallery"
+import { FollowButton } from "@/components/follow-button"
 
 function EventCountdown({ date, time }: { date: string; time: string }) {
   const [label, setLabel] = useState("");
@@ -207,6 +208,15 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
   const handleShare = async () => {
     if (!event) return;
     const shareUrl = `${window.location.origin}/map?eventId=${event.id}`
+
+    // Always attempt clipboard copy first
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      toast.success("Link copied!")
+    } catch (err) {
+      console.error("Clipboard copy failed", err)
+    }
+
     if (navigator.share) {
       try {
         await navigator.share({
@@ -216,13 +226,6 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
         })
       } catch (err) {
         // user cancelled share, fail silently
-      }
-    } else {
-      try {
-        await navigator.clipboard.writeText(shareUrl)
-        toast.success("Link copied to clipboard!")
-      } catch (err) {
-        toast.error("Failed to copy link")
       }
     }
   }
@@ -532,11 +535,11 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
       if (isFull) return "Joining Waitlist..."
       return "Joining..."
     }
-    if (!user) return "Join Game"
+    if (!user) return "Join Event"
     if (hasJoined) return "Unjoin"
     if (isWaitlisted) return "Leave Waitlist"
     if (isFull) return "Join Waitlist"
-    return "Join Game"
+    return "Join Event"
   }
 
   const getButtonVariant = () => {
@@ -655,6 +658,9 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                           toast.success('🎉 Event claimed! You now own this event.');
                           onEventUpdated(data.event);
                           onClose();
+                          if (data.isNewOrganizer) {
+                            router.push('/dashboard?onboarding=true');
+                          }
                         } else {
                           toast.error('Failed to claim event');
                         }
@@ -862,6 +868,9 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                             <div className="flex justify-between items-center">
                               <div className="flex items-center gap-2">
                                 <span className="text-xs font-bold text-slate-300">{a.name}</span>
+                                {user?.uid !== a.id && (
+                                  <FollowButton targetUserId={a.id} targetUserName={a.name} size="icon" variant="ghost" className="h-5 w-auto px-1.5 bg-transparent p-0 text-slate-500 hover:bg-slate-800 hover:text-white ml-0.5 shadow-none text-[9px] uppercase tracking-wider" />
+                                )}
                                 {(a.loyaltyCount || 0) >= 2 && (
                                   <span className="text-[8px] bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded-md border border-amber-500/20 font-black uppercase tracking-tighter shadow-sm">
                                     🔥 Tier {a.loyaltyCount}
