@@ -156,6 +156,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Gate event creation behind email verification
+    // Google sign-in users are pre-verified; anonymous/guest users are exempt
+    const isGoogleUser = user.firebase?.sign_in_provider === 'google.com';
+    const isAnonymous = user.firebase?.sign_in_provider === 'anonymous';
+    if (!isAnonymous && !isGoogleUser && !user.email_verified) {
+      return NextResponse.json(
+        { error: "Please verify your email before creating events. Check your inbox for a verification link." },
+        { status: 403 }
+      )
+    }
+
     const body = await request.json()
     console.log("Incoming Payload for POST /api/events:", body)
 
@@ -182,6 +193,7 @@ export async function POST(request: NextRequest) {
     const userDoc = await adminDb.collection("users").doc(user.uid).get()
     const userData = userDoc.data()
     const organizerName = userData?.name || user.name || user.email?.split("@")[0] || "User"
+    const isOrganizerVerified = userData?.verificationStatus === 'verified'
 
     // compute recurrence dates
     const dates = [rest.date];
@@ -240,6 +252,7 @@ export async function POST(request: NextRequest) {
         virtualLink: rest.virtualLink || null,
         createdBy: user.uid,
         organizerName,
+        isOrganizerVerified,
         players: [user.uid],
         currentPlayers: 1,
         createdAt: Timestamp.now(),

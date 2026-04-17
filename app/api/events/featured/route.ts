@@ -2,6 +2,7 @@ import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdminDb } from '@/lib/firebase-admin';
+import { getServerCurrentUser } from '@/lib/auth-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,11 +80,34 @@ export async function GET(request: NextRequest) {
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
 
+    // --- SERENDIPITY PICKS ---
+    let serendipityPicks: any[] = [];
+    const user = await getServerCurrentUser();
+    if (user) {
+      try {
+        const notifsSnap = await adminDb.collection('users').doc(user.uid)
+          .collection('notifications')
+          .where('type', '==', 'serendipity_nudge')
+          .get();
+
+        const pickEventIds = new Set<string>();
+        notifsSnap.docs.forEach(doc => {
+          const d = doc.data();
+          if (d.eventId) pickEventIds.add(d.eventId);
+        });
+
+        serendipityPicks = allEvents.filter(e => pickEventIds.has(e.id) && e.date >= todayStr);
+      } catch (e) {
+        console.error('Error fetching serendipity picks:', e);
+      }
+    }
+
     return NextResponse.json({
       happeningNow,
       popularThisWeek: thisWeekEvents,
       newOnHuddle: newEvents,
       categoryCounts,
+      serendipityPicks,
     }, { headers: { 'Cache-Control': 'no-store, max-age=0' } });
   } catch (error) {
     console.error('Featured events error:', error);

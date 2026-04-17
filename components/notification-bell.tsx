@@ -13,12 +13,19 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/lib/firebase-context";
+import { toast } from "sonner";
 
 export function NotificationBell() {
     const { user } = useAuth();
     const [notifications, setNotifications] = useState<any[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
+
+    // Post-Event Reporting State
+    const [reportingEventId, setReportingEventId] = useState<string | null>(null);
+    const [attendanceCount, setAttendanceCount] = useState("");
+    const [reportingStatus, setReportingStatus] = useState<"idle" | "loading" | "success">("idle");
+    const [reportMessage, setReportMessage] = useState<string>("");
 
     useEffect(() => {
         if (!user) return;
@@ -70,6 +77,31 @@ export function NotificationBell() {
             });
         } catch (err) {
             console.error("Failed to mark notification as read", err);
+        }
+    };
+
+    const handleReportAttendance = async (e: React.MouseEvent, eventId: string) => {
+        e.stopPropagation();
+        if (!attendanceCount || isNaN(Number(attendanceCount))) return;
+        setReportingStatus("loading");
+        try {
+            const idToken = await user!.getIdToken();
+            const res = await fetch(`/api/events/${eventId}/attendance`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
+                body: JSON.stringify({ reportedAttendance: Number(attendanceCount) })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setReportingStatus("success");
+                setReportMessage(data.message);
+            } else {
+                setReportingStatus("idle");
+                toast.error(data.error || "Failed to report attendance");
+            }
+        } catch {
+            setReportingStatus("idle");
+            toast.error("Something went wrong");
         }
     };
 
@@ -129,7 +161,14 @@ export function NotificationBell() {
                                 {notifications.map((n) => (
                                     <div
                                         key={n.id}
-                                        onClick={() => markAsRead(n.id, n.read)}
+                                        onClick={() => {
+                                            markAsRead(n.id, n.read);
+                                            if (n.type === 'post_event' && n.eventId && reportingEventId !== n.eventId) {
+                                                setReportingEventId(n.eventId);
+                                                setReportingStatus("idle");
+                                                setAttendanceCount("");
+                                            }
+                                        }}
                                         className={`p-4 transition-colors cursor-pointer hover:bg-white/5 flex gap-4 ${!n.read ? "bg-primary/5" : ""
                                             }`}
                                     >
@@ -146,6 +185,58 @@ export function NotificationBell() {
                                                 <Clock className="w-3 h-3" />
                                                 {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
                                             </div>
+
+                                            {/* Post-Event Reporting Inline UI */}
+                                            {n.type === "post_event" && reportingEventId === n.eventId && (
+                                                <div className="mt-3 bg-black/40 rounded-lg p-3 border border-white/5 cursor-default" onClick={e => e.stopPropagation()}>
+                                                    {reportingStatus === "success" ? (
+                                                        <div className="space-y-1.5">
+                                                            <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-2 mx-auto">
+                                                                <CheckCircle2 className="w-5 h-5" />
+                                                            </div>
+                                                            <p className="text-xs text-emerald-400 font-bold leading-relaxed text-center">
+                                                                {reportMessage}
+                                                            </p>
+                                                            <Button 
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setIsOpen(false);
+                                                                    setTimeout(() => {
+                                                                        window.location.href = `/my-events?cloneEventId=${n.eventId}`;
+                                                                    }, 100);
+                                                                }}
+                                                                className="mt-3 w-full bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/30 text-emerald-400 text-xs font-bold"
+                                                            >
+                                                                Schedule Again Next Week
+                                                            </Button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="space-y-2 text-center">
+                                                            <p className="text-xs text-slate-300 font-bold">How many people actually showed up?</p>
+                                                            <div className="flex gap-2">
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    value={attendanceCount}
+                                                                    onChange={(e) => setAttendanceCount(e.target.value)}
+                                                                    placeholder="0"
+                                                                    className="w-16 bg-slate-900 border border-white/10 rounded-md text-white text-center text-sm focus:outline-none focus:border-primary"
+                                                                />
+                                                                <Button 
+                                                                    size="sm"
+                                                                    onClick={(e) => handleReportAttendance(e, n.eventId!)}
+                                                                    disabled={!attendanceCount || reportingStatus === 'loading'}
+                                                                    className="flex-1 min-w-[80px] h-8 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold"
+                                                                >
+                                                                    {reportingStatus === 'loading' ? 'Saving...' : 'Report'}
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                         {!n.read && (
                                             <div className="shrink-0 pt-2">

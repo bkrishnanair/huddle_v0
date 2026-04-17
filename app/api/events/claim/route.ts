@@ -88,10 +88,13 @@ export async function POST(request: NextRequest) {
     batch.update(scrapedRef, { status: 'archived', claimedBy: user.uid, claimedAt: Timestamp.now() });
     await batch.commit();
 
+    const isNewOrganizer = !userData.onboardingComplete;
+
     return NextResponse.json({
       message: 'Event claimed successfully! You now own and manage this event.',
       eventId: newEventRef.id,
       event: { id: newEventRef.id, ...newEvent },
+      isNewOrganizer,
     });
   } catch (error) {
     console.error('Claim event error:', error);
