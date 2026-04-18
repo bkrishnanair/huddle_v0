@@ -935,9 +935,9 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
           <div className="absolute top-0 left-0 right-0 z-20 flex flex-col pointer-events-none">
             {/* Glassmorphic Top Bar */}
-            <div className="pointer-events-auto mx-3 mt-3 bg-slate-950/70 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] overflow-hidden">
+            <div className="pointer-events-auto bg-slate-950/70 backdrop-blur-xl border-b border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)] overflow-hidden">
               {/* Search Row */}
-              <div className="flex items-center gap-2 px-3 py-2.5">
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-white/5">
                 {/* Location Search (Google Places) */}
                 <div className="flex-1 min-w-0">
                   <LocationSearchInput
@@ -948,7 +948,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                 </div>
 
                 {/* Event Name Search */}
-                <div className="relative w-36 md:w-48 shrink-0">
+                <div className="flex-1 min-w-0 relative shrink-0">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
                   <input
                     type="text"
@@ -959,8 +959,8 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                   />
                 </div>
 
-                {/* View Toggle (Desktop Only) */}
-                <div className="hidden md:flex items-center p-0.5 bg-white/5 border border-white/10 rounded-xl shrink-0">
+                {/* View Toggle */}
+                <div className="flex items-center p-0.5 bg-white/5 border border-white/10 rounded-xl shrink-0">
                   <button
                     className={`rounded-lg h-8 w-8 flex items-center justify-center transition-all ${!showListPanel ? 'bg-primary text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
                     onClick={() => setShowListPanel(false)}
