@@ -134,12 +134,17 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
     const handleHeaderAiSearch = (e: any) => {
         handleAiSearch(e.detail.query);
     };
+    const handleTextSearch = (e: any) => {
+        setEventSearchQuery(e.detail.query);
+    };
 
     window.addEventListener('huddle-map-search', handleHeaderSearch);
     window.addEventListener('huddle-map-ai-search', handleHeaderAiSearch);
+    window.addEventListener('huddle-text-search', handleTextSearch);
     return () => {
         window.removeEventListener('huddle-map-search', handleHeaderSearch);
         window.removeEventListener('huddle-map-ai-search', handleHeaderAiSearch);
+        window.removeEventListener('huddle-text-search', handleTextSearch);
     };
   }, [map]);
 
@@ -614,7 +619,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   }
 
   return (
-    <div className="h-[calc(100dvh-90px)] flex flex-col liquid-gradient" id="map-view">
+    <div className="h-[100dvh] flex flex-col liquid-gradient" id="map-view">
         <div className="flex-1 relative overflow-hidden">
           <div className="w-full h-full opacity-100 relative z-0">
             <Map
@@ -933,61 +938,21 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             </Map >
           </div >
 
-          <div className="absolute top-0 left-0 right-0 z-20 flex flex-col pointer-events-none">
-            {/* Glassmorphic Top Bar */}
-            <div className="pointer-events-auto bg-slate-950/70 backdrop-blur-xl border-b border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)] overflow-hidden">
-              {/* Search Row */}
-              <div className="flex items-center gap-2 px-3 py-2 border-b border-white/5">
-                {/* Location Search (Google Places) */}
-                <div className="flex-1 min-w-0">
-                  <LocationSearchInput
-                    onPlaceSelect={handleGlobalSearchSelect}
-                    onAiSearch={handleAiSearch}
-                    className="!bg-white/5 !border-white/10 h-9 text-sm !rounded-xl placeholder:text-slate-500"
-                  />
-                </div>
-
-                {/* Event Name Search */}
-                <div className="flex-1 min-w-0 relative shrink-0">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
-                  <input
-                    type="text"
-                    placeholder="Filter events..."
-                    value={eventSearchQuery}
-                    onChange={(e) => setEventSearchQuery(e.target.value)}
-                    className="w-full h-9 pl-8 pr-3 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder:text-slate-500 outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
-                  />
-                </div>
-
-                {/* View Toggle */}
-                <div className="flex items-center p-0.5 bg-white/5 border border-white/10 rounded-xl shrink-0">
-                  <button
-                    className={`rounded-lg h-8 w-8 flex items-center justify-center transition-all ${!showListPanel ? 'bg-primary text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
-                    onClick={() => setShowListPanel(false)}
-                  >
-                    <MapIcon className="w-4 h-4" />
-                  </button>
-                  <button
-                    className={`rounded-lg h-8 w-8 flex items-center justify-center transition-all ${showListPanel ? 'bg-primary text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
-                    onClick={() => setShowListPanel(true)}
-                  >
-                    <List className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Filter Chips Row */}
-              <div className="flex flex-col gap-1.5 px-3 pb-2.5">
-                {/* Category Chips */}
-                <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar">
-                  {CATEGORIES.map(category => (
-                    <Chip
-                      key={category}
-                      size="sm"
-                      isActive={activeCategory === category}
-                      onClick={() => setActiveCategory(category)}
-                      className="shrink-0 text-xs"
-                    >
+    <div className="absolute top-[88px] inset-x-2 z-20 flex flex-col gap-2 pointer-events-none">
+            {/* Filter Chips & View Toggle Container */}
+            <div className="pointer-events-auto flex gap-2">
+                {/* Filters Pill */}
+                <div className="flex-1 glass-surface rounded-2xl p-2.5 flex flex-col gap-2 shadow-lg overflow-hidden">
+                    {/* Category Chips */}
+                    <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar">
+                    {CATEGORIES.map(category => (
+                        <Chip
+                        key={category}
+                        size="sm"
+                        isActive={activeCategory === category}
+                        onClick={() => setActiveCategory(category)}
+                        className="shrink-0 text-xs"
+                        >
                       {category}
                     </Chip>
                   ))}
@@ -1018,14 +983,31 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                 </div>
               </div>
 
-              {/* AI Searching indicator */}
-              {isAiSearching && (
-                <div className="px-3 pb-2 flex items-center gap-2 text-xs text-teal-400 font-bold">
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  Searching with AI...
-                </div>
-              )}
+              {/* View Toggle Pill */}
+              <div className="glass-surface rounded-2xl p-1 flex flex-col gap-1 items-center justify-center shadow-lg shrink-0 h-[84px]">
+                <button
+                className={`rounded-xl h-9 w-9 flex items-center justify-center transition-all ${!showListPanel ? 'bg-primary text-white' : 'text-slate-400 hover:text-white'}`}
+                onClick={() => setShowListPanel(false)}
+                >
+                <MapIcon className="w-4 h-4" />
+                </button>
+                <button
+                className={`rounded-xl h-9 w-9 flex items-center justify-center transition-all ${showListPanel ? 'bg-primary text-white' : 'text-slate-400 hover:text-white'}`}
+                onClick={() => setShowListPanel(true)}
+                >
+                <List className="w-4 h-4" />
+                </button>
+              </div>
             </div>
+
+            {/* AI Searching indicator */}
+            {isAiSearching && (
+              <div className="pointer-events-auto px-4 py-2 mt-1 mx-2 bg-indigo-500/20 backdrop-blur-md rounded-xl border border-indigo-500/30 w-max flex items-center gap-2 text-xs text-indigo-300 font-bold shadow-lg">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Searching with AI...
+              </div>
+            )}
+          </div>
 
             {/* Location Permission Toast/Prompt */}
             {showLocationPrompt && !userLocation && (

@@ -62,7 +62,7 @@ export default function AppLayout({
           <FollowingProvider>
             {/* Global top header — refined design with search and theme */}
             {showTopNav && <TopNavbar />}
-            <div className={showTopNav ? "pt-[90px]" : ""}>
+            <div className={showTopNav && pathname !== "/map" ? "pt-[90px]" : ""}>
               {children}
             </div>
         <BottomNavigation />
