@@ -66,7 +66,9 @@ Huddle utilizes Firebase Cloud Firestore, a NoSQL database. Data is organized in
 *   `source` (string, optional): Origin of the event — `"manual"` (user-created), `"terplink"` (scraped from TerpLink), or `"claimed"` (scraped event claimed by organizer).
 *   `sourceUrl` (string, optional): Link back to the source event page (e.g., TerpLink URL).
 *   `claimedFrom` (string, optional): If `source === "claimed"`, the document ID of the original scraped event.
+*   `claimedAt` (Firestore Timestamp, optional): When the event was claimed by an organizer.
 *   `isScraped` (boolean, optional): `true` for auto-imported events from external sources.
+*   `timezone` (string, optional): IANA timezone identifier (e.g., `"America/New_York"`). Events without this field default to `"America/New_York"`. New events capture the organizer's browser timezone automatically.
 *   `status` (string, optional): `"active"` | `"past"` | `"archived"`. Archived events are cleaned up by the nightly cron.
 *   `lastAnnouncementAt` (string, optional): ISO timestamp updated when organizer pins an announcement. Used for "New update" indicator on event cards.
 *   `postEventPromptSent` (boolean, optional): Set to `true` after the hourly cron sends the organizer a post-event feedback prompt.
