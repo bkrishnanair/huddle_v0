@@ -614,8 +614,8 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   }
 
   return (
-    <div className="h-screen flex flex-col liquid-gradient" id="map-view">
-        <div className="flex-1 relative">
+    <div className="h-[calc(100dvh-90px)] flex flex-col liquid-gradient" id="map-view">
+        <div className="flex-1 relative overflow-hidden">
           <div className="w-full h-full opacity-100 relative z-0">
             <Map
               onIdle={debouncedFetchEventsInView}
