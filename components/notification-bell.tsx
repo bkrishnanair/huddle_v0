@@ -124,10 +124,10 @@ export function NotificationBell() {
             <Button
                 variant="ghost"
                 size="icon"
-                className="relative hover:bg-white/10"
+                className="relative hover:bg-black/5 dark:hover:bg-white/10"
                 onClick={() => setIsOpen(true)}
             >
-                <Bell className="w-5 h-5 text-slate-300" />
+                <Bell className="w-5 h-5 text-slate-500 dark:text-slate-300" />
                 {unreadCount > 0 && (
                     <Badge
                         variant="destructive"
@@ -139,7 +139,7 @@ export function NotificationBell() {
             </Button>
 
             <Drawer open={isOpen} onOpenChange={setIsOpen}>
-                <DrawerContent className="glass-surface border-white/10 text-foreground max-w-lg mx-auto rounded-t-[2rem] max-h-[85vh] flex flex-col focus:outline-none">
+                <DrawerContent className="glass-surface border-foreground/10 dark:border-white/10 text-foreground max-w-lg mx-auto rounded-t-[2rem] max-h-[85vh] flex flex-col focus:outline-none">
                     <div className="mx-auto mt-4 h-1.5 w-12 rounded-full bg-white/20 shrink-0" />
                     <DrawerHeader className="pb-4 pt-2 shrink-0 border-b border-white/5">
                         <div className="flex justify-between items-center">
