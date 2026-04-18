@@ -75,6 +75,7 @@ export interface GameEvent {
   source?: "terplink" | "manual" | "claimed"; // origin of the event
   sourceUrl?: string; // link back to source (e.g. TerpLink event page)
   claimedFrom?: string; // original scraped event ID if claimed
+  claimedAt?: any; // Timestamp — when the event was claimed by an organizer
   isScraped?: boolean; // true for auto-imported events
   status?: "active" | "archived" | "past"; // archived = expired by cleanup cron
   checkInOpen?: boolean;

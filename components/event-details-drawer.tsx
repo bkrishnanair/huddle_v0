@@ -642,6 +642,11 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                   </div>
                   <p className="text-xs text-slate-400 mb-3">
                     Claim this event to enable RSVPs, manage attendance, and send announcements to your attendees.
+                    {(event.currentPlayers > 0 || (event.players && event.players.length > 0)) && (
+                      <span className="block mt-1 text-violet-400 font-bold">
+                        ⚡ {event.currentPlayers || event.players?.length || 0} existing attendee{(event.currentPlayers || event.players?.length || 0) !== 1 ? 's' : ''} will be preserved and notified.
+                      </span>
+                    )}
                   </p>
                   <Button
                     onClick={async () => {
@@ -655,14 +660,15 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                         });
                         if (res.ok) {
                           const data = await res.json();
-                          toast.success('🎉 Event claimed! You now own this event.');
+                          toast.success('🎉 Event claimed! All existing RSVPs are preserved.');
                           onEventUpdated(data.event);
-                          onClose();
+                          // Don't close — let the user see their newly-claimed event with updated ownership
                           if (data.isNewOrganizer) {
                             router.push('/dashboard?onboarding=true');
                           }
                         } else {
-                          toast.error('Failed to claim event');
+                          const errData = await res.json().catch(() => ({ error: 'Failed to claim event' }));
+                          toast.error(errData.error || 'Failed to claim event');
                         }
                       } catch {
                         toast.error('Something went wrong');
