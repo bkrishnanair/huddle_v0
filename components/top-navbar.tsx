@@ -56,7 +56,7 @@ export function TopNavbar() {
                                 <LocationSearchInput
                                     onPlaceSelect={handlePlaceSelect}
                                     onAiSearch={handleAiSearch}
-                                    className="bg-transparent border-none shadow-none focus-visible:ring-0 text-[14px] h-full placeholder:text-slate-500 text-foreground"
+                                    className="bg-transparent !border-0 !ring-0 !outline-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 text-[14px] h-full placeholder:text-slate-500 text-foreground"
                                 />
                             </div>
                             {isAiSearching && <Loader2 className="w-4 h-4 text-primary animate-spin mr-3" />}
@@ -71,7 +71,7 @@ export function TopNavbar() {
                             <input
                                 type="text"
                                 placeholder="Search by Event"
-                                className="w-full h-full pl-9 pr-3 bg-transparent border-none text-[14px] text-foreground placeholder:text-slate-500 outline-none focus:ring-0 transition-all rounded-xl"
+                                className="w-full h-full pl-9 pr-3 bg-transparent !border-0 !ring-0 !outline-none text-[14px] text-foreground placeholder:text-slate-500 transition-all rounded-xl"
                                 onChange={(e) => {
                                     window.dispatchEvent(new CustomEvent('huddle-text-search', { detail: { query: e.target.value } }));
                                 }}
