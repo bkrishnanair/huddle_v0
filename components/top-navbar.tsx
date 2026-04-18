@@ -37,7 +37,7 @@ export function TopNavbar() {
     }
 
     return (
-        <header className="fixed top-0 inset-x-0 z-[100] h-16 bg-slate-950/80 backdrop-blur-xl border-b border-white/5 shadow-2xl safe-top">
+        <header className="fixed top-0 inset-x-0 z-[100] h-16 bg-slate-950/30 backdrop-blur-2xl border-b border-white/10 shadow-2xl safe-top">
             <div className="max-w-[1800px] mx-auto h-full px-4 flex items-center justify-between gap-4">
                 {/* Logo Section */}
                 <Link href="/home" className="flex items-center gap-3 shrink-0">
@@ -45,12 +45,12 @@ export function TopNavbar() {
                     <span className="text-2xl font-black text-white tracking-tighter hidden sm:inline">Huddle</span>
                 </Link>
 
-                {/* Search Bar Integration (only on map) */}
-                {showSearch && (
-                    <div className="flex-1 max-w-2xl px-2 animate-in fade-in slide-in-from-top-2 duration-500">
+                {/* Search Bar Integration (only on desktop non-map pages) */}
+                {!isMapPage && (
+                    <div className="hidden md:block flex-1 max-w-2xl px-2 animate-in fade-in slide-in-from-top-2 duration-500">
                         <div className="relative group">
                             <div className="absolute inset-0 bg-primary/20 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none" />
-                            <div className="relative bg-slate-900/60 backdrop-blur-md rounded-2xl border border-white/10 p-[1px] flex items-center group-focus-within:border-primary/50 transition-all">
+                            <div className="relative bg-slate-900/40 backdrop-blur-2xl rounded-2xl border border-white/10 p-[1px] flex items-center group-focus-within:border-primary/50 transition-all">
                                 <Search className="w-5 h-5 ml-3 text-slate-500 group-focus-within:text-primary transition-colors shrink-0" />
                                 <div className="flex-1 h-10 flex items-center pr-2">
                                      <LocationSearchInput 
