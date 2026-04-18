@@ -46,7 +46,7 @@ export function TopNavbar() {
                 </Link>
 
                 {/* Search Bar Integration (Cross-Platform) */}
-                <div className="hidden md:flex flex-1 max-w-2xl px-2 gap-2 animate-in fade-in slide-in-from-top-2 duration-500">
+                <div className="hidden md:flex flex-1 max-w-4xl px-4 gap-2 animate-in fade-in slide-in-from-top-2 duration-500">
                     {/* Location Search */}
                     <div className="flex-1 min-w-0 relative group">
                         <div className="absolute inset-0 bg-primary/20 rounded-xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none" />
