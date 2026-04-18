@@ -3,6 +3,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdminDb } from '@/lib/firebase-admin';
 import { getServerCurrentUser } from '@/lib/auth-server';
+import { isEventLive } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,18 +39,9 @@ export async function GET(request: NextRequest) {
     });
 
     // --- HAPPENING NOW ---
-    const happeningNow = allEvents.filter(e => {
-      if (!e.date || !e.time) return false;
-      try {
-        const start = new Date(`${e.date}T${e.time}`);
-        if (isNaN(start.getTime())) return false;
-        if (now < start) return false;
-        const end = e.endTime
-          ? new Date(`${e.date}T${e.endTime}`)
-          : new Date(start.getTime() + 3 * 60 * 60 * 1000);
-        return now <= end;
-      } catch { return false; }
-    }).slice(0, 10);
+    // Uses the canonical isEventLive() from lib/utils to guarantee 
+    // count consistency with the Map's "Live" filter chip.
+    const happeningNow = allEvents.filter(e => isEventLive(e)).slice(0, 10);
 
     // --- POPULAR THIS WEEK ---
     const thisWeekEvents = allEvents
