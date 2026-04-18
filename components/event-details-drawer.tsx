@@ -40,15 +40,18 @@ import { ReportModal } from "./modals/report-modal"
 import { ShieldAlert, Ban, ImageIcon } from "lucide-react"
 import EventGallery from "./events/event-gallery"
 import { FollowButton } from "@/components/follow-button"
+import { getEventStartUTC, formatEventTimeRange } from "@/lib/datetime"
 
-function EventCountdown({ date, time }: { date: string; time: string }) {
+function EventCountdown({ date, time, timezone }: { date: string; time: string; timezone?: string }) {
   const [label, setLabel] = useState("");
 
   useEffect(() => {
     function compute() {
       try {
-        const start = new Date(`${date}T${time}`);
-        const msUntil = start.getTime() - Date.now();
+        // Use timezone-aware UTC conversion for accurate countdowns
+        const event = { date, time, timezone } as any;
+        const startUTC = getEventStartUTC(event);
+        const msUntil = startUTC.getTime() - Date.now();
         if (msUntil <= 0) { setLabel(""); return; }
         const totalMins = Math.floor(msUntil / 60000);
         const h = Math.floor(totalMins / 60);
@@ -59,7 +62,7 @@ function EventCountdown({ date, time }: { date: string; time: string }) {
     compute();
     const id = setInterval(compute, 60_000);
     return () => clearInterval(id);
-  }, [date, time]);
+  }, [date, time, timezone]);
 
   if (!label) return null;
   return (
@@ -611,7 +614,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                 {[
                   { icon: Users, label: "Capacity", value: `${event.currentPlayers} / ${event.maxPlayers}` },
                   { icon: Calendar, label: "Date", value: event.date.includes('/') ? event.date : format(parseISO(event.date), 'MMM d, yyyy') },
-                  { icon: Clock, label: "Time", value: event.endTime ? `${event.time} - ${event.endTime}` : event.time },
+                  { icon: Clock, label: "Time", value: formatEventTimeRange(event) },
                   ...(event.eventType === 'virtual'
                     ? [{ icon: Monitor, label: "Location", value: event.location || '🖥️ Virtual Event' }]
                     : [{ icon: MapPin, label: "Location", value: typeof event.location === 'string' ? event.location : 'Unavailable' }]
@@ -752,7 +755,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                   const sixHours = 6 * 60 * 60 * 1000;
                   if (msUntil <= 0 || msUntil > sixHours) return null;
                 } catch { return null; }
-                return <EventCountdown date={event.date} time={event.time} />;
+                return <EventCountdown date={event.date} time={event.time} timezone={event.timezone} />;
               })()}
 
               {/* Capacity Meter */}

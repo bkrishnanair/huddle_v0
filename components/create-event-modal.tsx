@@ -492,6 +492,8 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         pickupPoints,
         stayUntil,
         transitTips,
+        // Capture organizer's timezone from browser for timezone-aware display
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         ...(scheduledMessagesPayload.length > 0 && { scheduledMessages: scheduledMessagesPayload }),
         ...(isRecurring && recurrenceEndDate && !isEditMode && {
           recurrence: {
