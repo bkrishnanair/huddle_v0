@@ -656,8 +656,8 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                       const mappableEvents = filteredEvents
                         .filter((event: GameEvent) => event.eventType !== 'virtual' && event.geopoint);
 
-                      // At zoom >= 16, show all pins unclustered. Below that, cluster.
-                      const CLUSTER_RADIUS = currentZoom >= 16 ? 0 : 0.0005; // ~50m in lat/lng
+                      // At zoom >= 16, show pins unclustered EXCEPT for exact overlapping duplicates. Below that, cluster normally.
+                      const CLUSTER_RADIUS = currentZoom >= 16 ? 0.0000001 : 0.0005; // ~50m for normal, identical for high zoom
                       type Cluster = { events: GameEvent[]; lat: number; lng: number };
                       const clusters: Cluster[] = [];
 

@@ -17,14 +17,14 @@ export function MapListPanel({ events, onSelectEvent, isVisible }: MapListPanelP
     // On mobile, the sheet is always visible, so `isVisible` only applies to desktop (md)
     return (
         <div className={`
-            absolute z-[50] flex flex-col transition-all duration-300 ease-out shadow-[0_-10px_40px_rgba(0,0,0,0.5)] md:shadow-[20px_0_40px_rgba(0,0,0,0.5)]
+            z-[50] flex flex-col transition-all duration-300 ease-out shadow-[0_-10px_40px_rgba(0,0,0,0.5)] md:shadow-[20px_0_40px_rgba(0,0,0,0.5)]
             
             /* Mobile styles: Bottom sheet */
-            inset-x-0 bottom-[calc(var(--safe-bottom,0px)+55px)] w-full rounded-t-3xl bg-slate-950/95 backdrop-blur-2xl border-t border-white/10
-            ${isExpanded ? 'h-[85vh]' : 'h-[32vh]'}
+            fixed md:absolute inset-x-2 md:inset-x-0 bottom-[80px] md:bottom-0 rounded-3xl md:rounded-none bg-slate-950/95 backdrop-blur-2xl border border-white/10
+            ${isExpanded ? 'h-[85vh] bottom-0 rounded-b-none border-b-0 inset-x-0' : 'h-[32vh]'}
             
             /* Desktop styles: Side panel */
-            md:inset-y-0 md:left-0 md:w-[420px] md:pt-[70px] md:rounded-none md:border-r md:border-t-0 md:h-[100dvh]
+            md:inset-y-0 md:left-0 md:w-[420px] md:pt-[70px] md:border-r md:border-t-0 md:h-[100dvh] md:border-l-0 md:border-b-0
             ${isVisible ? 'md:translate-x-0' : 'md:-translate-x-full md:pointer-events-none md:opacity-0'}
         `}>
            {/* Mobile Drag Handle */}
