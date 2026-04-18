@@ -42,6 +42,7 @@ export interface GameEvent {
   endDate?: string;
   time: string;
   endTime?: string;
+  timezone?: string; // IANA timezone (e.g. "America/New_York"). Defaults to "America/New_York" if missing.
   maxPlayers: number;
   currentPlayers: number;
   createdBy: string;
