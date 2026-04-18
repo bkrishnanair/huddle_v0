@@ -1045,8 +1045,6 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                 </div>
               </div>
             )}
-          </div>
-
           <MapListPanel
              events={filteredEvents.filter(e => e.eventType !== 'virtual').slice(0, 15)}
              onSelectEvent={(event) => {
