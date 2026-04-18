@@ -15,7 +15,7 @@ import { GameEvent } from "@/lib/types"
 import LocationSearchInput from "./location-search"
 import { isToday, isWeekend, isBefore, addHours, isFuture, addDays, endOfWeek, startOfDay } from "date-fns"
 import { toast } from "sonner"
-import { formatTime, getCategoryColor } from "@/lib/utils"
+import { formatTime, getCategoryColor, isEventLive } from "@/lib/utils"
 import DotPin from "./map-pins/dot-pin"
 import MediumPin from "./map-pins/medium-pin"
 import LivePin from "./map-pins/live-pin"
@@ -479,27 +479,9 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
     }
   }, [map, dismissPrompt]);
 
-  // Shared Helper — must be defined before filteredEvents useMemo that references it
-  const isEventOngoing = (event: GameEvent) => {
-    if (event.status === 'past') return false;
-    if (!event.date || !event.time) return false;
-    try {
-      const startDateTime = new Date(`${event.date}T${event.time}`);
-      if (isNaN(startDateTime.getTime())) return false;
-      const now = new Date();
-      if (now < startDateTime) return false;
-
-      let endDateTime;
-      if (event.endTime) {
-        endDateTime = new Date(`${event.date}T${event.endTime}`);
-      } else {
-        endDateTime = new Date(startDateTime.getTime() + 3 * 60 * 60 * 1000);
-      }
-      return now <= endDateTime;
-    } catch (e) {
-      return false;
-    }
-  };
+  // Shared Helper — wraps the canonical isEventLive() from lib/utils.
+  // Kept as a local function since it's referenced widely in pin rendering. 
+  const isEventOngoing = (event: GameEvent) => isEventLive(event);
 
   const filteredEvents = useMemo(() => {
     let result = events;
@@ -541,8 +523,10 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           if (isNaN(eventDateTime.getTime())) return true;
 
           if (activeTime === 'Live') {
+            // Use the canonical isEventLive to match Home's happeningNow count,
+            // plus include events starting within the next hour.
             const isStartingSoon = isBefore(eventDateTime, addHours(now, 1)) && isFuture(eventDateTime);
-            return isEventOngoing(event) || isStartingSoon;
+            return isEventLive(event) || isStartingSoon;
           }
           if (activeTime === 'Today') return isToday(eventDateTime);
           if (activeTime === 'This Week') {

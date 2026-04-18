@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import type { GameEvent } from "@/lib/types"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -40,4 +41,42 @@ export const getCategoryColor = (category: string): string => {
     default: "#64748b", // Slate
   }
   return colors[category] || colors.default
+}
+
+/**
+ * Canonical "is this event happening right now?" check.
+ * Used by BOTH the Home happeningNow section and the Map Live filter chip
+ * to guarantee consistent counts.
+ *
+ * Logic:
+ *   - Event has started (now >= start)
+ *   - Event has NOT ended. If endTime is set, use it; otherwise default to 2 hours after start.
+ *   - Skips archived/past events.
+ */
+export function isEventLive(event: GameEvent): boolean {
+  if (event.status === 'archived' || event.status === 'past') return false;
+  if (!event.date || !event.time) return false;
+
+  try {
+    const start = new Date(`${event.date}T${event.time}`);
+    if (isNaN(start.getTime())) return false;
+
+    const now = new Date();
+    if (now < start) return false;
+
+    // Use endTime if available; otherwise default to start + 2 hours
+    let end: Date;
+    if (event.endTime) {
+      end = new Date(`${event.endDate || event.date}T${event.endTime}`);
+      if (isNaN(end.getTime())) {
+        end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+      }
+    } else {
+      end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+    }
+
+    return now <= end;
+  } catch {
+    return false;
+  }
 }

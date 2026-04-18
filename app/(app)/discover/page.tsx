@@ -17,7 +17,7 @@ import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { isToday, isWeekend, isBefore, addHours, isFuture, addDays, endOfWeek, startOfDay } from "date-fns"
-import { getCategoryColor } from "@/lib/utils"
+import { getCategoryColor, isEventLive } from "@/lib/utils"
 
 const CATEGORY_FILTERS = ["All", "Recommended", "🖥️ Virtual", "Sports", "Music", "Community", "Learning", "Food & Drink", "Tech", "Arts & Culture", "Outdoors"];
 const TIME_FILTERS = ["All", "Live", "Today", "This Week", "This Weekend"];
@@ -282,12 +282,9 @@ export default function DiscoverPage() {
                         const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
                         if (!isNaN(eventDateTime.getTime())) {
                             if (activeTime === 'Live') {
-                                // Default roughly 3 hr duration for display logic if no endTime
-                                let endTime = new Date(eventDateTime.getTime() + 180 * 60000);
-                                if (event.endTime) endTime = new Date(`${event.date}T${event.endTime}`);
-                                const isOngoing = now >= eventDateTime && now <= endTime;
+                                // Use canonical isEventLive for cross-page consistency
                                 const isStartingSoon = isBefore(eventDateTime, addHours(now, 1)) && isFuture(eventDateTime);
-                                matchesTime = isOngoing || isStartingSoon;
+                                matchesTime = isEventLive(event) || isStartingSoon;
                             } else if (activeTime === 'Today') {
                                 matchesTime = isToday(eventDateTime);
                             } else if (activeTime === 'This Week') {
