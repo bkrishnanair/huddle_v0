@@ -360,6 +360,9 @@ export default function DiscoverPage() {
             return <ActionableEmptyState onOpenCreateModal={() => setShowCreateModal(true)} />
         }
 
+        const communityEvents = otherEvents.filter(e => !e.isScraped);
+        const terplinkEvents = otherEvents.filter(e => e.isScraped);
+
         return (
             <>
                 {/* Organizer search results */}
@@ -397,12 +400,29 @@ export default function DiscoverPage() {
                         </div>
                     </section>
                 )}
-                <section>
-                    {hasRecommended && <h2 className="text-2xl font-bold text-slate-50 mb-4">All Other Events</h2>}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {otherEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} showMapButton={true} />)}
-                    </div>
-                </section>
+                
+                {communityEvents.length > 0 && (
+                    <section className="mb-8">
+                        <h2 className="text-2xl font-bold text-slate-50 mb-4">Community Events</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {communityEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} showMapButton={true} />)}
+                        </div>
+                    </section>
+                )}
+
+                {terplinkEvents.length > 0 && (
+                    <section className="mb-8">
+                        <div className="flex items-center gap-3 mb-4">
+                            <h2 className="text-2xl font-bold text-slate-50">From TerpLink</h2>
+                            <span className="text-[10px] font-bold bg-white/10 text-slate-300 px-2 py-0.5 rounded border border-white/5 uppercase tracking-wider">
+                                Sourced
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {terplinkEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} showMapButton={true} />)}
+                        </div>
+                    </section>
+                )}
             </>
         )
     }
