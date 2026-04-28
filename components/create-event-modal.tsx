@@ -403,10 +403,11 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
           handleInputChange("location", `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`)
         }
       },
-      () => {
-        toast.error("Unable to get your location. Please allow location access.")
+      (error) => {
+        console.error("Geolocation error:", error);
+        toast.error(`Unable to get location: ${error.message}. Please check browser permissions.`);
       },
-      { enableHighAccuracy: true }
+      { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
     )
   }
 

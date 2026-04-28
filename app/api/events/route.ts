@@ -160,12 +160,13 @@ export async function POST(request: NextRequest) {
     // Google sign-in users are pre-verified; anonymous/guest users are exempt
     const isGoogleUser = user.firebase?.sign_in_provider === 'google.com';
     const isAnonymous = user.firebase?.sign_in_provider === 'anonymous';
-    if (!isAnonymous && !isGoogleUser && !user.email_verified) {
-      return NextResponse.json(
-        { error: "Please verify your email before creating events. Check your inbox for a verification link." },
-        { status: 403 }
-      )
-    }
+    // Email verification requirement removed per user request
+    // if (!isAnonymous && !isGoogleUser && !user.email_verified) {
+    //   return NextResponse.json(
+    //     { error: "Please verify your email before creating events. Check your inbox for a verification link." },
+    //     { status: 403 }
+    //   )
+    // }
 
     const body = await request.json()
     console.log("Incoming Payload for POST /api/events:", body)

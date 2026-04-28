@@ -49,9 +49,9 @@ function ProfileSkeleton() {
 
 const StatCard = ({ label, value }: { label: string; value: number }) => (
   <Card className="glass-surface border-white/10 text-center shadow-2xl hover:scale-105 transition-transform duration-300">
-    <CardContent className="p-6">
-      <div className="text-3xl font-extrabold text-slate-50 tracking-tight">{value}</div>
-      <div className="text-sm font-bold text-slate-500 uppercase tracking-widest mt-1">{label}</div>
+    <CardContent className="p-3 md:p-6">
+      <div className="text-2xl md:text-3xl font-extrabold text-slate-50 tracking-tight">{value}</div>
+      <div className="text-[10px] md:text-sm font-bold text-slate-500 uppercase tracking-wider md:tracking-widest mt-1 truncate">{label}</div>
     </CardContent>
   </Card>
 )
