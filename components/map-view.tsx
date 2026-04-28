@@ -359,7 +359,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           lat: place.geometry.location.lat(),
           lng: place.geometry.location.lng(),
         });
-        map.setZoom(15);
+        map.setZoom(17);
       }
     },
     [map]
@@ -943,44 +943,40 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             <div className="pointer-events-auto flex gap-2">
                 {/* Filters Pill */}
                 <div className="flex-1 glass-surface rounded-2xl p-2.5 flex flex-col gap-2 shadow-lg overflow-hidden">
-                    {/* Category Chips */}
-                    <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar">
-                    {CATEGORIES.map(category => (
-                        <Chip
-                        key={category}
+                    <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar pb-1">
+                      {CATEGORIES.map(category => (
+                          <Chip
+                          key={category}
+                          size="sm"
+                          isActive={activeCategory === category}
+                          onClick={() => setActiveCategory(category)}
+                          className="shrink-0 text-[11px] px-2.5 py-1"
+                          >
+                        {category}
+                      </Chip>
+                    ))}
+                    <div className="w-px h-5 bg-white/10 shrink-0 mx-1 rounded-full" />
+                    {TIMES.map(time => (
+                      <Chip
+                        key={time}
                         size="sm"
-                        isActive={activeCategory === category}
-                        onClick={() => setActiveCategory(category)}
-                        className="shrink-0 text-xs"
-                        >
-                      {category}
-                    </Chip>
-                  ))}
-                </div>
-
-                {/* Time Filter Chips */}
-                <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar">
-                  {TIMES.map(time => (
-                    <Chip
-                      key={time}
-                      size="sm"
-                      isActive={activeTime === time}
-                      onClick={() => setActiveTime(time)}
-                      className="shrink-0 text-xs"
-                    >
-                      {time}
-                    </Chip>
-                  ))}
-                  {/* Active filter indicator */}
-                  {(activeCategory !== 'All' || activeTime !== 'All' || eventSearchQuery) && (
-                    <button
-                      onClick={() => { setActiveCategory('All'); setActiveTime('All'); setEventSearchQuery(''); setAiKeywords([]); }}
-                      className="shrink-0 text-[10px] text-rose-400 font-bold px-2 py-1 bg-rose-400/10 rounded-full border border-rose-400/20 hover:bg-rose-400/20 transition-colors"
-                    >
-                      Clear ✕
-                    </button>
-                  )}
-                </div>
+                        isActive={activeTime === time}
+                        onClick={() => setActiveTime(time)}
+                        className="shrink-0 text-[11px] px-2.5 py-1"
+                      >
+                        {time}
+                      </Chip>
+                    ))}
+                    {/* Active filter indicator */}
+                    {(activeCategory !== 'All' || activeTime !== 'All' || eventSearchQuery) && (
+                      <button
+                        onClick={() => { setActiveCategory('All'); setActiveTime('All'); setEventSearchQuery(''); setAiKeywords([]); }}
+                        className="shrink-0 text-[10px] text-rose-400 font-bold px-2 py-1 bg-rose-400/10 rounded-full border border-rose-400/20 hover:bg-rose-400/20 transition-colors"
+                      >
+                        Clear ✕
+                      </button>
+                    )}
+                    </div>
               </div>
 
               {/* View Toggle Pill */}
