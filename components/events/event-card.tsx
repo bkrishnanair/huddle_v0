@@ -151,7 +151,7 @@ export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = fal
           </div>
         </div>
       </CardContent>
-      <div className="bg-white/5 px-4 py-3 flex justify-between items-center gap-3">
+      <div className="bg-white/5 px-4 py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex items-center gap-3">
           <div className="flex items-center">
             <Users className="w-4 h-4 mr-2 text-slate-400" />
@@ -175,7 +175,7 @@ export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = fal
             </div>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end sm:justify-end mt-2 sm:mt-0">
           {showMapButton && (
             <Button
               size="sm"

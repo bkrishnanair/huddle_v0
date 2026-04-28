@@ -47,7 +47,8 @@ export default function DiscoverPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [activeCategory, setActiveCategory] = useState("All");
     const [activeTime, setActiveTime] = useState("All");
-    const [activeRange, setActiveRange] = useState("50 Miles");
+    const [activeRange, setActiveRange] = useState("All");
+    const [sourceFilter, setSourceFilter] = useState("All");
     const [sortBy, setSortBy] = useState("soonest");
     const [filterStartDate, setFilterStartDate] = useState("");
     const [filterEndDate, setFilterEndDate] = useState("");
@@ -310,7 +311,15 @@ export default function DiscoverPage() {
                 }
             }
 
-            return matchesSearch && matchesAi && matchesRange && matchesTime && isNotPast && matchesDateRange;
+            // Source filter
+            let matchesSource = true;
+            if (sourceFilter === 'Originals') {
+                matchesSource = !event.isScraped;
+            } else if (sourceFilter === 'TerpLink') {
+                matchesSource = !!event.isScraped;
+            }
+
+            return matchesSearch && matchesAi && matchesRange && matchesTime && isNotPast && matchesDateRange && matchesSource;
         });
 
         const favoriteCategories = userProfile?.favoriteCategories || [];
@@ -340,7 +349,7 @@ export default function DiscoverPage() {
         });
 
         return { recommendedEvents: recommended, otherEvents: others };
-    }, [allNearbyEvents, searchQuery, aiKeywords, activeCategory, activeTime, activeRange, userLocation, userProfile, sortBy, filterStartDate, filterEndDate]);
+    }, [allNearbyEvents, searchQuery, aiKeywords, activeCategory, activeTime, activeRange, sourceFilter, userLocation, userProfile, sortBy, filterStartDate, filterEndDate]);
 
     const renderContent = () => {
         if (!initialLoadComplete) {
@@ -540,6 +549,27 @@ export default function DiscoverPage() {
                                             </button>
                                         );
                                     })}
+                                </div>
+                            </div>
+
+                            <div className="hidden sm:block w-px h-6 bg-white/10" />
+
+                            {/* Source Filter */}
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest shrink-0">Source</span>
+                                <div className="flex items-center gap-1">
+                                    {["All", "Originals", "TerpLink"].map((source) => (
+                                        <button
+                                            key={source}
+                                            onClick={() => setSourceFilter(source)}
+                                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${sourceFilter === source
+                                                ? 'bg-primary text-primary-foreground shadow-sm'
+                                                : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                                }`}
+                                        >
+                                            {source}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
 

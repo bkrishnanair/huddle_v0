@@ -42,7 +42,7 @@ export function TopNavbar() {
                 {/* Logo Section */}
                 <Link href="/home" className="flex items-center gap-3 shrink-0">
                     <HuddleLogo size={32} />
-                    <span className="text-2xl font-black text-foreground tracking-tighter hidden sm:inline">Huddle</span>
+                    <span className="text-2xl font-black text-foreground tracking-tighter">Huddle</span>
                 </Link>
 
                 {/* Search Bar Integration (Cross-Platform) */}
