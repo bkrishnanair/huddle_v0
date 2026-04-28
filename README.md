@@ -20,6 +20,8 @@ This production-ready application features a complete authentication system, rea
 *   **Live Interactive Map**: Unauthenticated users can instantly explore the live map and Discover feed. 
 *   **Transit-Inspired Color Theming**: A vibrant "Sunset Transit" color palette universally paints event cards, discovery filters, and map pins based on category for rapid visual scanning.
 *   **Premium Map Pins**: Custom React teardrop nodes featuring rich gradients, drop shadows, and scale-on-hover micro-animations. Categorizes events via custom emojis. **Zoom-adaptive sizing** — pins shrink at low zoom to reduce overlap and improve click accuracy.
+*   **Dynamic Pin Clustering**: Overlapping events at popular venues dynamically group into numbered clusters at low zoom levels to eliminate visual clutter. Expanding the map smoothly unclusters the venues into individual pins.
+*   **Performance Pin Limiting**: At low zoom, the map renders only the next 10 most immediate events (transit app-style) to guarantee rapid performance without overwhelming the DOM.
 *   **Discovery Filters**: Surface events happening "Live", "Today", "This Week", or "This Weekend" with a single tap. Defaults to "This Week" for best initial relevance. Collapsible "More Filters" panel for Range and Date Range to keep the UI clean.
 *   **👁️ View Count Tracking**: Every unique event view is tracked via `POST /api/events/[id]/view` with session-level deduplication. View counts appear on event cards alongside RSVP counts.
 *   **🔴 "Happening Now" Live Badge**: The Map tab in the bottom navigation displays a real-time red badge showing the count of currently live events, refreshing every 5 minutes.
