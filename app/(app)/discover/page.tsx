@@ -17,7 +17,7 @@ import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { isToday, isWeekend, isBefore, addHours, isFuture, addDays, endOfWeek, startOfDay } from "date-fns"
-import { getCategoryColor } from "@/lib/utils"
+import { getCategoryColor, isEventLive } from "@/lib/utils"
 
 const CATEGORY_FILTERS = ["All", "Recommended", "🖥️ Virtual", "Sports", "Music", "Community", "Learning", "Food & Drink", "Tech", "Arts & Culture", "Outdoors"];
 const TIME_FILTERS = ["All", "Live", "Today", "This Week", "This Weekend"];
@@ -282,12 +282,9 @@ export default function DiscoverPage() {
                         const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
                         if (!isNaN(eventDateTime.getTime())) {
                             if (activeTime === 'Live') {
-                                // Default roughly 3 hr duration for display logic if no endTime
-                                let endTime = new Date(eventDateTime.getTime() + 180 * 60000);
-                                if (event.endTime) endTime = new Date(`${event.date}T${event.endTime}`);
-                                const isOngoing = now >= eventDateTime && now <= endTime;
+                                // Use canonical isEventLive for cross-page consistency
                                 const isStartingSoon = isBefore(eventDateTime, addHours(now, 1)) && isFuture(eventDateTime);
-                                matchesTime = isOngoing || isStartingSoon;
+                                matchesTime = isEventLive(event) || isStartingSoon;
                             } else if (activeTime === 'Today') {
                                 matchesTime = isToday(eventDateTime);
                             } else if (activeTime === 'This Week') {
@@ -363,6 +360,9 @@ export default function DiscoverPage() {
             return <ActionableEmptyState onOpenCreateModal={() => setShowCreateModal(true)} />
         }
 
+        const communityEvents = otherEvents.filter(e => !e.isScraped);
+        const terplinkEvents = otherEvents.filter(e => e.isScraped);
+
         return (
             <>
                 {/* Organizer search results */}
@@ -400,12 +400,29 @@ export default function DiscoverPage() {
                         </div>
                     </section>
                 )}
-                <section>
-                    {hasRecommended && <h2 className="text-2xl font-bold text-slate-50 mb-4">All Other Events</h2>}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {otherEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} showMapButton={true} />)}
-                    </div>
-                </section>
+                
+                {communityEvents.length > 0 && (
+                    <section className="mb-8">
+                        <h2 className="text-2xl font-bold text-slate-50 mb-4">Community Events</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {communityEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} showMapButton={true} />)}
+                        </div>
+                    </section>
+                )}
+
+                {terplinkEvents.length > 0 && (
+                    <section className="mb-8">
+                        <div className="flex items-center gap-3 mb-4">
+                            <h2 className="text-2xl font-bold text-slate-50">From TerpLink</h2>
+                            <span className="text-[10px] font-bold bg-white/10 text-slate-300 px-2 py-0.5 rounded border border-white/5 uppercase tracking-wider">
+                                Sourced
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {terplinkEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} showMapButton={true} />)}
+                        </div>
+                    </section>
+                )}
             </>
         )
     }

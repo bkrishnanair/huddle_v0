@@ -175,8 +175,8 @@ This document is designed to be fed directly into Antigravity (Gemini) or Claude
 
 ---
 
-### 2.1 — Feed / Home Page
-**What:** A new "Home" tab (replacing or complementing the current landing page link) showing curated event content: "Happening Now," "Popular This Week," "New on Huddle," and "Browse by Category."
+### 2.1 — Feed / Home Page (Completed)
+**What:** A new "Home" tab (replacing or complementing the current landing page link) showing curated event content: "Happening Now," "Popular This Week," "New on Huddle," and "Browse by Category." (Includes Task 7 Discover Sections separating Organic vs Scraped events).
 **Why:** The map is for geographic exploration. The feed is for curated browsing. Users who habitually check "what's happening today" need a scroll-friendly interface, not a map zoom. This is the Luma-style discovery page adapted for campus.
 **How:**
 1. New route: `app/(app)/home/page.tsx`.
@@ -341,8 +341,8 @@ This document is designed to be fed directly into Antigravity (Gemini) or Claude
 
 ---
 
-### 3.2 — Global/Local View Toggle
-**What:** A toggle that switches between hyperlocal view (your campus) and a zoomed-out regional view (city/county).
+### 3.2 — Global/Local View Toggle (Completed)
+**What:** A toggle that switches between hyperlocal view (your campus) and a zoomed-out regional view (city/county). (Includes Task 5 Pin Clustering and Task 6 Map List Mobile Merge/Limits).
 **Why:** Needed for multi-campus expansion and the Montgomery County pilot. When browsing locally, show full-detail pins. When browsing globally, show aggregated activity clusters.
 **How:** Add a toggle button on the map. Local mode: zoom to user's campus, show individual pins. Global mode: zoom to metropolitan area, cluster nearby events into count bubbles (use Google Maps MarkerClusterer). Tapping a cluster zooms in to reveal individual pins.
 **Time:** 3 hours

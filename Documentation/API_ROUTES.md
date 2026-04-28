@@ -120,11 +120,19 @@ Lets an authenticated user "claim" a scraped TerpLink event, converting it into 
 *   **Authentication**: **Required**.
 *   **Body**:
     ```json
-    { "scrapedEventId": "event_id_string" }
+    {
+      "scrapedEventId": "event_id_string",
+      "updates": {              // Optional organizer edits
+        "name": "New Title",
+        "description": "...",
+        "maxPlayers": 100,
+        "category": "Sports"
+      }
+    }
     ```
-*   **Behavior**: Copies the scraped event data into a new document owned by the requesting user (sets `source: "claimed"`, `claimedFrom: scrapedEventId`). Archives the original scraped doc. Atomic batch write.
-*   **Response (200 OK)**: `{ "message": "Event claimed successfully!", "eventId": "new_id", "event": { ... } }`
-*   **Errors**: `401 Unauthorized`, `404 Not Found` (scraped event doesn't exist).
+*   **Behavior**: Updates the scraped event document **in place** using a Firestore Transaction. Only ownership fields are changed (`createdBy`, `organizerName`, `source`, `admins`). **All attendee data is preserved**: `players[]`, `guestRsvps`, `attendeeAnswers`, `attendeeNotes`, `attendeePickup`, `checkedInPlayers`, `checkIns`, `viewCount`, `reportedAttendance`, `pinnedMessage`, `lastAnnouncementAt`, `scheduledMessages`, and the `chat` subcollection. The organizer is added to `players` via `FieldValue.arrayUnion` (safely handles concurrent RSVPs). Existing attendees receive a notification about the ownership transfer.
+*   **Response (200 OK)**: `{ "message": "Event claimed successfully! All existing RSVPs are preserved.", "eventId": "same_id", "event": { ... } }`
+*   **Errors**: `401 Unauthorized`, `400 Bad Request` ("Only scraped events can be claimed"), `404 Not Found`, `409 Conflict` ("This event has already been claimed").
 
 ---
 

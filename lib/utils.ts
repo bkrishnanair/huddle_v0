@@ -41,3 +41,13 @@ export const getCategoryColor = (category: string): string => {
   }
   return colors[category] || colors.default
 }
+
+/**
+ * Canonical "is this event happening right now?" check.
+ * Used by BOTH the Home happeningNow section and the Map Live filter chip
+ * to guarantee consistent counts.
+ *
+ * Delegates to the timezone-aware isEventLiveTZ() from lib/datetime
+ * which properly interprets event times in the event's stored timezone.
+ */
+export { isEventLiveTZ as isEventLive } from '@/lib/datetime';

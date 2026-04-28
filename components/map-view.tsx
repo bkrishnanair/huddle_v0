@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Chip } from "@/components/ui/chip"
-import { Plus, MapPin, LocateFixed, AlertCircle, Loader2, Star, Calendar, Clock, Map as MapIcon, List } from "lucide-react"
+import { Plus, MapPin, LocateFixed, AlertCircle, Loader2, Star, Calendar, Clock, Map as MapIcon, List, Search } from "lucide-react"
 import { useTheme } from "next-themes"
 import EventDetailsDrawer from "./event-details-drawer"
 import CreateEventModal from "./create-event-modal"
@@ -15,7 +15,7 @@ import { GameEvent } from "@/lib/types"
 import LocationSearchInput from "./location-search"
 import { isToday, isWeekend, isBefore, addHours, isFuture, addDays, endOfWeek, startOfDay } from "date-fns"
 import { toast } from "sonner"
-import { formatTime, getCategoryColor } from "@/lib/utils"
+import { formatTime, getCategoryColor, isEventLive } from "@/lib/utils"
 import DotPin from "./map-pins/dot-pin"
 import MediumPin from "./map-pins/medium-pin"
 import LivePin from "./map-pins/live-pin"
@@ -108,6 +108,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isAiSearching, setIsAiSearching] = useState(false);
   const [aiKeywords, setAiKeywords] = useState<string[]>([]);
+  const [eventSearchQuery, setEventSearchQuery] = useState("");
 
   // Session-level deduplication for view tracking (also fires in event-details-drawer as backup)
   const viewedEventIds = useRef<Set<string>>(new Set());
@@ -133,12 +134,17 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
     const handleHeaderAiSearch = (e: any) => {
         handleAiSearch(e.detail.query);
     };
+    const handleTextSearch = (e: any) => {
+        setEventSearchQuery(e.detail.query);
+    };
 
     window.addEventListener('huddle-map-search', handleHeaderSearch);
     window.addEventListener('huddle-map-ai-search', handleHeaderAiSearch);
+    window.addEventListener('huddle-text-search', handleTextSearch);
     return () => {
         window.removeEventListener('huddle-map-search', handleHeaderSearch);
         window.removeEventListener('huddle-map-ai-search', handleHeaderAiSearch);
+        window.removeEventListener('huddle-text-search', handleTextSearch);
     };
   }, [map]);
 
@@ -479,30 +485,22 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
     }
   }, [map, dismissPrompt]);
 
-  // Shared Helper — must be defined before filteredEvents useMemo that references it
-  const isEventOngoing = (event: GameEvent) => {
-    if (event.status === 'past') return false;
-    if (!event.date || !event.time) return false;
-    try {
-      const startDateTime = new Date(`${event.date}T${event.time}`);
-      if (isNaN(startDateTime.getTime())) return false;
-      const now = new Date();
-      if (now < startDateTime) return false;
-
-      let endDateTime;
-      if (event.endTime) {
-        endDateTime = new Date(`${event.date}T${event.endTime}`);
-      } else {
-        endDateTime = new Date(startDateTime.getTime() + 3 * 60 * 60 * 1000);
-      }
-      return now <= endDateTime;
-    } catch (e) {
-      return false;
-    }
-  };
+  // Shared Helper — wraps the canonical isEventLive() from lib/utils.
+  // Kept as a local function since it's referenced widely in pin rendering. 
+  const isEventOngoing = (event: GameEvent) => isEventLive(event);
 
   const filteredEvents = useMemo(() => {
     let result = events;
+
+    // Text-based event name/location filter from the top bar search input
+    if (eventSearchQuery.trim()) {
+      const q = eventSearchQuery.toLowerCase();
+      result = result.filter(event =>
+        event.name?.toLowerCase().includes(q) ||
+        (typeof event.location === 'string' && event.location.toLowerCase().includes(q)) ||
+        event.category?.toLowerCase().includes(q)
+      );
+    }
 
     if (activeCategory === 'Joined') {
       result = result.filter(event => event.players?.includes(user?.uid))
@@ -541,8 +539,10 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           if (isNaN(eventDateTime.getTime())) return true;
 
           if (activeTime === 'Live') {
+            // Use the canonical isEventLive to match Home's happeningNow count,
+            // plus include events starting within the next hour.
             const isStartingSoon = isBefore(eventDateTime, addHours(now, 1)) && isFuture(eventDateTime);
-            return isEventOngoing(event) || isStartingSoon;
+            return isEventLive(event) || isStartingSoon;
           }
           if (activeTime === 'Today') return isToday(eventDateTime);
           if (activeTime === 'This Week') {
@@ -590,7 +590,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
       const dateB = new Date(`${b.date}T${b.time || '00:00'}`).getTime();
       return dateA - dateB;
     });
-  }, [events, activeCategory, activeTime]);
+  }, [events, activeCategory, activeTime, eventSearchQuery, aiKeywords]);
 
 
 
@@ -619,8 +619,8 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   }
 
   return (
-    <div className="h-screen flex flex-col liquid-gradient" id="map-view">
-        <div className="flex-1 relative">
+    <div className="h-[100dvh] flex flex-col liquid-gradient" id="map-view">
+        <div className="flex-1 relative overflow-hidden">
           <div className="w-full h-full opacity-100 relative z-0">
             <Map
               onIdle={debouncedFetchEventsInView}
@@ -655,10 +655,105 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                         </div>
                       </AdvancedMarker>
                     )}
-                    {filteredEvents
-                      .filter((event: GameEvent) => event.eventType !== 'virtual' && event.geopoint)
-                      .slice(0, 40) // Limit total markers for performance
-                      .map((event: GameEvent, index: number) => {
+                    {(() => {
+                      // --- Task 5: Venue-based clustering ---
+                      // Group nearby events (within ~50m) into clusters
+                      const mappableEvents = filteredEvents
+                        .filter((event: GameEvent) => event.eventType !== 'virtual' && event.geopoint);
+
+                      // At zoom >= 16, show pins unclustered EXCEPT for exact overlapping duplicates. Below that, cluster normally.
+                      const CLUSTER_RADIUS = currentZoom >= 16 ? 0.0000001 : 0.0005; // ~50m for normal, identical for high zoom
+                      type Cluster = { events: GameEvent[]; lat: number; lng: number };
+                      const clusters: Cluster[] = [];
+
+                      for (const event of mappableEvents) {
+                        const lat = event.geopoint.latitude;
+                        const lng = event.geopoint.longitude;
+                        let added = false;
+                        if (CLUSTER_RADIUS > 0) {
+                          for (const cluster of clusters) {
+                            if (Math.abs(cluster.lat - lat) < CLUSTER_RADIUS && Math.abs(cluster.lng - lng) < CLUSTER_RADIUS) {
+                              cluster.events.push(event);
+                              // Recalculate centroid
+                              cluster.lat = cluster.events.reduce((s, e) => s + e.geopoint.latitude, 0) / cluster.events.length;
+                              cluster.lng = cluster.events.reduce((s, e) => s + e.geopoint.longitude, 0) / cluster.events.length;
+                              added = true;
+                              break;
+                            }
+                          }
+                        }
+                        if (!added) {
+                          clusters.push({ events: [event], lat, lng });
+                        }
+                      }
+
+                      // --- Task 6: Limit to next 10 soonest (individual pins from single-event clusters) ---
+                      // Sort clusters: live first, then soonest start time
+                      const sortedClusters = [...clusters].sort((a, b) => {
+                        const aLive = a.events.some(e => isEventOngoing(e));
+                        const bLive = b.events.some(e => isEventOngoing(e));
+                        if (aLive && !bLive) return -1;
+                        if (!aLive && bLive) return 1;
+                        const aTime = Math.min(...a.events.map(e => new Date(`${e.date}T${e.time || '23:59'}`).getTime()));
+                        const bTime = Math.min(...b.events.map(e => new Date(`${e.date}T${e.time || '23:59'}`).getTime()));
+                        return aTime - bTime;
+                      });
+
+                      // Limit total visible clusters/pins for performance
+                      const MAX_PINS = currentZoom >= 16 ? 30 : 10;
+                      const visibleClusters = sortedClusters.slice(0, MAX_PINS);
+
+                      return visibleClusters.map((cluster, clusterIdx) => {
+                        // --- Cluster Pin (multiple events at same venue) ---
+                        if (cluster.events.length > 1) {
+                          const liveCount = cluster.events.filter(e => isEventOngoing(e)).length;
+                          const topEvent = cluster.events[0];
+                          return (
+                            <AdvancedMarker
+                              key={`cluster-${clusterIdx}`}
+                              position={{ lat: cluster.lat, lng: cluster.lng }}
+                              onClick={() => {
+                                // Zoom in to expand cluster, or show first event if already zoomed
+                                if (currentZoom < 16 && map) {
+                                  map.panTo({ lat: cluster.lat, lng: cluster.lng });
+                                  map.setZoom(17);
+                                } else {
+                                  setSelectedEvent(topEvent);
+                                  trackEventView(topEvent.id);
+                                }
+                              }}
+                              style={{ zIndex: liveCount > 0 ? 40 : 25 }}
+                            >
+                              <div className="flex flex-col items-center cursor-pointer group">
+                                <div className={`
+                                  relative flex items-center justify-center
+                                  ${currentZoom <= 13 ? 'w-10 h-10' : 'w-12 h-12'}
+                                  rounded-full border-2 shadow-xl
+                                  ${liveCount > 0 ? 'border-emerald-400 bg-emerald-500/90' : 'border-white/60 bg-slate-800/90'}
+                                  backdrop-blur-sm transition-transform group-hover:scale-110
+                                `}>
+                                  {liveCount > 0 && (
+                                    <div className="absolute inset-0 rounded-full bg-emerald-400/30 animate-ping" />
+                                  )}
+                                  <span className="relative text-white font-black text-sm">
+                                    {cluster.events.length}
+                                  </span>
+                                </div>
+                                {currentZoom >= 14 && (
+                                  <div className="mt-1 px-2 py-0.5 bg-slate-950/80 backdrop-blur-sm border border-white/10 rounded-full">
+                                    <span className="text-[9px] text-white font-bold whitespace-nowrap">
+                                      {cluster.events.length} events{liveCount > 0 ? ` · ${liveCount} live` : ''}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </AdvancedMarker>
+                          );
+                        }
+
+                        // --- Single Event Pin ---
+                        const event = cluster.events[0];
+                        const index = clusterIdx;
                         const isHovered = hoveredEvent?.id === event.id;
                         // Ranking system: Only show teardrops for the first 15 events 
                         const rankLimit = 15;
@@ -835,60 +930,89 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                             </div >
                           </AdvancedMarker >
                         );
-                      })}
+                      });
+                    })()}
                   </>
                 )}
               </MapRenderer >
             </Map >
           </div >
 
-          <div className="absolute top-0 left-4 right-4 z-20 flex flex-col gap-3 pointer-events-none">
-            {/* Header: Secondary Controls */}
-            <div className="flex items-center justify-end gap-3 w-full pointer-events-auto">
-              {/* View Toggle */}
-              <div className="flex items-center p-1 glass-surface border border-white/10 rounded-2xl shadow-2xl shrink-0">
-                <Button variant="ghost" size="icon" className={`rounded-xl h-10 w-10 ${!showListPanel ? 'bg-primary text-primary-foreground shadow-lg' : 'text-slate-300 hover:text-white'} ${showListPanel ? 'animate-pulse' : ''}`} onClick={() => setShowListPanel(false)}>
-                  <MapIcon className="w-5 h-5" />
-                </Button>
-                <Button variant="ghost" size="icon" className={`rounded-xl h-10 w-10 ${showListPanel ? 'bg-primary text-primary-foreground shadow-lg' : 'text-slate-300 hover:text-white'}`} onClick={() => setShowListPanel(true)}>
-                  <List className="w-5 h-5" />
-                </Button>
+    <div className="absolute top-[88px] inset-x-2 z-20 flex flex-col gap-2 pointer-events-none">
+            {/* Filter Chips & View Toggle Container */}
+            <div className="pointer-events-auto flex gap-2">
+                {/* Filters Pill */}
+                <div className="flex-1 glass-surface rounded-2xl p-2.5 flex flex-col gap-2 shadow-lg overflow-hidden">
+                    {/* Category Chips */}
+                    <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar">
+                    {CATEGORIES.map(category => (
+                        <Chip
+                        key={category}
+                        size="sm"
+                        isActive={activeCategory === category}
+                        onClick={() => setActiveCategory(category)}
+                        className="shrink-0 text-xs"
+                        >
+                      {category}
+                    </Chip>
+                  ))}
+                </div>
+
+                {/* Time Filter Chips */}
+                <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar">
+                  {TIMES.map(time => (
+                    <Chip
+                      key={time}
+                      size="sm"
+                      isActive={activeTime === time}
+                      onClick={() => setActiveTime(time)}
+                      className="shrink-0 text-xs"
+                    >
+                      {time}
+                    </Chip>
+                  ))}
+                  {/* Active filter indicator */}
+                  {(activeCategory !== 'All' || activeTime !== 'All' || eventSearchQuery) && (
+                    <button
+                      onClick={() => { setActiveCategory('All'); setActiveTime('All'); setEventSearchQuery(''); setAiKeywords([]); }}
+                      className="shrink-0 text-[10px] text-rose-400 font-bold px-2 py-1 bg-rose-400/10 rounded-full border border-rose-400/20 hover:bg-rose-400/20 transition-colors"
+                    >
+                      Clear ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* View Toggle Pill */}
+              <div className="glass-surface rounded-2xl p-1 flex flex-col gap-1 items-center justify-center shadow-lg shrink-0 h-[84px]">
+                <button
+                className={`rounded-xl h-9 w-9 flex items-center justify-center transition-all ${!showListPanel ? 'bg-primary text-white' : 'text-slate-400 hover:text-white'}`}
+                onClick={() => setShowListPanel(false)}
+                >
+                <MapIcon className="w-4 h-4" />
+                </button>
+                <button
+                className={`rounded-xl h-9 w-9 flex items-center justify-center transition-all ${showListPanel ? 'bg-primary text-white' : 'text-slate-400 hover:text-white'}`}
+                onClick={() => setShowListPanel(true)}
+                >
+                <List className="w-4 h-4" />
+                </button>
               </div>
             </div>
 
-            {/* Filter Group: Category and Time */}
-            <div className="flex flex-col gap-2 pointer-events-auto">
-              {/* Category Chips */}
-              <div className="flex items-center space-x-2 p-1.5 glass-surface border border-white/10 rounded-full overflow-x-auto no-scrollbar max-w-max shadow-xl">
-                {CATEGORIES.map(category => (
-                  <Chip
-                    key={category}
-                    isActive={activeCategory === category}
-                    onClick={() => setActiveCategory(category)}
-                  >
-                    {category}
-                  </Chip>
-                ))}
+            {/* AI Searching indicator */}
+            {isAiSearching && (
+              <div className="pointer-events-auto px-4 py-2 mt-1 mx-2 bg-indigo-500/20 backdrop-blur-md rounded-xl border border-indigo-500/30 w-max flex items-center gap-2 text-xs text-indigo-300 font-bold shadow-lg">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Searching with AI...
               </div>
-
-              {/* Time Filter Chips */}
-              <div className="flex items-center space-x-2 p-1.5 glass-surface border border-white/10 rounded-full overflow-x-auto no-scrollbar max-w-max shadow-xl">
-                {TIMES.map(time => (
-                  <Chip
-                    key={time}
-                    isActive={activeTime === time}
-                    onClick={() => setActiveTime(time)}
-                  >
-                    {time}
-                  </Chip>
-                ))}
-              </div>
-            </div>
+            )}
+          </div>
 
             {/* Location Permission Toast/Prompt */}
             {showLocationPrompt && !userLocation && (
-              <div className="absolute top-48 left-1/2 -translate-x-1/2 z-20 w-[90%] max-w-sm pointer-events-auto">
-                <div className="glass-surface border border-primary/30 p-4 rounded-3xl shadow-[0_0_30px_rgba(245,158,11,0.2)] animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="pointer-events-auto mx-auto mt-4 w-[90%] max-w-sm">
+                <div className="bg-slate-950/80 backdrop-blur-xl border border-primary/30 p-4 rounded-2xl shadow-[0_0_30px_rgba(245,158,11,0.15)] animate-in fade-in slide-in-from-top-4 duration-500">
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
                       <MapPin className="w-5 h-5 text-primary" />
@@ -921,8 +1045,6 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                 </div>
               </div>
             )}
-          </div>
-
           <MapListPanel
              events={filteredEvents.filter(e => e.eventType !== 'virtual').slice(0, 15)}
              onSelectEvent={(event) => {
@@ -932,8 +1054,8 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                      setCurrentZoom(16);
                  }
              }}
-             onClose={() => setShowListPanel(false)}
              isVisible={showListPanel}
+             onClose={() => setShowListPanel(false)}
           />
 
           {
