@@ -76,12 +76,12 @@ export function MapListPanel({ events, onSelectEvent, onClose, isVisible }: MapL
 
            {/* Mobile Search Bar ("Where to?") Transit-Style */}
            <div className="md:hidden px-4 pb-3 shrink-0">
-               <div className="relative h-[44px] bg-black/40 backdrop-blur-2xl rounded-xl border border-white/10 p-[1px] flex items-center focus-within:border-primary/50 transition-all shadow-inner">
-                   <Search className="w-4 h-4 ml-3 text-slate-400 shrink-0" />
+               <div className="relative h-[44px] bg-black/60 backdrop-blur-2xl rounded-xl border border-primary/40 p-[1px] flex items-center focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all shadow-[0_0_15px_rgba(245,158,11,0.15)]">
+                   <Search className="w-4 h-4 ml-3 text-slate-300 shrink-0" />
                    <div className="flex-1 h-full flex items-center pr-2">
                        <LocationSearchInput
                            onPlaceSelect={(place) => window.dispatchEvent(new CustomEvent('huddle-map-search', { detail: { place } }))}
-                           className="bg-transparent !border-0 !ring-0 !outline-none shadow-none text-[15px] h-full placeholder:text-slate-400 text-slate-100"
+                           className="bg-transparent !border-0 !ring-0 !outline-none shadow-none text-[15px] h-full placeholder:text-slate-300 text-slate-100"
                        />
                    </div>
                </div>
