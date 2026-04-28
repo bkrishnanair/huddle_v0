@@ -98,7 +98,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeTime, setActiveTime] = useState("All");
-  const [currentZoom, setCurrentZoom] = useState(initialCenter ? 17 : 13);
+  const [currentZoom, setCurrentZoom] = useState(initialCenter ? 23 : 23);
   const [showListPanel, setShowListPanel] = useState(false);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [hasCenteredDefault, setHasCenteredDefault] = useState(!!initialCenter);
@@ -116,7 +116,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const trackEventView = useCallback((eventId: string) => {
     if (!viewedEventIds.current.has(eventId)) {
       viewedEventIds.current.add(eventId);
-      fetch(`/api/events/${eventId}/view`, { method: 'POST' }).catch(() => {});
+      fetch(`/api/events/${eventId}/view`, { method: 'POST' }).catch(() => { });
     }
   }, []);
 
@@ -126,25 +126,25 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   // External Header Search Listener
   useEffect(() => {
     const handleHeaderSearch = (e: any) => {
-        const place = e.detail.place;
-        if (place?.geometry?.location) {
-            handleGlobalSearchSelect(place);
-        }
+      const place = e.detail.place;
+      if (place?.geometry?.location) {
+        handleGlobalSearchSelect(place);
+      }
     };
     const handleHeaderAiSearch = (e: any) => {
-        handleAiSearch(e.detail.query);
+      handleAiSearch(e.detail.query);
     };
     const handleTextSearch = (e: any) => {
-        setEventSearchQuery(e.detail.query);
+      setEventSearchQuery(e.detail.query);
     };
 
     window.addEventListener('huddle-map-search', handleHeaderSearch);
     window.addEventListener('huddle-map-ai-search', handleHeaderAiSearch);
     window.addEventListener('huddle-text-search', handleTextSearch);
     return () => {
-        window.removeEventListener('huddle-map-search', handleHeaderSearch);
-        window.removeEventListener('huddle-map-ai-search', handleHeaderAiSearch);
-        window.removeEventListener('huddle-text-search', handleTextSearch);
+      window.removeEventListener('huddle-map-search', handleHeaderSearch);
+      window.removeEventListener('huddle-map-ai-search', handleHeaderAiSearch);
+      window.removeEventListener('huddle-text-search', handleTextSearch);
     };
   }, [map]);
 
@@ -359,7 +359,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           lat: place.geometry.location.lat(),
           lng: place.geometry.location.lng(),
         });
-        map.setZoom(15);
+        map.setZoom(19);
       }
     },
     [map]
@@ -385,18 +385,18 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
       }
 
       if (filters.timeFilter) {
-         const timeMap: Record<string, string> = {
-            'live': 'Live', 'today': 'Today', 'this_week': 'This Week', 'this_weekend': 'This Weekend', 'this_month': 'This Month'
-         };
-         setActiveTime(timeMap[filters.timeFilter] || 'All');
+        const timeMap: Record<string, string> = {
+          'live': 'Live', 'today': 'Today', 'this_week': 'This Week', 'this_weekend': 'This Weekend', 'this_month': 'This Month'
+        };
+        setActiveTime(timeMap[filters.timeFilter] || 'All');
       } else {
-         setActiveTime('All');
+        setActiveTime('All');
       }
 
       if (filters.keywords && filters.keywords.length > 0) {
         setAiKeywords(filters.keywords);
       }
-      
+
       toast.success(`AI Search: Filtered for "${query}" ✨`);
     } catch (e) {
       toast.error('AI Search failed. Try a regular search.');
@@ -620,197 +620,174 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
   return (
     <div className="h-[100dvh] flex flex-col liquid-gradient" id="map-view">
-        <div className="flex-1 relative overflow-hidden">
-          <div className="w-full h-full opacity-100 relative z-0">
-            <Map
-              onIdle={debouncedFetchEventsInView}
-              defaultCenter={mapCenter}
-              defaultZoom={initialCenter ? 17 : 13}
-              className="w-full h-full"
-              disableDefaultUI={true}
-              mapId={mapId}
+      <div className="flex-1 relative overflow-hidden">
+        <div className="w-full h-full opacity-100 relative z-0">
+          <Map
+            onIdle={debouncedFetchEventsInView}
+            defaultCenter={mapCenter}
+            defaultZoom={initialCenter ? 17 : 13}
+            className="w-full h-full"
+            disableDefaultUI={true}
+            mapId={mapId}
 
-              // @ts-ignore
-              colorScheme={isDarkMode ? "DARK" : "LIGHT"}
-              gestureHandling={'greedy'}
-            >
-              <MapRenderer onMapLoad={setMap} isDarkMode={isDarkMode}>
-                {map && (
-                  <>
-                    {userLocation && (
-                      <AdvancedMarker position={userLocation}>
-                        <div className="relative flex items-center justify-center">
-                          <div className="absolute w-8 h-8 bg-blue-500/30 rounded-full animate-ping" />
-                          <div className="relative w-4 h-4 bg-blue-500 border-2 border-white rounded-full shadow-lg" />
+            // @ts-ignore
+            colorScheme={isDarkMode ? "DARK" : "LIGHT"}
+            gestureHandling={'greedy'}
+          >
+            <MapRenderer onMapLoad={setMap} isDarkMode={isDarkMode}>
+              {map && (
+                <>
+                  {userLocation && (
+                    <AdvancedMarker position={userLocation}>
+                      <div className="relative flex items-center justify-center">
+                        <div className="absolute w-8 h-8 bg-blue-500/30 rounded-full animate-ping" />
+                        <div className="relative w-4 h-4 bg-blue-500 border-2 border-white rounded-full shadow-lg" />
+                      </div>
+                    </AdvancedMarker>
+                  )}
+                  {!userLocation && (
+                    <AdvancedMarker position={{ lat: 38.9897, lng: -76.9378 }}>
+                      <div className="flex flex-col items-center">
+                        <div className="bg-primary/20 backdrop-blur-sm border border-primary/50 text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-full mb-1">
+                          College Park
                         </div>
-                      </AdvancedMarker>
-                    )}
-                    {!userLocation && (
-                      <AdvancedMarker position={{ lat: 38.9897, lng: -76.9378 }}>
-                        <div className="flex flex-col items-center">
-                          <div className="bg-primary/20 backdrop-blur-sm border border-primary/50 text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-full mb-1">
-                            College Park
-                          </div>
-                          <div className="w-3 h-3 bg-primary rounded-full border-2 border-white shadow-lg animate-pulse" />
-                        </div>
-                      </AdvancedMarker>
-                    )}
-                    {(() => {
-                      // --- Task 5: Venue-based clustering ---
-                      // Group nearby events (within ~50m) into clusters
-                      const mappableEvents = filteredEvents
-                        .filter((event: GameEvent) => event.eventType !== 'virtual' && event.geopoint);
+                        <div className="w-3 h-3 bg-primary rounded-full border-2 border-white shadow-lg animate-pulse" />
+                      </div>
+                    </AdvancedMarker>
+                  )}
+                  {(() => {
+                    // --- Task 5: Venue-based clustering ---
+                    // Group nearby events (within ~50m) into clusters
+                    const mappableEvents = filteredEvents
+                      .filter((event: GameEvent) => event.eventType !== 'virtual' && event.geopoint);
 
-                      // At zoom >= 16, show pins unclustered EXCEPT for exact overlapping duplicates. Below that, cluster normally.
-                      const CLUSTER_RADIUS = currentZoom >= 16 ? 0.0000001 : 0.0005; // ~50m for normal, identical for high zoom
-                      type Cluster = { events: GameEvent[]; lat: number; lng: number };
-                      const clusters: Cluster[] = [];
+                    // At zoom >= 16, show pins unclustered EXCEPT for exact overlapping duplicates. Below that, cluster normally.
+                    const CLUSTER_RADIUS = currentZoom >= 16 ? 0.0000001 : 0.0005; // ~50m for normal, identical for high zoom
+                    type Cluster = { events: GameEvent[]; lat: number; lng: number };
+                    const clusters: Cluster[] = [];
 
-                      for (const event of mappableEvents) {
-                        const lat = event.geopoint.latitude;
-                        const lng = event.geopoint.longitude;
-                        let added = false;
-                        if (CLUSTER_RADIUS > 0) {
-                          for (const cluster of clusters) {
-                            if (Math.abs(cluster.lat - lat) < CLUSTER_RADIUS && Math.abs(cluster.lng - lng) < CLUSTER_RADIUS) {
-                              cluster.events.push(event);
-                              // Recalculate centroid
-                              cluster.lat = cluster.events.reduce((s, e) => s + e.geopoint.latitude, 0) / cluster.events.length;
-                              cluster.lng = cluster.events.reduce((s, e) => s + e.geopoint.longitude, 0) / cluster.events.length;
-                              added = true;
-                              break;
-                            }
+                    for (const event of mappableEvents) {
+                      const lat = event.geopoint.latitude;
+                      const lng = event.geopoint.longitude;
+                      let added = false;
+                      if (CLUSTER_RADIUS > 0) {
+                        for (const cluster of clusters) {
+                          if (Math.abs(cluster.lat - lat) < CLUSTER_RADIUS && Math.abs(cluster.lng - lng) < CLUSTER_RADIUS) {
+                            cluster.events.push(event);
+                            // Recalculate centroid
+                            cluster.lat = cluster.events.reduce((s, e) => s + e.geopoint.latitude, 0) / cluster.events.length;
+                            cluster.lng = cluster.events.reduce((s, e) => s + e.geopoint.longitude, 0) / cluster.events.length;
+                            added = true;
+                            break;
                           }
                         }
-                        if (!added) {
-                          clusters.push({ events: [event], lat, lng });
-                        }
                       }
+                      if (!added) {
+                        clusters.push({ events: [event], lat, lng });
+                      }
+                    }
 
-                      // --- Task 6: Limit to next 10 soonest (individual pins from single-event clusters) ---
-                      // Sort clusters: live first, then soonest start time
-                      const sortedClusters = [...clusters].sort((a, b) => {
-                        const aLive = a.events.some(e => isEventOngoing(e));
-                        const bLive = b.events.some(e => isEventOngoing(e));
-                        if (aLive && !bLive) return -1;
-                        if (!aLive && bLive) return 1;
-                        const aTime = Math.min(...a.events.map(e => new Date(`${e.date}T${e.time || '23:59'}`).getTime()));
-                        const bTime = Math.min(...b.events.map(e => new Date(`${e.date}T${e.time || '23:59'}`).getTime()));
-                        return aTime - bTime;
-                      });
+                    // --- Task 6: Limit to next 10 soonest (individual pins from single-event clusters) ---
+                    // Sort clusters: live first, then soonest start time
+                    const sortedClusters = [...clusters].sort((a, b) => {
+                      const aLive = a.events.some(e => isEventOngoing(e));
+                      const bLive = b.events.some(e => isEventOngoing(e));
+                      if (aLive && !bLive) return -1;
+                      if (!aLive && bLive) return 1;
+                      const aTime = Math.min(...a.events.map(e => new Date(`${e.date}T${e.time || '23:59'}`).getTime()));
+                      const bTime = Math.min(...b.events.map(e => new Date(`${e.date}T${e.time || '23:59'}`).getTime()));
+                      return aTime - bTime;
+                    });
 
-                      // Limit total visible clusters/pins for performance
-                      const MAX_PINS = currentZoom >= 16 ? 30 : 10;
-                      const visibleClusters = sortedClusters.slice(0, MAX_PINS);
+                    // Limit total visible clusters/pins for performance
+                    const MAX_PINS = currentZoom >= 16 ? 30 : 10;
+                    const visibleClusters = sortedClusters.slice(0, MAX_PINS);
 
-                      return visibleClusters.map((cluster, clusterIdx) => {
-                        // --- Cluster Pin (multiple events at same venue) ---
-                        if (cluster.events.length > 1) {
-                          const liveCount = cluster.events.filter(e => isEventOngoing(e)).length;
-                          const topEvent = cluster.events[0];
-                          return (
-                            <AdvancedMarker
-                              key={`cluster-${clusterIdx}`}
-                              position={{ lat: cluster.lat, lng: cluster.lng }}
-                              onClick={() => {
-                                // Zoom in to expand cluster, or show first event if already zoomed
-                                if (currentZoom < 16 && map) {
-                                  map.panTo({ lat: cluster.lat, lng: cluster.lng });
-                                  map.setZoom(17);
-                                } else {
-                                  setSelectedEvent(topEvent);
-                                  trackEventView(topEvent.id);
-                                }
-                              }}
-                              style={{ zIndex: liveCount > 0 ? 40 : 25 }}
-                            >
-                              <div className="flex flex-col items-center cursor-pointer group">
-                                <div className={`
+                    return visibleClusters.map((cluster, clusterIdx) => {
+                      // --- Cluster Pin (multiple events at same venue) ---
+                      if (cluster.events.length > 1) {
+                        const liveCount = cluster.events.filter(e => isEventOngoing(e)).length;
+                        const topEvent = cluster.events[0];
+                        return (
+                          <AdvancedMarker
+                            key={`cluster-${clusterIdx}`}
+                            position={{ lat: cluster.lat, lng: cluster.lng }}
+                            onClick={() => {
+                              // Zoom in to expand cluster, or show first event if already zoomed
+                              if (currentZoom < 16 && map) {
+                                map.panTo({ lat: cluster.lat, lng: cluster.lng });
+                                map.setZoom(17);
+                              } else {
+                                setSelectedEvent(topEvent);
+                                trackEventView(topEvent.id);
+                              }
+                            }}
+                            style={{ zIndex: liveCount > 0 ? 40 : 25 }}
+                          >
+                            <div className="flex flex-col items-center cursor-pointer group">
+                              <div className={`
                                   relative flex items-center justify-center
                                   ${currentZoom <= 13 ? 'w-10 h-10' : 'w-12 h-12'}
                                   rounded-full border-2 shadow-xl
                                   ${liveCount > 0 ? 'border-emerald-400 bg-emerald-500/90' : 'border-white/60 bg-slate-800/90'}
                                   backdrop-blur-sm transition-transform group-hover:scale-110
                                 `}>
-                                  {liveCount > 0 && (
-                                    <div className="absolute inset-0 rounded-full bg-emerald-400/30 animate-ping" />
-                                  )}
-                                  <span className="relative text-white font-black text-sm">
-                                    {cluster.events.length}
+                                {liveCount > 0 && (
+                                  <div className="absolute inset-0 rounded-full bg-emerald-400/30 animate-ping" />
+                                )}
+                                <span className="relative text-white font-black text-sm">
+                                  {cluster.events.length}
+                                </span>
+                              </div>
+                              {currentZoom >= 14 && (
+                                <div className="mt-1 px-2 py-0.5 bg-slate-950/80 backdrop-blur-sm border border-white/10 rounded-full">
+                                  <span className="text-[9px] text-white font-bold whitespace-nowrap">
+                                    {cluster.events.length} events{liveCount > 0 ? ` · ${liveCount} live` : ''}
                                   </span>
                                 </div>
-                                {currentZoom >= 14 && (
-                                  <div className="mt-1 px-2 py-0.5 bg-slate-950/80 backdrop-blur-sm border border-white/10 rounded-full">
-                                    <span className="text-[9px] text-white font-bold whitespace-nowrap">
-                                      {cluster.events.length} events{liveCount > 0 ? ` · ${liveCount} live` : ''}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            </AdvancedMarker>
-                          );
-                        }
-
-                        // --- Single Event Pin ---
-                        const event = cluster.events[0];
-                        const index = clusterIdx;
-                        const isHovered = hoveredEvent?.id === event.id;
-                        // Ranking system: Only show teardrops for the first 15 events 
-                        const rankLimit = 15;
-                        const isPrimaryPin = index < rankLimit || !event.isScraped;
-                        const showDetails = isHovered || (currentZoom >= 16 && isPrimaryPin);
-                        // Zoom-based pin sizing — smaller pins at low zoom reduce overlap
-                        const pinSize = currentZoom <= 13 ? 'w-7 h-7' : currentZoom <= 15 ? 'w-8 h-8' : 'w-10 h-10';
-                        const emojiSize = currentZoom <= 13 ? 'text-sm' : currentZoom <= 15 ? 'text-base' : 'text-xl';
-                        const shadowSize = currentZoom <= 13 ? 'w-3 h-0.5' : 'w-4 h-1';
-                        const categoryColor = getCategoryColor(event.category);
-
-                        let isFutureEvent = false;
-                        let pinTier: 'live' | 'imminent' | 'future' = 'future';
-                        if (!event.date || event.date.includes('/')) {
-                          isFutureEvent = false;
-                        } else {
-                          try {
-                            const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
-                            const now = new Date();
-                            if (isEventOngoing(event)) {
-                              pinTier = 'live';
-                            } else if (isBefore(eventDateTime, addHours(now, 6)) && isFuture(eventDateTime)) {
-                              pinTier = 'imminent';
-                            } else {
-                              pinTier = 'future';
-                              isFutureEvent = !isToday(eventDateTime) && eventDateTime > now;
-                            }
-                          } catch (e) {
-                            isFutureEvent = false;
-                          }
-                        }
-
-                        // "Map Dots" requirement: show simplified pins for distant or secondary events even when zoomed in
-                        if (!isHovered && (!showDetails || currentZoom <= 13)) {
-                          return (
-                            <AdvancedMarker
-                              key={event.id}
-                              position={{ lat: event.geopoint.latitude, lng: event.geopoint.longitude }}
-                              onClick={() => {
-                                setSelectedEvent(event);
-                                trackEventView(event.id);
-                              }}
-                              onMouseEnter={() => setHoveredEvent(event)}
-                              onMouseLeave={() => setHoveredEvent(null)}
-                              style={{ zIndex: pinTier === 'live' ? 30 : pinTier === 'imminent' ? 20 : 0 }}
-                            >
-                              {pinTier === 'live' ? (
-                                <LivePin category={event.category} icon={event.icon} size={30} />
-                              ) : pinTier === 'imminent' ? (
-                                <MediumPin category={event.category} icon={event.icon} size={20} />
-                              ) : (
-                                <DotPin category={event.category} size={8} />
                               )}
-                            </AdvancedMarker>
-                          );
-                        }
+                            </div>
+                          </AdvancedMarker>
+                        );
+                      }
 
+                      // --- Single Event Pin ---
+                      const event = cluster.events[0];
+                      const index = clusterIdx;
+                      const isHovered = hoveredEvent?.id === event.id;
+                      // Ranking system: Only show teardrops for the first 15 events 
+                      const rankLimit = 15;
+                      const isPrimaryPin = index < rankLimit || !event.isScraped;
+                      const showDetails = isHovered || (currentZoom >= 16 && isPrimaryPin);
+                      // Zoom-based pin sizing — smaller pins at low zoom reduce overlap
+                      const pinSize = currentZoom <= 13 ? 'w-7 h-7' : currentZoom <= 15 ? 'w-8 h-8' : 'w-10 h-10';
+                      const emojiSize = currentZoom <= 13 ? 'text-sm' : currentZoom <= 15 ? 'text-base' : 'text-xl';
+                      const shadowSize = currentZoom <= 13 ? 'w-3 h-0.5' : 'w-4 h-1';
+                      const categoryColor = getCategoryColor(event.category);
+
+                      let isFutureEvent = false;
+                      let pinTier: 'live' | 'imminent' | 'future' = 'future';
+                      if (!event.date || event.date.includes('/')) {
+                        isFutureEvent = false;
+                      } else {
+                        try {
+                          const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
+                          const now = new Date();
+                          if (isEventOngoing(event)) {
+                            pinTier = 'live';
+                          } else if (isBefore(eventDateTime, addHours(now, 6)) && isFuture(eventDateTime)) {
+                            pinTier = 'imminent';
+                          } else {
+                            pinTier = 'future';
+                            isFutureEvent = !isToday(eventDateTime) && eventDateTime > now;
+                          }
+                        } catch (e) {
+                          isFutureEvent = false;
+                        }
+                      }
+
+                      // "Map Dots" requirement: show simplified pins for distant or secondary events even when zoomed in
+                      if (!isHovered && (!showDetails || currentZoom <= 13)) {
                         return (
                           <AdvancedMarker
                             key={event.id}
@@ -821,245 +798,284 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                             }}
                             onMouseEnter={() => setHoveredEvent(event)}
                             onMouseLeave={() => setHoveredEvent(null)}
-                            style={{ zIndex: isHovered ? 50 : (showDetails ? 10 : 0) }}
+                            style={{ zIndex: pinTier === 'live' ? 30 : pinTier === 'imminent' ? 20 : 0 }}
                           >
-                            <div className={`flex flex-col items-center transition-all duration-500 transform origin-bottom ${isHovered ? 'scale-110 -translate-y-1' : 'scale-100'}`}>
-                              {/* Floating Info Bubble */}
-                              <div className={`
+                            {pinTier === 'live' ? (
+                              <LivePin category={event.category} icon={event.icon} size={30} />
+                            ) : pinTier === 'imminent' ? (
+                              <MediumPin category={event.category} icon={event.icon} size={20} />
+                            ) : (
+                              <DotPin category={event.category} size={8} />
+                            )}
+                          </AdvancedMarker>
+                        );
+                      }
+
+                      return (
+                        <AdvancedMarker
+                          key={event.id}
+                          position={{ lat: event.geopoint.latitude, lng: event.geopoint.longitude }}
+                          onClick={() => {
+                            setSelectedEvent(event);
+                            trackEventView(event.id);
+                          }}
+                          onMouseEnter={() => setHoveredEvent(event)}
+                          onMouseLeave={() => setHoveredEvent(null)}
+                          style={{ zIndex: isHovered ? 50 : (showDetails ? 10 : 0) }}
+                        >
+                          <div className={`flex flex-col items-center transition-all duration-500 transform origin-bottom ${isHovered ? 'scale-110 -translate-y-1' : 'scale-100'}`}>
+                            {/* Floating Info Bubble */}
+                            <div className={`
                               mb-2 px-3 py-1.5 rounded-2xl glass-surface border border-white/20 shadow-2xl
                               transition-all duration-300 ease-out flex flex-col items-center
                               ${showDetails ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
                             `}>
-                                <span className="text-[11px] font-black text-white whitespace-nowrap leading-none mb-1">{event.name}</span>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[9px] text-slate-300 font-bold leading-none">
-                                    {getDisplayDate(event.date)}{event.endDate && event.endDate !== event.date ? ` - ${getDisplayDate(event.endDate)}` : ''} • {formatTime(event.time)}{event.endTime ? ` - ${formatTime(event.endTime)}` : ''}
+                              <span className="text-[11px] font-black text-white whitespace-nowrap leading-none mb-1">{event.name}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[9px] text-slate-300 font-bold leading-none">
+                                  {getDisplayDate(event.date)}{event.endDate && event.endDate !== event.date ? ` - ${getDisplayDate(event.endDate)}` : ''} • {formatTime(event.time)}{event.endTime ? ` - ${formatTime(event.endTime)}` : ''}
+                                </span>
+                                {isEventOngoing(event) && (
+                                  <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 rounded font-black flex items-center gap-1 animate-pulse border border-emerald-500/30">
+                                    <span className="w-1 h-1 rounded-full bg-emerald-400" /> LIVE
                                   </span>
-                                  {isEventOngoing(event) && (
-                                    <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 rounded font-black flex items-center gap-1 animate-pulse border border-emerald-500/30">
-                                      <span className="w-1 h-1 rounded-full bg-emerald-400" /> LIVE
-                                    </span>
-                                  )}
-                                  {event.eventType === 'hybrid' && (
-                                    <span className="text-[8px] bg-violet-500/20 text-violet-400 px-1 rounded font-black border border-violet-500/30">
-                                      📡
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Teardrop Pin */}
-                              <div className="relative group">
-                                {/* Pulse effect for hovered OR ongoing pins */}
-                                {(isHovered || isEventOngoing(event)) && (
-                                  <div
-                                    className={`absolute ${isEventOngoing(event) && !isHovered ? '-inset-1 live-glow-ring opacity-60' : 'inset-0 animate-ping opacity-40'} rounded-full`}
-                                    style={{ backgroundColor: isEventOngoing(event) && !isHovered ? '#10b981' : categoryColor }}
-                                  />
                                 )}
+                                {event.eventType === 'hybrid' && (
+                                  <span className="text-[8px] bg-violet-500/20 text-violet-400 px-1 rounded font-black border border-violet-500/30">
+                                    📡
+                                  </span>
+                                )}
+                              </div>
+                            </div>
 
-                                {(() => {
-                                  // Determine animation class
-                                  let animClass = "";
-                                  if (!isHovered) {
-                                    if (isEventOngoing(event)) {
-                                      animClass = "live-glow-ring border-emerald-400";
-                                    } else {
-                                      let isWithin6h = false;
-                                      if (event.date && event.time) {
-                                        try {
-                                          const d = new Date(`${event.date}T${event.time}`);
-                                          isWithin6h = isBefore(d, addHours(new Date(), 6)) && isFuture(d);
-                                        } catch (e) { }
-                                      }
-                                      if (isWithin6h) {
-                                        const isSoonest = filteredEvents.find(e => {
-                                          if (!e.date || !e.time) return false;
-                                          try {
-                                            const ed = new Date(`${e.date}T${e.time}`);
-                                            return isBefore(ed, addHours(new Date(), 6)) && isFuture(ed);
-                                          } catch (e) { }
-                                          return false;
-                                        })?.id === event.id; // true since filteredEvents is sorted
-                                        if (isSoonest) {
-                                          animClass = "soonest-bounce animate-yellow-pulse border-yellow-400";
-                                        } else {
-                                          animClass = "animate-yellow-pulse border-yellow-400";
-                                        }
-                                      } else {
-                                        animClass = "border-white";
-                                      }
-                                    }
+                            {/* Teardrop Pin */}
+                            <div className="relative group">
+                              {/* Pulse effect for hovered OR ongoing pins */}
+                              {(isHovered || isEventOngoing(event)) && (
+                                <div
+                                  className={`absolute ${isEventOngoing(event) && !isHovered ? '-inset-1 live-glow-ring opacity-60' : 'inset-0 animate-ping opacity-40'} rounded-full`}
+                                  style={{ backgroundColor: isEventOngoing(event) && !isHovered ? '#10b981' : categoryColor }}
+                                />
+                              )}
+
+                              {(() => {
+                                // Determine animation class
+                                let animClass = "";
+                                if (!isHovered) {
+                                  if (isEventOngoing(event)) {
+                                    animClass = "live-glow-ring border-emerald-400";
                                   } else {
-                                    animClass = isEventOngoing(event) ? "border-emerald-400" : "border-white";
+                                    let isWithin6h = false;
+                                    if (event.date && event.time) {
+                                      try {
+                                        const d = new Date(`${event.date}T${event.time}`);
+                                        isWithin6h = isBefore(d, addHours(new Date(), 6)) && isFuture(d);
+                                      } catch (e) { }
+                                    }
+                                    if (isWithin6h) {
+                                      const isSoonest = filteredEvents.find(e => {
+                                        if (!e.date || !e.time) return false;
+                                        try {
+                                          const ed = new Date(`${e.date}T${e.time}`);
+                                          return isBefore(ed, addHours(new Date(), 6)) && isFuture(ed);
+                                        } catch (e) { }
+                                        return false;
+                                      })?.id === event.id; // true since filteredEvents is sorted
+                                      if (isSoonest) {
+                                        animClass = "soonest-bounce animate-yellow-pulse border-yellow-400";
+                                      } else {
+                                        animClass = "animate-yellow-pulse border-yellow-400";
+                                      }
+                                    } else {
+                                      animClass = "border-white";
+                                    }
                                   }
-                                  return (
-                                    <div
-                                      className={`
+                                } else {
+                                  animClass = isEventOngoing(event) ? "border-emerald-400" : "border-white";
+                                }
+                                return (
+                                  <div
+                                    className={`
                                       relative ${pinSize} flex items-center justify-center
                                       rounded-full rounded-br-none rotate-45
                                       border-2 ${animClass} transition-all duration-300
                                       ${isFutureEvent ? 'opacity-70 saturate-50' : 'opacity-100'}
                                     `}
-                                      style={{
-                                        background: `linear-gradient(135deg, ${categoryColor}, ${categoryColor}dd)`,
-                                        boxShadow: isHovered ? `0 0 25px ${categoryColor}aa` : (isEventOngoing(event) ? `0 4px 10px rgba(0,0,0,0.4)` : `0 4px 10px rgba(0,0,0,0.4)`)
-                                      }}
-                                    >
-                                      <div className={`-rotate-45 ${emojiSize} filter drop-shadow-sm brightness-110`}>
-                                        {event.icon || getCategoryIcon(event.category)}
-                                      </div>
+                                    style={{
+                                      background: `linear-gradient(135deg, ${categoryColor}, ${categoryColor}dd)`,
+                                      boxShadow: isHovered ? `0 0 25px ${categoryColor}aa` : (isEventOngoing(event) ? `0 4px 10px rgba(0,0,0,0.4)` : `0 4px 10px rgba(0,0,0,0.4)`)
+                                    }}
+                                  >
+                                    <div className={`-rotate-45 ${emojiSize} filter drop-shadow-sm brightness-110`}>
+                                      {event.icon || getCategoryIcon(event.category)}
                                     </div>
-                                  );
-                                })()}
-                                {/* Hybrid badge on the marker */}
-                                {
-                                  event.eventType === 'hybrid' && (
-                                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-violet-500 rounded-full border border-white flex items-center justify-center text-[8px] shadow-lg">
-                                      📡
-                                    </div>
-                                  )
-                                }
-                              </div >
+                                  </div>
+                                );
+                              })()}
+                              {/* Hybrid badge on the marker */}
+                              {
+                                event.eventType === 'hybrid' && (
+                                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-violet-500 rounded-full border border-white flex items-center justify-center text-[8px] shadow-lg">
+                                    📡
+                                  </div>
+                                )
+                              }
+                            </div >
 
-                              {/* Mini shadow at base */}
-                              < div className={`
+                            {/* Mini shadow at base */}
+                            < div className={`
                               ${shadowSize} bg-black/40 rounded-full blur-[2px] mt-1 transition-all duration-300
                               ${isHovered ? 'scale-150 opacity-60' : 'scale-100 opacity-30'}
                             `} />
-                            </div >
-                          </AdvancedMarker >
-                        );
-                      });
-                    })()}
-                  </>
-                )}
-              </MapRenderer >
-            </Map >
-          </div >
+                          </div >
+                        </AdvancedMarker >
+                      );
+                    });
+                  })()}
+                </>
+              )}
+            </MapRenderer >
+          </Map >
+        </div >
 
-    <div className="absolute top-[88px] inset-x-2 z-20 flex flex-col gap-2 pointer-events-none">
-            {/* Filter Chips & View Toggle Container */}
-            <div className="pointer-events-auto flex gap-2">
-                {/* Filters Pill */}
-                <div className="flex-1 glass-surface rounded-2xl p-2.5 flex flex-col gap-2 shadow-lg overflow-hidden">
-                    {/* Category Chips */}
-                    <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar">
-                    {CATEGORIES.map(category => (
-                        <Chip
-                        key={category}
-                        size="sm"
-                        isActive={activeCategory === category}
-                        onClick={() => setActiveCategory(category)}
-                        className="shrink-0 text-xs"
-                        >
-                      {category}
-                    </Chip>
-                  ))}
-                </div>
-
-                {/* Time Filter Chips */}
-                <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar">
-                  {TIMES.map(time => (
-                    <Chip
-                      key={time}
-                      size="sm"
-                      isActive={activeTime === time}
-                      onClick={() => setActiveTime(time)}
-                      className="shrink-0 text-xs"
-                    >
-                      {time}
-                    </Chip>
-                  ))}
-                  {/* Active filter indicator */}
-                  {(activeCategory !== 'All' || activeTime !== 'All' || eventSearchQuery) && (
-                    <button
-                      onClick={() => { setActiveCategory('All'); setActiveTime('All'); setEventSearchQuery(''); setAiKeywords([]); }}
-                      className="shrink-0 text-[10px] text-rose-400 font-bold px-2 py-1 bg-rose-400/10 rounded-full border border-rose-400/20 hover:bg-rose-400/20 transition-colors"
-                    >
-                      Clear ✕
-                    </button>
-                  )}
-                </div>
+        <div className="absolute top-[92px] inset-x-2 z-20 flex flex-col gap-2 pointer-events-none">
+          {/* Filter Chips & View Toggle Container */}
+          <div className="pointer-events-auto flex gap-2 h-auto">
+            {/* Filters Pill */}
+            <div className="flex-1 min-w-0 glass-surface rounded-[24px] p-2 flex flex-col gap-1.5 shadow-2xl border border-white/15 overflow-hidden backdrop-blur-xl">
+              {/* Category Row */}
+              <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar w-full pb-0.5">
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter mr-1 pl-1">What</span>
+                {CATEGORIES.map(category => (
+                  <Chip
+                    key={category}
+                    size="sm"
+                    isActive={activeCategory === category}
+                    onClick={() => setActiveCategory(category)}
+                    className="shrink-0 text-[10px] px-3 py-1 rounded-full whitespace-nowrap h-7"
+                  >
+                    {category}
+                  </Chip>
+                ))}
               </div>
+              
+              <div className="h-px bg-white/5 mx-1" />
 
-              {/* View Toggle Pill */}
-              <div className="glass-surface rounded-2xl p-1 flex flex-col gap-1 items-center justify-center shadow-lg shrink-0 h-[84px]">
-                <button
-                className={`rounded-xl h-9 w-9 flex items-center justify-center transition-all ${!showListPanel ? 'bg-primary text-white' : 'text-slate-400 hover:text-white'}`}
-                onClick={() => setShowListPanel(false)}
-                >
-                <MapIcon className="w-4 h-4" />
-                </button>
-                <button
-                className={`rounded-xl h-9 w-9 flex items-center justify-center transition-all ${showListPanel ? 'bg-primary text-white' : 'text-slate-400 hover:text-white'}`}
-                onClick={() => setShowListPanel(true)}
-                >
-                <List className="w-4 h-4" />
-                </button>
+              {/* Time Row */}
+              <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar w-full pt-0.5">
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter mr-1 pl-1">When</span>
+                {TIMES.map(time => (
+                  <Chip
+                    key={time}
+                    size="sm"
+                    isActive={activeTime === time}
+                    onClick={() => setActiveTime(time)}
+                    className="shrink-0 text-[10px] px-3 py-1 rounded-full whitespace-nowrap h-7"
+                  >
+                    {time === 'All' ? 'Any time' : time}
+                  </Chip>
+                ))}
+                {/* Active filter indicator */}
+                {(activeCategory !== 'All' || activeTime !== 'All' || eventSearchQuery) && (
+                  <button
+                    onClick={() => { setActiveCategory('All'); setActiveTime('All'); setEventSearchQuery(''); setAiKeywords([]); }}
+                    className="shrink-0 text-[9px] text-rose-400 font-black px-2 py-1 bg-rose-400/10 rounded-full border border-rose-400/20 hover:bg-rose-400/20 transition-colors uppercase tracking-tight ml-auto"
+                  >
+                    Clear
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* AI Searching indicator */}
-            {isAiSearching && (
-              <div className="pointer-events-auto px-4 py-2 mt-1 mx-2 bg-indigo-500/20 backdrop-blur-md rounded-xl border border-indigo-500/30 w-max flex items-center gap-2 text-xs text-indigo-300 font-bold shadow-lg">
-                <Loader2 className="w-3 h-3 animate-spin" />
-                Searching with AI...
-              </div>
-            )}
+            {/* View Toggle Pill */}
+            <div className="glass-surface rounded-[24px] p-1 flex flex-col gap-1 items-center justify-center shadow-2xl border border-white/15 shrink-0 w-12 h-auto backdrop-blur-xl">
+              <button
+                className={`rounded-xl h-10 w-10 flex items-center justify-center transition-all duration-300 ${!showListPanel ? 'bg-primary text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                onClick={() => setShowListPanel(false)}
+                title="Map View"
+              >
+                <MapIcon className="w-4 h-4" />
+              </button>
+              <button
+                className={`rounded-xl h-10 w-10 flex items-center justify-center transition-all duration-300 ${showListPanel ? 'bg-primary text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                onClick={() => setShowListPanel(true)}
+                title="List View"
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
-            {/* Location Permission Toast/Prompt */}
-            {showLocationPrompt && !userLocation && (
-              <div className="pointer-events-auto mx-auto mt-4 w-[90%] max-w-sm">
-                <div className="bg-slate-950/80 backdrop-blur-xl border border-primary/30 p-4 rounded-2xl shadow-[0_0_30px_rgba(245,158,11,0.15)] animate-in fade-in slide-in-from-top-4 duration-500">
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                      <MapPin className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="text-white font-bold text-sm">Find events near you</h4>
-                      <p className="text-slate-300 text-xs mt-1 leading-relaxed">
-                        Enable location to instantly discover what's happening in your neighborhood.
-                      </p>
-                      <div className="flex items-center gap-3 mt-3">
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={handleRecenter}
-                          className="bg-primary hover:bg-orange-600 text-white text-xs font-bold rounded-full px-4"
-                        >
-                          Share Location
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={dismissPrompt}
-                          className="text-slate-400 hover:text-white text-xs px-2"
-                        >
-                          Not now
-                        </Button>
-                      </div>
-                    </div>
+          {/* AI Searching indicator */}
+          {isAiSearching && (
+            <div className="pointer-events-auto px-4 py-2 mt-1 mx-2 bg-indigo-500/20 backdrop-blur-md rounded-xl border border-indigo-500/30 w-max flex items-center gap-2 text-xs text-indigo-300 font-bold shadow-lg">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Searching with AI...
+            </div>
+          )}
+        </div>
+
+        {/* Location Permission Toast/Prompt */}
+        {showLocationPrompt && !userLocation && (
+          <div className="pointer-events-auto mx-auto mt-4 w-[90%] max-w-sm">
+            <div className="bg-slate-950/80 backdrop-blur-xl border border-primary/30 p-4 rounded-2xl shadow-[0_0_30px_rgba(245,158,11,0.15)] animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                  <MapPin className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-white font-bold text-sm">Find events near you</h4>
+                  <p className="text-slate-300 text-xs mt-1 leading-relaxed">
+                    Enable location to instantly discover what's happening in your neighborhood.
+                  </p>
+                  <div className="flex items-center gap-3 mt-3">
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={handleRecenter}
+                      className="bg-primary hover:bg-orange-600 text-white text-xs font-bold rounded-full px-4"
+                    >
+                      Share Location
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={dismissPrompt}
+                      className="text-slate-400 hover:text-white text-xs px-2"
+                    >
+                      Not now
+                    </Button>
                   </div>
                 </div>
               </div>
-            )}
-          <MapListPanel
-             events={filteredEvents.filter(e => e.eventType !== 'virtual').slice(0, 15)}
-             onSelectEvent={(event) => {
-                 setSelectedEvent(event);
-                 if (event.geopoint) {
-                     map?.panTo({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
-                     setCurrentZoom(16);
-                 }
-             }}
-             isVisible={showListPanel}
-             onClose={() => setShowListPanel(false)}
-          />
+            </div>
+          </div>
+        )}
+        <MapListPanel
+          events={filteredEvents.filter(e => e.eventType !== 'virtual').slice(0, 15)}
+          onSelectEvent={(event) => {
+            setSelectedEvent(event);
+            if (event.geopoint) {
+              map?.panTo({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
+              setCurrentZoom(23);
+            }
+          }}
+          isVisible={showListPanel}
+          onClose={() => setShowListPanel(false)}
+        />
 
-          {
-            !showListPanel && (
+        {
+          !showListPanel && (
+            <div className="absolute top-[185px] md:bottom-12 md:top-auto right-4 z-40 flex flex-col gap-4 pointer-events-none">
+              <Button
+                onClick={handleRecenter}
+                onTouchEnd={(e) => { e.preventDefault(); handleRecenter(); }}
+                variant="default"
+                size="icon"
+                className="h-12 w-12 md:h-14 md:w-14 rounded-full glass-surface text-slate-700 dark:text-white border border-white/20 shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:bg-white/10 hover:scale-110 transition-all pointer-events-auto cursor-pointer"
+              >
+                <LocateFixed className="w-5 h-5 md:w-6 md:h-6" />
+              </Button>
               <Button
                 id="create-event-button"
                 onClick={() => {
@@ -1083,34 +1099,21 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                     setShowCreateModal(true);
                   }
                 }}
-                size="lg"
-                className="absolute bottom-44 md:bottom-28 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-110 transition-transform z-40 pointer-events-auto cursor-pointer"
+                size="icon"
+                className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-primary text-primary-foreground shadow-[0_8px_30px_rgba(245,158,11,0.3)] hover:bg-orange-600 hover:scale-110 transition-all pointer-events-auto cursor-pointer"
               >
                 <Plus className="w-6 h-6" />
               </Button>
-            )
-          }
-
-          {
-            !showListPanel && (
-              <Button
-                onClick={handleRecenter}
-                onTouchEnd={(e) => { e.preventDefault(); handleRecenter(); }}
-                variant="default"
-                size="lg"
-                className="absolute bottom-28 md:bottom-12 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-orange-600 hover:scale-110 transition-all z-40 pointer-events-auto cursor-pointer"
-              >
-                <LocateFixed className="w-6 h-6" />
-              </Button>
-            )
-          }
-
-
-        </div >
-
-        {selectedEvent && <EventDetailsDrawer event={selectedEvent} isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} onEventUpdated={() => { }} />
+            </div>
+          )
         }
-        {showCreateModal && <CreateEventModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onEventCreated={() => { }} userLocation={userLocation || mapCenter} />}
+
+
+      </div >
+
+      {selectedEvent && <EventDetailsDrawer event={selectedEvent} isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} onEventUpdated={() => { }} />
+      }
+      {showCreateModal && <CreateEventModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onEventCreated={() => { }} userLocation={userLocation || mapCenter} />}
 
       {/* First-visit onboarding */}
       {showOnboarding && (
