@@ -32,30 +32,50 @@ interface TerpLinkEvent {
 async function geocodeLocation(address: string) {
   // Jitter helper to prevent exact stacking
   const jitter = () => (Math.random() - 0.5) * 0.002;
-  const fallback = { lat: 38.9897 + jitter(), lng: -76.9378 + jitter() };
+  const fallback = { lat: 38.9897 + jitter(), lng: -76.9378 + jitter(), geocoded: false };
 
-  if (!address) return fallback;
-  
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  if (!apiKey) return fallback;
+  if (!address) {
+    console.warn('[Scraper] No address provided, using campus center fallback');
+    return fallback;
+  }
+
+  // Prefer server-side key (no HTTP referrer restrictions).
+  // Falls back to client key with a warning — client key may fail if referrer-restricted.
+  // TODO: Set GOOGLE_MAPS_SERVER_KEY in Vercel env vars for production reliability.
+  const apiKey = process.env.GOOGLE_MAPS_SERVER_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    console.error('[Scraper] No Google Maps API key available for geocoding');
+    return fallback;
+  }
+  if (!process.env.GOOGLE_MAPS_SERVER_KEY) {
+    console.warn('[Scraper] Using client-side Maps key for geocoding — set GOOGLE_MAPS_SERVER_KEY for reliable server-side geocoding');
+  }
 
   try {
-    // We append the city/state to help Google focus 
-    const query = `${address}, College Park, MD`;
+    // Append University of Maryland context to improve geocoding accuracy for campus buildings
+    const query = `${address}, University of Maryland, College Park, MD`;
     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${apiKey}`;
     const res = await fetch(url);
     const data = await res.json();
-    
+
+    if (data.status !== 'OK') {
+      console.warn(`[Scraper] Geocoding status '${data.status}' for address: "${address}"`, data.error_message || '');
+      return fallback;
+    }
+
     if (data.results && data.results[0]) {
        const loc = data.results[0].geometry.location;
        // Add a tiny bit of jitter even to successful results to distinguish between events in the same building
        return {
          lat: loc.lat + (Math.random() - 0.5) * 0.0005,
-         lng: loc.lng + (Math.random() - 0.5) * 0.0005
+         lng: loc.lng + (Math.random() - 0.5) * 0.0005,
+         geocoded: true,
        };
     }
+
+    console.warn(`[Scraper] No geocoding results for address: "${address}"`);
   } catch (e) {
-    console.error("Geocoding failed for", address, e);
+    console.error(`[Scraper] Geocoding exception for "${address}":`, e);
   }
   return fallback;
 }

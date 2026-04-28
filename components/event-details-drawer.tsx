@@ -40,15 +40,18 @@ import { ReportModal } from "./modals/report-modal"
 import { ShieldAlert, Ban, ImageIcon } from "lucide-react"
 import EventGallery from "./events/event-gallery"
 import { FollowButton } from "@/components/follow-button"
+import { getEventStartUTC, formatEventTimeRange } from "@/lib/datetime"
 
-function EventCountdown({ date, time }: { date: string; time: string }) {
+function EventCountdown({ date, time, timezone }: { date: string; time: string; timezone?: string }) {
   const [label, setLabel] = useState("");
 
   useEffect(() => {
     function compute() {
       try {
-        const start = new Date(`${date}T${time}`);
-        const msUntil = start.getTime() - Date.now();
+        // Use timezone-aware UTC conversion for accurate countdowns
+        const event = { date, time, timezone } as any;
+        const startUTC = getEventStartUTC(event);
+        const msUntil = startUTC.getTime() - Date.now();
         if (msUntil <= 0) { setLabel(""); return; }
         const totalMins = Math.floor(msUntil / 60000);
         const h = Math.floor(totalMins / 60);
@@ -59,7 +62,7 @@ function EventCountdown({ date, time }: { date: string; time: string }) {
     compute();
     const id = setInterval(compute, 60_000);
     return () => clearInterval(id);
-  }, [date, time]);
+  }, [date, time, timezone]);
 
   if (!label) return null;
   return (
@@ -611,7 +614,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                 {[
                   { icon: Users, label: "Capacity", value: `${event.currentPlayers} / ${event.maxPlayers}` },
                   { icon: Calendar, label: "Date", value: event.date.includes('/') ? event.date : format(parseISO(event.date), 'MMM d, yyyy') },
-                  { icon: Clock, label: "Time", value: event.endTime ? `${event.time} - ${event.endTime}` : event.time },
+                  { icon: Clock, label: "Time", value: formatEventTimeRange(event) },
                   ...(event.eventType === 'virtual'
                     ? [{ icon: Monitor, label: "Location", value: event.location || '🖥️ Virtual Event' }]
                     : [{ icon: MapPin, label: "Location", value: typeof event.location === 'string' ? event.location : 'Unavailable' }]
@@ -642,6 +645,11 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                   </div>
                   <p className="text-xs text-slate-400 mb-3">
                     Claim this event to enable RSVPs, manage attendance, and send announcements to your attendees.
+                    {(event.currentPlayers > 0 || (event.players && event.players.length > 0)) && (
+                      <span className="block mt-1 text-violet-400 font-bold">
+                        ⚡ {event.currentPlayers || event.players?.length || 0} existing attendee{(event.currentPlayers || event.players?.length || 0) !== 1 ? 's' : ''} will be preserved and notified.
+                      </span>
+                    )}
                   </p>
                   <Button
                     onClick={async () => {
@@ -655,14 +663,15 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                         });
                         if (res.ok) {
                           const data = await res.json();
-                          toast.success('🎉 Event claimed! You now own this event.');
+                          toast.success('🎉 Event claimed! All existing RSVPs are preserved.');
                           onEventUpdated(data.event);
-                          onClose();
+                          // Don't close — let the user see their newly-claimed event with updated ownership
                           if (data.isNewOrganizer) {
                             router.push('/dashboard?onboarding=true');
                           }
                         } else {
-                          toast.error('Failed to claim event');
+                          const errData = await res.json().catch(() => ({ error: 'Failed to claim event' }));
+                          toast.error(errData.error || 'Failed to claim event');
                         }
                       } catch {
                         toast.error('Something went wrong');
@@ -746,7 +755,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                   const sixHours = 6 * 60 * 60 * 1000;
                   if (msUntil <= 0 || msUntil > sixHours) return null;
                 } catch { return null; }
-                return <EventCountdown date={event.date} time={event.time} />;
+                return <EventCountdown date={event.date} time={event.time} timezone={event.timezone} />;
               })()}
 
               {/* Capacity Meter */}

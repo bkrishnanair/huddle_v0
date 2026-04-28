@@ -48,19 +48,17 @@ export default function LocationSearchInput({ onPlaceSelect, onAiSearch, insideM
   }, [autocomplete, onPlaceSelect]);
 
   return (
-    <div className="relative">
-      <Input
-        ref={inputRef}
-        placeholder="Search for an address, place, or event vibe..."
-        className={`glass border-white/30 text-white placeholder:text-white/60 w-full ${className || ''}`}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && onAiSearch && inputRef.current?.value) {
-            // Check if dropdown is not active (basic heuristic: we just grab the value)
-            onAiSearch(inputRef.current.value);
-            inputRef.current.blur();
-          }
-        }}
-      />
-    </div>
+    <Input
+      ref={inputRef}
+      placeholder="Search for an address, place, or event vibe..."
+      className={className !== undefined ? `w-full ${className}` : "glass border-white/30 text-white placeholder:text-white/60 w-full"}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' && onAiSearch && inputRef.current?.value) {
+          // Check if dropdown is not active (basic heuristic: we just grab the value)
+          onAiSearch(inputRef.current.value);
+          inputRef.current.blur();
+        }
+      }}
+    />
   );
 }
