@@ -938,31 +938,31 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           </Map >
         </div >
 
-        <div className="absolute top-[88px] inset-x-2 z-20 flex flex-col gap-2 pointer-events-none">
+        <div className="absolute top-[92px] inset-x-2 z-20 flex flex-col gap-2 pointer-events-none">
           {/* Filter Chips & View Toggle Container */}
-          <div className="pointer-events-auto flex gap-2">
+          <div className="pointer-events-auto flex gap-2 h-12">
             {/* Filters Pill */}
-            <div className="flex-1 min-w-0 glass-surface rounded-2xl p-2.5 flex flex-col gap-2 shadow-lg overflow-hidden">
-              <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar pb-1">
+            <div className="flex-1 min-w-0 glass-surface rounded-full px-3 flex items-center shadow-2xl border border-white/15 overflow-hidden backdrop-blur-xl">
+              <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar w-full">
                 {CATEGORIES.map(category => (
                   <Chip
                     key={category}
                     size="sm"
                     isActive={activeCategory === category}
                     onClick={() => setActiveCategory(category)}
-                    className="shrink-0 text-[11px] px-2.5 py-1"
+                    className="shrink-0 text-[11px] px-3 py-1 rounded-full whitespace-nowrap"
                   >
                     {category}
                   </Chip>
                 ))}
-                <div className="w-px h-5 bg-white/10 shrink-0 mx-1 rounded-full" />
+                <div className="w-px h-4 bg-white/10 shrink-0 mx-0.5" />
                 {TIMES.map(time => (
                   <Chip
                     key={time}
                     size="sm"
                     isActive={activeTime === time}
                     onClick={() => setActiveTime(time)}
-                    className="shrink-0 text-[11px] px-2.5 py-1"
+                    className="shrink-0 text-[11px] px-3 py-1 rounded-full whitespace-nowrap"
                   >
                     {time}
                   </Chip>
@@ -971,27 +971,29 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                 {(activeCategory !== 'All' || activeTime !== 'All' || eventSearchQuery) && (
                   <button
                     onClick={() => { setActiveCategory('All'); setActiveTime('All'); setEventSearchQuery(''); setAiKeywords([]); }}
-                    className="shrink-0 text-[10px] text-rose-400 font-bold px-2 py-1 bg-rose-400/10 rounded-full border border-rose-400/20 hover:bg-rose-400/20 transition-colors"
+                    className="shrink-0 text-[10px] text-rose-400 font-black px-2.5 py-1 bg-rose-400/10 rounded-full border border-rose-400/20 hover:bg-rose-400/20 transition-colors uppercase tracking-tight"
                   >
-                    Clear ✕
+                    Clear
                   </button>
                 )}
               </div>
             </div>
 
             {/* View Toggle Pill */}
-            <div className="glass-surface rounded-2xl p-1 flex flex-col gap-1 items-center justify-center shadow-lg shrink-0 h-[84px]">
+            <div className="glass-surface rounded-full p-1 flex items-center shadow-2xl border border-white/15 shrink-0 backdrop-blur-xl">
               <button
-                className={`rounded-xl h-9 w-9 flex items-center justify-center transition-all ${!showListPanel ? 'bg-primary text-white' : 'text-slate-400 hover:text-white'}`}
+                className={`rounded-full h-10 px-3 flex items-center gap-2 transition-all duration-300 ${!showListPanel ? 'bg-primary text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
                 onClick={() => setShowListPanel(false)}
               >
                 <MapIcon className="w-4 h-4" />
+                <span className={`text-[10px] font-bold ${showListPanel ? 'hidden' : 'block'}`}>Map</span>
               </button>
               <button
-                className={`rounded-xl h-9 w-9 flex items-center justify-center transition-all ${showListPanel ? 'bg-primary text-white' : 'text-slate-400 hover:text-white'}`}
+                className={`rounded-full h-10 px-3 flex items-center gap-2 transition-all duration-300 ${showListPanel ? 'bg-primary text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
                 onClick={() => setShowListPanel(true)}
               >
                 <List className="w-4 h-4" />
+                <span className={`text-[10px] font-bold ${!showListPanel ? 'hidden' : 'block'}`}>List</span>
               </button>
             </div>
           </div>
