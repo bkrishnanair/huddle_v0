@@ -98,7 +98,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeTime, setActiveTime] = useState("All");
-  const [currentZoom, setCurrentZoom] = useState(initialCenter ? 17 : 13);
+  const [currentZoom, setCurrentZoom] = useState(initialCenter ? 19 : 19);
   const [showListPanel, setShowListPanel] = useState(false);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [hasCenteredDefault, setHasCenteredDefault] = useState(!!initialCenter);
@@ -359,7 +359,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           lat: place.geometry.location.lat(),
           lng: place.geometry.location.lng(),
         });
-        map.setZoom(17);
+        map.setZoom(19);
       }
     },
     [map]
@@ -942,7 +942,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             {/* Filter Chips & View Toggle Container */}
             <div className="pointer-events-auto flex gap-2">
                 {/* Filters Pill */}
-                <div className="flex-1 glass-surface rounded-2xl p-2.5 flex flex-col gap-2 shadow-lg overflow-hidden">
+                <div className="flex-1 min-w-0 glass-surface rounded-2xl p-2.5 flex flex-col gap-2 shadow-lg overflow-hidden">
                     <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar pb-1">
                       {CATEGORIES.map(category => (
                           <Chip
@@ -1047,7 +1047,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                  setSelectedEvent(event);
                  if (event.geopoint) {
                      map?.panTo({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
-                     setCurrentZoom(16);
+                     setCurrentZoom(19);
                  }
              }}
              isVisible={showListPanel}
