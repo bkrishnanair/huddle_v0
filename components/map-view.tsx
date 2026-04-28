@@ -1055,6 +1055,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                  }
              }}
              isVisible={showListPanel}
+             onClose={() => setShowListPanel(false)}
           />
 
           {
