@@ -940,38 +940,46 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
         <div className="absolute top-[92px] inset-x-2 z-20 flex flex-col gap-2 pointer-events-none">
           {/* Filter Chips & View Toggle Container */}
-          <div className="pointer-events-auto flex gap-2 h-12">
+          <div className="pointer-events-auto flex gap-2 h-auto">
             {/* Filters Pill */}
-            <div className="flex-1 min-w-0 glass-surface rounded-full px-3 flex items-center shadow-2xl border border-white/15 overflow-hidden backdrop-blur-xl">
-              <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar w-full">
+            <div className="flex-1 min-w-0 glass-surface rounded-[24px] p-2 flex flex-col gap-1.5 shadow-2xl border border-white/15 overflow-hidden backdrop-blur-xl">
+              {/* Category Row */}
+              <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar w-full pb-0.5">
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter mr-1 pl-1">What</span>
                 {CATEGORIES.map(category => (
                   <Chip
                     key={category}
                     size="sm"
                     isActive={activeCategory === category}
                     onClick={() => setActiveCategory(category)}
-                    className="shrink-0 text-[11px] px-3 py-1 rounded-full whitespace-nowrap"
+                    className="shrink-0 text-[10px] px-3 py-1 rounded-full whitespace-nowrap h-7"
                   >
                     {category}
                   </Chip>
                 ))}
-                <div className="w-px h-4 bg-white/10 shrink-0 mx-0.5" />
+              </div>
+              
+              <div className="h-px bg-white/5 mx-1" />
+
+              {/* Time Row */}
+              <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar w-full pt-0.5">
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter mr-1 pl-1">When</span>
                 {TIMES.map(time => (
                   <Chip
                     key={time}
                     size="sm"
                     isActive={activeTime === time}
                     onClick={() => setActiveTime(time)}
-                    className="shrink-0 text-[11px] px-3 py-1 rounded-full whitespace-nowrap"
+                    className="shrink-0 text-[10px] px-3 py-1 rounded-full whitespace-nowrap h-7"
                   >
-                    {time}
+                    {time === 'All' ? 'Any time' : time}
                   </Chip>
                 ))}
                 {/* Active filter indicator */}
                 {(activeCategory !== 'All' || activeTime !== 'All' || eventSearchQuery) && (
                   <button
                     onClick={() => { setActiveCategory('All'); setActiveTime('All'); setEventSearchQuery(''); setAiKeywords([]); }}
-                    className="shrink-0 text-[10px] text-rose-400 font-black px-2.5 py-1 bg-rose-400/10 rounded-full border border-rose-400/20 hover:bg-rose-400/20 transition-colors uppercase tracking-tight"
+                    className="shrink-0 text-[9px] text-rose-400 font-black px-2 py-1 bg-rose-400/10 rounded-full border border-rose-400/20 hover:bg-rose-400/20 transition-colors uppercase tracking-tight ml-auto"
                   >
                     Clear
                   </button>
@@ -980,20 +988,20 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             </div>
 
             {/* View Toggle Pill */}
-            <div className="glass-surface rounded-full p-1 flex items-center shadow-2xl border border-white/15 shrink-0 backdrop-blur-xl">
+            <div className="glass-surface rounded-[24px] p-1 flex flex-col gap-1 items-center justify-center shadow-2xl border border-white/15 shrink-0 w-12 h-auto backdrop-blur-xl">
               <button
-                className={`rounded-full h-10 px-3 flex items-center gap-2 transition-all duration-300 ${!showListPanel ? 'bg-primary text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                className={`rounded-xl h-10 w-10 flex items-center justify-center transition-all duration-300 ${!showListPanel ? 'bg-primary text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
                 onClick={() => setShowListPanel(false)}
+                title="Map View"
               >
                 <MapIcon className="w-4 h-4" />
-                <span className={`text-[10px] font-bold ${showListPanel ? 'hidden' : 'block'}`}>Map</span>
               </button>
               <button
-                className={`rounded-full h-10 px-3 flex items-center gap-2 transition-all duration-300 ${showListPanel ? 'bg-primary text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                className={`rounded-xl h-10 w-10 flex items-center justify-center transition-all duration-300 ${showListPanel ? 'bg-primary text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
                 onClick={() => setShowListPanel(true)}
+                title="List View"
               >
                 <List className="w-4 h-4" />
-                <span className={`text-[10px] font-bold ${!showListPanel ? 'hidden' : 'block'}`}>List</span>
               </button>
             </div>
           </div>
