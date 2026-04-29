@@ -624,13 +624,8 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
         <div className="w-full h-full opacity-100 relative z-0">
           <Map
             onIdle={debouncedFetchEventsInView}
-            center={mapCenter}
-            onCenterChanged={(e) => {
-              const c = e.detail.center;
-              setMapCenter({ lat: c.lat, lng: c.lng });
-            }}
-            zoom={currentZoom}
-            onZoomChanged={(e) => setCurrentZoom(e.detail.zoom)}
+            defaultCenter={mapCenter}
+            defaultZoom={25}
             className="w-full h-full"
             disableDefaultUI={true}
             mapId={mapId}
