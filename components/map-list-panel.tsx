@@ -48,6 +48,7 @@ export function MapListPanel({ events, onSelectEvent, onClose, isVisible }: MapL
             
             /* Mobile styles: Bottom sheet */
             fixed md:absolute inset-x-2 md:inset-x-0 bottom-[80px] md:bottom-0 rounded-3xl md:rounded-none bg-slate-950/95 backdrop-blur-2xl border border-white/10
+            ${!isVisible ? 'translate-y-[120%] opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}
             ${isExpanded ? 'h-[85vh] bottom-0 rounded-b-none border-b-0 inset-x-0' : 'h-[36vh]'}
             
             /* Desktop styles: Side panel */
