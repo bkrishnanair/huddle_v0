@@ -277,7 +277,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             if (event.geopoint && typeof event.geopoint.latitude === 'number' && isFinite(event.geopoint.latitude) && typeof event.geopoint.longitude === 'number' && isFinite(event.geopoint.longitude)) {
               // Override map centering for deep links to ensure it pans correctly
               map.panTo({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
-              map.setZoom(18);
+              map.setZoom(28);
               // Store the deep link center so handleRecenter knows not to override it initially
               sessionStorage.setItem('huddleMapCenter', JSON.stringify({ lat: event.geopoint.latitude, lng: event.geopoint.longitude }));
               // Only open drawer if not coming from a 'locate' intent (e.g. map button on event cards)
@@ -624,8 +624,13 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
         <div className="w-full h-full opacity-100 relative z-0">
           <Map
             onIdle={debouncedFetchEventsInView}
-            defaultCenter={mapCenter}
-            defaultZoom={initialCenter ? 17 : 13}
+            center={mapCenter}
+            onCenterChanged={(e) => {
+              const c = e.detail.center;
+              setMapCenter({ lat: c.lat, lng: c.lng });
+            }}
+            zoom={currentZoom}
+            onZoomChanged={(e) => setCurrentZoom(e.detail.zoom)}
             className="w-full h-full"
             disableDefaultUI={true}
             mapId={mapId}
@@ -958,7 +963,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                   </Chip>
                 ))}
               </div>
-              
+
               <div className="h-px bg-white/5 mx-1" />
 
               {/* Time Row */}
@@ -1015,6 +1020,21 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           )}
         </div>
 
+        {/* Mobile Floating Search Bar ("Where to?") - Stays visible even when list is hidden */}
+        {!showListPanel && (
+          <div className="md:hidden absolute bottom-[92px] inset-x-4 z-30 animate-in fade-in slide-in-from-bottom-4 duration-500 pointer-events-none">
+            <div className="pointer-events-auto relative h-[48px] bg-slate-950/80 backdrop-blur-3xl rounded-2xl border border-primary/40 p-[1px] flex items-center focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20 transition-all shadow-[0_8px_32px_rgba(0,0,0,0.4),0_0_15px_rgba(245,158,11,0.15)]">
+              <Search className="w-4 h-4 ml-4 text-primary/80 shrink-0" />
+              <div className="flex-1 h-full flex items-center pr-3">
+                <LocationSearchInput
+                  onPlaceSelect={(place) => window.dispatchEvent(new CustomEvent('huddle-map-search', { detail: { place } }))}
+                  className="bg-transparent !border-0 !ring-0 !outline-none shadow-none text-[15px] h-full placeholder:text-slate-400 text-slate-100 font-medium"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Location Permission Toast/Prompt */}
         {showLocationPrompt && !userLocation && (
           <div className="pointer-events-auto mx-auto mt-4 w-[90%] max-w-sm">
@@ -1057,7 +1077,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             setSelectedEvent(event);
             if (event.geopoint) {
               map?.panTo({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
-              setCurrentZoom(23);
+              setCurrentZoom(28);
             }
           }}
           isVisible={showListPanel}
@@ -1066,7 +1086,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
         {
           !showListPanel && (
-            <div className="absolute top-[185px] md:bottom-12 md:top-auto right-4 z-40 flex flex-col gap-4 pointer-events-none">
+            <div className="absolute bottom-[156px] md:bottom-12 right-4 z-40 flex flex-col gap-4 pointer-events-none">
               <Button
                 onClick={handleRecenter}
                 onTouchEnd={(e) => { e.preventDefault(); handleRecenter(); }}
