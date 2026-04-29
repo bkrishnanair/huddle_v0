@@ -277,7 +277,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             if (event.geopoint && typeof event.geopoint.latitude === 'number' && isFinite(event.geopoint.latitude) && typeof event.geopoint.longitude === 'number' && isFinite(event.geopoint.longitude)) {
               // Override map centering for deep links to ensure it pans correctly
               map.panTo({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
-              map.setZoom(26);
+              map.setZoom(28);
               // Store the deep link center so handleRecenter knows not to override it initially
               sessionStorage.setItem('huddleMapCenter', JSON.stringify({ lat: event.geopoint.latitude, lng: event.geopoint.longitude }));
               // Only open drawer if not coming from a 'locate' intent (e.g. map button on event cards)
@@ -963,7 +963,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                   </Chip>
                 ))}
               </div>
-              
+
               <div className="h-px bg-white/5 mx-1" />
 
               {/* Time Row */}
@@ -1077,7 +1077,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             setSelectedEvent(event);
             if (event.geopoint) {
               map?.panTo({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
-              setCurrentZoom(26);
+              setCurrentZoom(28);
             }
           }}
           isVisible={showListPanel}
