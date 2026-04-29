@@ -1020,6 +1020,21 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           )}
         </div>
 
+        {/* Mobile Floating Search Bar ("Where to?") - Stays visible even when list is hidden */}
+        {!showListPanel && (
+          <div className="md:hidden absolute bottom-[92px] inset-x-4 z-30 animate-in fade-in slide-in-from-bottom-4 duration-500 pointer-events-none">
+            <div className="pointer-events-auto relative h-[48px] bg-slate-950/80 backdrop-blur-3xl rounded-2xl border border-primary/40 p-[1px] flex items-center focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20 transition-all shadow-[0_8px_32px_rgba(0,0,0,0.4),0_0_15px_rgba(245,158,11,0.15)]">
+              <Search className="w-4 h-4 ml-4 text-primary/80 shrink-0" />
+              <div className="flex-1 h-full flex items-center pr-3">
+                <LocationSearchInput
+                  onPlaceSelect={(place) => window.dispatchEvent(new CustomEvent('huddle-map-search', { detail: { place } }))}
+                  className="bg-transparent !border-0 !ring-0 !outline-none shadow-none text-[15px] h-full placeholder:text-slate-400 text-slate-100 font-medium"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Location Permission Toast/Prompt */}
         {showLocationPrompt && !userLocation && (
           <div className="pointer-events-auto mx-auto mt-4 w-[90%] max-w-sm">
