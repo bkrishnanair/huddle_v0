@@ -613,7 +613,12 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { icon: Users, label: "Capacity", value: `${event.currentPlayers} / ${event.maxPlayers}` },
-                  { icon: Calendar, label: "Date", value: event.date.includes('/') ? event.date : format(parseISO(event.date), 'MMM d, yyyy') },
+                  { icon: Calendar, label: "Date", value: (() => {
+                    if (!event.date) return 'TBD';
+                    if (typeof event.date !== 'string') return String(event.date);
+                    if (event.date.includes('/')) return event.date;
+                    try { return format(parseISO(event.date), 'MMM d, yyyy'); } catch(e) { return event.date; }
+                  })() },
                   { icon: Clock, label: "Time", value: formatEventTimeRange(event) },
                   ...(event.eventType === 'virtual'
                     ? [{ icon: Monitor, label: "Location", value: event.location || '🖥️ Virtual Event' }]
