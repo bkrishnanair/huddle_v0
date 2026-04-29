@@ -19,10 +19,10 @@ interface FollowButtonProps {
 
 export function FollowButton({ targetUserId, targetUserName = "User", variant = "default", size = "sm", className }: FollowButtonProps) {
     const { user } = useAuth();
-    const { following, loading: followingLoading } = useFollowing();
+    const { followingSet, loading: followingLoading } = useFollowing();
     const [isUpdating, setIsUpdating] = useState(false);
 
-    const isFollowing = following.has(targetUserId);
+    const isFollowing = followingSet.has(targetUserId);
 
     const toggleFollow = useCallback(async (e: React.MouseEvent) => {
         e.preventDefault();
