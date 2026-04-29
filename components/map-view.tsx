@@ -1086,7 +1086,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
         {
           !showListPanel && (
-            <div className="absolute top-[185px] md:bottom-12 md:top-auto right-4 z-40 flex flex-col gap-4 pointer-events-none">
+            <div className="absolute bottom-[156px] md:bottom-12 right-4 z-40 flex flex-col gap-4 pointer-events-none">
               <Button
                 onClick={handleRecenter}
                 onTouchEnd={(e) => { e.preventDefault(); handleRecenter(); }}
