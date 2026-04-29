@@ -98,7 +98,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeTime, setActiveTime] = useState("All");
-  const [currentZoom, setCurrentZoom] = useState(initialCenter ? 23 : 23);
+  const [currentZoom, setCurrentZoom] = useState(initialCenter ? 25 : 25);
   const [showListPanel, setShowListPanel] = useState(false);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [hasCenteredDefault, setHasCenteredDefault] = useState(!!initialCenter);
