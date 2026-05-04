@@ -51,7 +51,14 @@ export default function HuddleProModal({ isOpen, onClose }: HuddleProModalProps)
             <span className="text-white font-bold text-lg tracking-tight">Coming Spring 2026</span>
           </div>
           <p className="text-center text-sm text-emerald-400 font-medium mb-2">Free for founding organizers who join the waitlist today.</p>
-          <Button size="lg" className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-bold hover:scale-[1.02] transition-transform">
+          <Button 
+            size="lg" 
+            className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-bold hover:scale-[1.02] transition-transform"
+            onClick={() => {
+              import("sonner").then(({ toast }) => toast.success("You've been added to the waitlist!"));
+              onClose();
+            }}
+          >
             Join the Waitlist
           </Button>
         </div>

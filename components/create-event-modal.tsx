@@ -571,12 +571,58 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
           }
         }}
       >
-        <DialogHeader className="p-6 pb-4">
-          <DialogTitle>Create a New Event</DialogTitle>
-          <DialogDescription>Fill in the details to get your event on the map.</DialogDescription>
-        </DialogHeader>
+        {postCreateState.show ? (
+          <div className="p-6 flex flex-col items-center justify-center min-h-[300px] text-center animate-in zoom-in-95 duration-300">
+            <div className="text-5xl mb-4">🎉</div>
+            <h3 className="text-xl font-black text-white mb-1">Event is Live!</h3>
+            <p className="text-slate-400 text-sm mb-5">Share this link to start getting RSVPs</p>
 
-        <div className="flex-1 overflow-y-auto no-scrollbar px-6">
+            <div className="bg-slate-800/60 w-full rounded-xl p-3 flex items-center gap-2 mb-4 border border-white/5">
+              <span className="text-sm text-teal-400 truncate flex-1 text-left">{postCreateState.deepLink}</span>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(postCreateState.deepLink);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  } catch {
+                    toast.error("Failed to copy link");
+                  }
+                }}
+                className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold shrink-0 transition-colors flex items-center gap-1.5 cursor-pointer pointer-events-auto"
+              >
+                {copied ? <CheckCheck className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? "Copied!" : "Copy"}
+              </button>
+            </div>
+
+            {typeof window !== 'undefined' && navigator.share && (
+              <button
+                type="button"
+                onClick={() => navigator.share({ title: 'Join my event on Huddle!', url: postCreateState.deepLink }).catch(() => {})}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-white py-2.5 rounded-xl text-sm font-bold mb-3 transition-colors border border-white/5 cursor-pointer pointer-events-auto"
+              >
+                📤 Share via...
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => { setPostCreateState({ show: false, eventId: '', deepLink: '' }); onClose(); }}
+              className="text-slate-500 text-sm hover:text-white transition-colors cursor-pointer pointer-events-auto"
+            >
+              Done
+            </button>
+          </div>
+        ) : (
+          <>
+            <DialogHeader className="p-6 pb-4">
+              <DialogTitle>{isEditMode ? "Edit Event" : "Create a New Event"}</DialogTitle>
+              <DialogDescription>{isEditMode ? "Update your event details." : "Fill in the details to get your event on the map."}</DialogDescription>
+            </DialogHeader>
+
+            <div className="flex-1 overflow-y-auto no-scrollbar px-6">
           <form id="event-form" onSubmit={handleSubmit} className="space-y-4">
             {/* Event Type Segmented Toggle */}
             <div>
@@ -1108,53 +1154,9 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : isEditMode ? "Save Changes" : "Create Event"}
           </Button>
         </DialogFooter>
+          </>
+        )}
       </DialogContent>
-
-      {/* Post-creation share card overlay */}
-      {postCreateState.show && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl p-6 max-w-sm w-full mx-4 text-center shadow-2xl shadow-black/50 animate-in zoom-in-95 duration-200">
-            <div className="text-5xl mb-4">🎉</div>
-            <h3 className="text-xl font-black text-white mb-1">Event is Live!</h3>
-            <p className="text-slate-400 text-sm mb-5">Share this link to start getting RSVPs</p>
-
-            <div className="bg-slate-800/60 rounded-xl p-3 flex items-center gap-2 mb-4 border border-white/5">
-              <span className="text-sm text-teal-400 truncate flex-1 text-left">{postCreateState.deepLink}</span>
-              <button
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(postCreateState.deepLink);
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
-                  } catch {
-                    toast.error("Failed to copy link");
-                  }
-                }}
-                className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold shrink-0 transition-colors flex items-center gap-1.5"
-              >
-                {copied ? <CheckCheck className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                {copied ? "Copied!" : "Copy"}
-              </button>
-            </div>
-
-            {typeof window !== 'undefined' && navigator.share && (
-              <button
-                onClick={() => navigator.share({ title: 'Join my event on Huddle!', url: postCreateState.deepLink }).catch(() => {})}
-                className="w-full bg-slate-800 hover:bg-slate-700 text-white py-2.5 rounded-xl text-sm font-bold mb-3 transition-colors border border-white/5"
-              >
-                📤 Share via...
-              </button>
-            )}
-
-            <button
-              onClick={() => { setPostCreateState({ show: false, eventId: '', deepLink: '' }); onClose(); }}
-              className="text-slate-500 text-sm hover:text-white transition-colors"
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      )}
     </Dialog>
   )
 }
