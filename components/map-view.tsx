@@ -98,7 +98,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeTime, setActiveTime] = useState("All");
-  const [currentZoom, setCurrentZoom] = useState(initialCenter ? 25 : 25);
+  const [currentZoom, setCurrentZoom] = useState(initialCenter ? 18 : 18);
   const [showListPanel, setShowListPanel] = useState(false);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [hasCenteredDefault, setHasCenteredDefault] = useState(!!initialCenter);
@@ -277,7 +277,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             if (event.geopoint && typeof event.geopoint.latitude === 'number' && isFinite(event.geopoint.latitude) && typeof event.geopoint.longitude === 'number' && isFinite(event.geopoint.longitude)) {
               // Override map centering for deep links to ensure it pans correctly
               map.panTo({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
-              map.setZoom(19);
+              map.setZoom(18);
               // Store the deep link center so handleRecenter knows not to override it initially
               sessionStorage.setItem('huddleMapCenter', JSON.stringify({ lat: event.geopoint.latitude, lng: event.geopoint.longitude }));
               // Only open drawer if not coming from a 'locate' intent (e.g. map button on event cards)
@@ -359,7 +359,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           lat: place.geometry.location.lat(),
           lng: place.geometry.location.lng(),
         });
-        map.setZoom(19);
+        map.setZoom(18);
       }
     },
     [map]
@@ -625,16 +625,16 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           <Map
             onIdle={debouncedFetchEventsInView}
             defaultCenter={mapCenter}
-            defaultZoom={25}
+            defaultZoom={18}
             className="w-full h-full"
             disableDefaultUI={true}
             mapId={mapId}
 
             // @ts-ignore
-            colorScheme={isDarkMode ? "DARK" : "LIGHT"}
+            colorScheme="LIGHT"
             gestureHandling={'greedy'}
           >
-            <MapRenderer onMapLoad={setMap} isDarkMode={isDarkMode}>
+            <MapRenderer onMapLoad={setMap} isDarkMode={false}>
               {map && (
                 <>
                   {userLocation && (
@@ -826,7 +826,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                           <div className={`flex flex-col items-center transition-all duration-500 transform origin-bottom ${isHovered ? 'scale-110 -translate-y-1' : 'scale-100'}`}>
                             {/* Floating Info Bubble */}
                             <div className={`
-                              mb-2 px-3 py-1.5 rounded-2xl glass-surface border border-white/20 shadow-2xl
+                              mb-2 px-3 py-1.5 rounded-2xl bg-slate-900/95 backdrop-blur-md border border-slate-700 shadow-[0_4px_20px_rgba(0,0,0,0.5)]
                               transition-all duration-300 ease-out flex flex-col items-center
                               ${showDetails ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
                             `}>
@@ -938,11 +938,11 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           </Map >
         </div >
 
-        <div className="absolute top-[92px] inset-x-2 z-20 flex flex-col gap-2 pointer-events-none">
+        <div className="absolute top-[92px] inset-x-4 max-w-[1800px] mx-auto z-20 flex flex-col gap-2 pointer-events-none">
           {/* Filter Chips & View Toggle Container */}
-          <div className="pointer-events-auto flex gap-2 h-auto">
+          <div className="pointer-events-auto flex justify-between gap-2 h-auto w-full">
             {/* Filters Pill */}
-            <div className="flex-1 min-w-0 glass-surface rounded-[24px] p-2 flex flex-col gap-1.5 shadow-2xl border border-white/15 overflow-hidden backdrop-blur-xl">
+            <div className="w-fit max-w-full glass-surface rounded-[24px] p-2 flex flex-col gap-1.5 shadow-2xl border border-white/15 overflow-hidden backdrop-blur-xl">
               {/* Category Row */}
               <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar w-full pb-0.5">
                 <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter mr-1 pl-1">What</span>
@@ -952,7 +952,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                     size="sm"
                     isActive={activeCategory === category}
                     onClick={() => setActiveCategory(category)}
-                    className="shrink-0 text-[10px] px-3 py-1 rounded-full whitespace-nowrap h-7"
+                    className="shrink-0 text-[11px] px-2.5 py-0.5 rounded-full whitespace-nowrap h-6"
                   >
                     {category}
                   </Chip>
@@ -970,7 +970,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                     size="sm"
                     isActive={activeTime === time}
                     onClick={() => setActiveTime(time)}
-                    className="shrink-0 text-[10px] px-3 py-1 rounded-full whitespace-nowrap h-7"
+                    className="shrink-0 text-[11px] px-2.5 py-0.5 rounded-full whitespace-nowrap h-6"
                   >
                     {time === 'All' ? 'Any time' : time}
                   </Chip>
@@ -1072,7 +1072,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             setSelectedEvent(event);
             if (event.geopoint) {
               map?.panTo({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
-              setCurrentZoom(19);
+              setCurrentZoom(18);
             }
           }}
           isVisible={showListPanel}
