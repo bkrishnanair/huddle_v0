@@ -3,7 +3,7 @@ import { getFirebaseAdminDb } from '@/lib/firebase-admin';
 import { GameEvent } from '@/lib/types';
 import { notFound, redirect } from 'next/navigation';
 import { getCategoryColor } from '@/lib/utils';
-import { MapPin, Users, Calendar, Clock } from 'lucide-react';
+import { MapPin, Users, Calendar, Clock, BadgeCheck } from 'lucide-react';
 
 export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await props.params;
@@ -83,7 +83,7 @@ export default async function PublicEventPage(props: { params: Promise<{ id: str
             style={{ background: bgGradient }}
         >
             <h1 className="text-3xl font-black tracking-tight mb-2">{event.name || event.title}</h1>
-            <p className="font-bold text-lg opacity-90 mb-6 drop-shadow-md">{event.category} • Hosted by {event.organizerName} {event.isOrganizerVerified && <span className="text-blue-400">✓</span>}</p>
+            <p className="font-bold text-lg opacity-90 mb-6 drop-shadow-md flex items-center gap-1">{event.category} • Hosted by {event.organizerName} {event.isOrganizerVerified && <BadgeCheck className="w-5 h-5 text-blue-400 inline shrink-0" />}</p>
 
             <div className="space-y-4 font-medium">
                 <div className="flex items-center gap-3">
