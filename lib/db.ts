@@ -441,7 +441,7 @@ export const createNotification = async ({
   eventId
 }: {
   userId: string;
-  type: "waitlist_promo" | "event_update" | "event_announcement" | "general" | "rsvp_update";
+  type: "waitlist_promo" | "event_update" | "event_announcement" | "general" | "rsvp_update" | "event_reminder";
   message: string;
   eventId?: string;
 }) => {

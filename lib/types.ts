@@ -82,6 +82,7 @@ export interface GameEvent {
   checkInOpen?: boolean;
   lastAnnouncementAt?: string; // ISO — updated when organizer pins announcement
   postEventPromptSent?: boolean; // true after post-event cron prompts organizer
+  reminderSentAt?: string | null; // ISO — set by event-reminders cron
   reportedAttendance?: number; // organizer-reported actual attendance
   createdAt?: any;
   parentEventId?: string;
@@ -94,7 +95,7 @@ export interface GameEvent {
 export interface AppNotification {
   id: string;
   userId: string;
-  type: "waitlist_promo" | "event_update" | "event_announcement" | "general" | "rsvp_update" | "serendipity_nudge" | "friend_attending" | "post_event";
+  type: "waitlist_promo" | "event_update" | "event_announcement" | "general" | "rsvp_update" | "serendipity_nudge" | "friend_attending" | "post_event" | "event_reminder";
   message: string;
   eventId?: string;
   eventName?: string;
