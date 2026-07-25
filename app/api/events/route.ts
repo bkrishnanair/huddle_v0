@@ -149,6 +149,64 @@ function deduplicateRecurring(events: any[]): any[] {
   return standalone;
 }
 
+/**
+ * Fire-and-forget: notify all followers of an organizer about a new event.
+ * Uses the same fan-out pattern as notifyFollowersOfJoin in rsvp/route.ts.
+ */
+async function notifyFollowersOfNewEvent(
+  organizerUid: string,
+  organizerName: string,
+  eventId: string,
+  eventName: string,
+  eventCategory: string,
+) {
+  try {
+    const adminDb = getFirebaseAdminDb();
+    if (!adminDb) return;
+
+    const followersSnap = await adminDb
+      .collection("users")
+      .doc(organizerUid)
+      .collection("followers")
+      .get();
+
+    if (followersSnap.empty) return;
+
+    const { Timestamp: AdminTimestamp } = await import("firebase-admin/firestore");
+    const followerIds = followersSnap.docs.map((d) => d.id);
+
+    // Chunk to stay under Firestore batch limit (500)
+    const chunkSize = 450;
+    for (let i = 0; i < followerIds.length; i += chunkSize) {
+      const chunk = followerIds.slice(i, i + chunkSize);
+      const batch = adminDb.batch();
+
+      for (const followerId of chunk) {
+        const notifRef = adminDb
+          .collection("users")
+          .doc(followerId)
+          .collection("notifications")
+          .doc();
+
+        batch.set(notifRef, {
+          userId: followerId,
+          type: "new_event_from_followed",
+          message: `📢 ${organizerName} just created a new ${eventCategory} event: "${eventName}"`,
+          eventId,
+          eventName,
+          read: false,
+          createdAt: AdminTimestamp.now().toDate().toISOString(),
+        });
+      }
+
+      await batch.commit();
+    }
+  } catch (error) {
+    console.error("Failed to notify followers of new event:", error);
+    // Non-blocking: don't throw
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const user = await getServerCurrentUser()
@@ -221,7 +279,7 @@ export async function POST(request: NextRequest) {
     const parentRef = adminDb.collection("events").doc()
     const parentId = parentRef.id
 
-    const createdEvents = [];
+    const createdEvents: Record<string, any>[] = [];
 
     // Diff in milliseconds for endDate if present
     let endDiff = 0;
@@ -278,6 +336,18 @@ export async function POST(request: NextRequest) {
     }
 
     await batch.commit();
+
+    // Fire-and-forget: notify organizer's followers about the new event
+    const createdEvent = createdEvents[0];
+    if (createdEvent) {
+      notifyFollowersOfNewEvent(
+        user.uid,
+        organizerName,
+        createdEvent.id,
+        createdEvent.name || createdEvent.title || "New Event",
+        createdEvent.category || createdEvent.sport || "Community",
+      ).catch(() => {}); // swallow — must not block response
+    }
 
     return NextResponse.json({
       message: "Event created successfully",
