@@ -50,7 +50,7 @@ export default function PublicProfilePage() {
   const { user } = useAuth()
   const params = useParams()
   const router = useRouter()
-  const uid = params.uid as string
+  const uid = params?.uid as string
 
   const [userProfile, setUserProfile] = useState<any>(null)
   const [userStats, setUserStats] = useState({ organized: 0, joined: 0, upcoming: 0 })

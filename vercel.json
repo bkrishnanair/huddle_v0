@@ -3,24 +3,8 @@
   "installCommand": "npm install",
   "crons": [
     {
-      "path": "/api/cron/scheduled-messages",
-      "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/cron/cleanup",
-      "schedule": "0 6 * * *"
-    },
-    {
-      "path": "/api/cron/serendipity",
-      "schedule": "0 1 * * *"
-    },
-    {
-      "path": "/api/cron/post-event-prompt",
-      "schedule": "0 2 * * *"
-    },
-    {
-      "path": "/api/cron/event-reminders",
-      "schedule": "0 */4 * * *"
+      "path": "/api/cron/dispatch",
+      "schedule": "0 * * * *"
     }
   ]
 }
