@@ -3,6 +3,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerCurrentUser } from '@/lib/auth-server';
 import { generateStructured } from '@/lib/gemini';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -38,6 +39,11 @@ export async function POST(request: NextRequest) {
   const validation = parseScheduleSchema.safeParse(body);
   if (!validation.success) {
     return NextResponse.json({ error: validation.error.flatten().fieldErrors }, { status: 400 });
+  }
+
+  const limitCheck = await checkRateLimit(user.uid, 'ai_parse_schedule', 10);
+  if (!limitCheck.success) {
+    return NextResponse.json({ error: 'Rate limit exceeded. Please try again later.' }, { status: 429 });
   }
 
   const { rawText } = validation.data;

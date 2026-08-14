@@ -2,6 +2,8 @@ import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { generateStructured } from '@/lib/gemini';
+import { getServerCurrentUser } from '@/lib/auth-server';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -22,10 +24,20 @@ interface ParsedFilters {
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await getServerCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await req.json();
     const validation = searchSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json({ error: validation.error.format() }, { status: 400 });
+    }
+
+    const limitCheck = await checkRateLimit(user.uid, 'ai_search', 50);
+    if (!limitCheck.success) {
+      return NextResponse.json({ error: 'Rate limit exceeded. Please try again later.' }, { status: 429 });
     }
 
     const { query, userLat, userLng } = validation.data;

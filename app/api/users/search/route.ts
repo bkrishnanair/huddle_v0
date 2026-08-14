@@ -2,6 +2,8 @@ import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdminDb } from '@/lib/firebase-admin';
+import { getServerCurrentUser } from '@/lib/auth-server';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -19,6 +21,16 @@ const searchSchema = z.object({
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get('q');
+
+  const user = await getServerCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const limitCheck = await checkRateLimit(user.uid, 'user_search', 60); // 60 searches per hour
+  if (!limitCheck.success) {
+    return NextResponse.json({ error: 'Rate limit exceeded. Please try again later.' }, { status: 429 });
+  }
 
   const validation = searchSchema.safeParse({ q });
   if (!validation.success) {
