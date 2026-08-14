@@ -1,9 +1,10 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { runCleanup } from '@/lib/cron/cleanup';
+import { runEventReminders } from '@/lib/cron/event-reminders';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
@@ -19,6 +20,6 @@ export async function GET(req: NextRequest) {
     return new NextResponse('Unauthorized', { status: 401 });
   }
 
-  const result = await runCleanup();
+  const result = await runEventReminders();
   return NextResponse.json(result, { status: result.ok ? 200 : 500 });
 }
