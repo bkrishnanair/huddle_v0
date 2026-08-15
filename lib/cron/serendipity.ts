@@ -113,41 +113,88 @@ export async function runSerendipity(): Promise<CronResult> {
 
     // ========== PHASE 2: REASON ==========
     const reasonStart = Date.now();
-    const usersSnap = await adminDb.collection('users').limit(500).get();
-    const allUsers: CandidateUser[] = [];
-    const userFollowing = new Map<string, string[]>();
-
-    for (const doc of usersSnap.docs) {
-      const data = doc.data();
-      allUsers.push({
-        uid: doc.id,
-        displayName: data.displayName || data.name || 'User',
-        favoriteSports: data.favoriteSports || data.favoriteCategories || [],
-        lastKnownLocation: data.lastKnownLocation
-          ? {
-              latitude:
-                data.lastKnownLocation.latitude ||
-                data.lastKnownLocation._latitude ||
-                0,
-              longitude:
-                data.lastKnownLocation.longitude ||
-                data.lastKnownLocation._longitude ||
-                0,
-            }
-          : undefined,
-        totalRsvps: data.totalRsvps || 0,
-        totalCheckIns: data.totalCheckIns || 0,
-      });
-    }
-
+    const geofire = await import('geofire-common');
+    
     const eventScores = new Map<string, CandidateScore[]>();
     let totalCandidatesEvaluated = 0;
     let totalQualified = 0;
+    const userFollowing = new Map<string, string[]>();
 
     for (const event of atRiskEvents) {
+      const candidatesMap = new Map<string, CandidateUser>();
+
+      // 1. Query by interest match (if users have favoriteSports array)
+      try {
+        const interestSnap = await adminDb.collection('users')
+          .where('favoriteSports', 'array-contains', event.category)
+          .limit(100)
+          .get();
+        
+        interestSnap.docs.forEach((doc) => {
+          const data = doc.data();
+          candidatesMap.set(doc.id, {
+            uid: doc.id,
+            displayName: data.displayName || data.name || 'User',
+            favoriteSports: data.favoriteSports || data.favoriteCategories || [],
+            lastKnownLocation: data.lastKnownLocation
+              ? {
+                  latitude: data.lastKnownLocation.latitude || data.lastKnownLocation._latitude || 0,
+                  longitude: data.lastKnownLocation.longitude || data.lastKnownLocation._longitude || 0,
+                }
+              : undefined,
+            totalRsvps: data.totalRsvps || 0,
+            totalCheckIns: data.totalCheckIns || 0,
+          });
+        });
+      } catch (e) {
+        console.warn(`Could not query users by interest for event ${event.id}`, e);
+      }
+
+      // 2. Query by geohash proximity (25 miles = ~40233 meters)
+      if (event.geopoint) {
+        try {
+          const center = [
+            event.geopoint.latitude || (event.geopoint as any)._latitude,
+            event.geopoint.longitude || (event.geopoint as any)._longitude
+          ] as [number, number];
+          const bounds = geofire.geohashQueryBounds(center, 40233);
+          
+          for (const b of bounds) {
+            const geoSnap = await adminDb.collection('users')
+              .orderBy('geohash')
+              .startAt(b[0])
+              .endAt(b[1])
+              .limit(50)
+              .get();
+              
+            geoSnap.docs.forEach((doc) => {
+              if (!candidatesMap.has(doc.id)) {
+                const data = doc.data();
+                candidatesMap.set(doc.id, {
+                  uid: doc.id,
+                  displayName: data.displayName || data.name || 'User',
+                  favoriteSports: data.favoriteSports || data.favoriteCategories || [],
+                  lastKnownLocation: data.lastKnownLocation
+                    ? {
+                        latitude: data.lastKnownLocation.latitude || data.lastKnownLocation._latitude || 0,
+                        longitude: data.lastKnownLocation.longitude || data.lastKnownLocation._longitude || 0,
+                      }
+                    : undefined,
+                  totalRsvps: data.totalRsvps || 0,
+                  totalCheckIns: data.totalCheckIns || 0,
+                });
+              }
+            });
+          }
+        } catch (e) {
+          console.warn(`Could not query users by geohash for event ${event.id}`, e);
+        }
+      }
+
+      const eventCandidates = Array.from(candidatesMap.values());
       const socialGraph = new Map<string, string[]>();
 
-      for (const user of allUsers) {
+      for (const user of eventCandidates) {
         if (!userFollowing.has(user.uid)) {
           try {
             const followingSnap = await adminDb
@@ -169,7 +216,7 @@ export async function runSerendipity(): Promise<CronResult> {
           event.players.includes(fid),
         );
         const friendNames = friendsInEvent.map((fid) => {
-          const friend = allUsers.find((u) => u.uid === fid);
+          const friend = eventCandidates.find((u) => u.uid === fid);
           return friend?.displayName || 'a friend';
         });
         if (friendNames.length > 0) {
@@ -177,8 +224,8 @@ export async function runSerendipity(): Promise<CronResult> {
         }
       }
 
-      totalCandidatesEvaluated += allUsers.length;
-      const scores = scoreCandidates(allUsers, event, socialGraph);
+      totalCandidatesEvaluated += eventCandidates.length;
+      const scores = scoreCandidates(eventCandidates, event, socialGraph);
       totalQualified += scores.length;
       eventScores.set(event.id, scores);
     }
