@@ -44,7 +44,9 @@ export async function getAndRegisterPushToken() {
     }
     
     const swUrl = `/firebase-messaging-sw.js?apiKey=${encodeURIComponent(apiKey)}&projectId=${encodeURIComponent(projectId)}&messagingSenderId=${encodeURIComponent(messagingSenderId)}&appId=${encodeURIComponent(appId)}`
-    const registration = await navigator.serviceWorker.register(swUrl)
+    const registration = await navigator.serviceWorker.register(swUrl, {
+      scope: '/firebase-cloud-messaging-push-scope',
+    })
 
     const token = await getToken(messaging, {
       vapidKey: process.env.NEXT_PUBLIC_VAPID_KEY,

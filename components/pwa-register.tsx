@@ -2,8 +2,11 @@
 
 import { useEffect } from 'react'
 import { syncPushPermissionState } from '@/lib/push-client'
+import { useFirebase } from '@/lib/firebase-context'
 
 export function PWARegister() {
+  const { user } = useFirebase()
+
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -17,10 +20,14 @@ export function PWARegister() {
         );
       });
     }
-
-    // Audit native Notification.permission on load and sync to user record
-    syncPushPermissionState();
   }, []);
+
+  useEffect(() => {
+    // Only audit and sync push permission when a user is signed in to avoid 401s for guests
+    if (user?.uid) {
+      syncPushPermissionState();
+    }
+  }, [user]);
 
   return null;
 }

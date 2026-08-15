@@ -38,9 +38,12 @@ export async function runEventReminders(): Promise<CronResult> {
     let notificationsSent = 0;
     let emailsSent = 0;
     let emailsFailed = 0;
+    let pushesSent = 0;
+    let pushesFailed = 0;
 
     const batch = adminDb.batch();
     const emailPromises: Promise<{ success: boolean; error?: string }>[] = [];
+    const pendingPushes: { uid: string; payload: { title: string; body: string; url: string; type: "event_reminder" } }[] = [];
     let batchOps = 0;
 
     for (const doc of eventsSnap.docs) {
@@ -115,13 +118,16 @@ export async function runEventReminders(): Promise<CronResult> {
         const pushTitle = `Reminder: ${eventName}`;
         const pushBody = `Happening ${hoursUntilEvent < 2 ? 'soon' : 'tomorrow'}! Don't forget to show up.`;
         
-        // Dispatch push asynchronously
-        sendPushToUser(uid, {
-          title: pushTitle,
-          body: pushBody,
-          url: `/event/${doc.id}`,
-          type: 'event_reminder'
-        }).catch(err => console.error('Push error for reminder:', err));
+        // Queue push to execute only AFTER successful batch commit
+        pendingPushes.push({
+          uid,
+          payload: {
+            title: pushTitle,
+            body: pushBody,
+            url: `/event/${doc.id}`,
+            type: 'event_reminder'
+          }
+        });
 
         const userEmail = userData.email;
         if (userEmail) {
@@ -146,7 +152,21 @@ export async function runEventReminders(): Promise<CronResult> {
     }
 
     if (batchOps > 0) {
+      // 1. Commit in-app notifications first
       await batch.commit();
+
+      // 2. Only dispatch and await push notifications after commit succeeds
+      const pushPromises = pendingPushes.map((p) =>
+        sendPushToUser(p.uid, p.payload),
+      );
+      const pushResults = await Promise.allSettled(pushPromises);
+      for (const res of pushResults) {
+        if (res.status === 'fulfilled' && (res.value as any)?.successCount > 0) {
+          pushesSent++;
+        } else if (res.status === 'rejected' || (res.value as any)?.failureCount > 0) {
+          pushesFailed++;
+        }
+      }
     }
 
     const emailResults = await Promise.allSettled(emailPromises);
@@ -158,9 +178,12 @@ export async function runEventReminders(): Promise<CronResult> {
       }
     }
 
-    // Include email stats in processed count for logging
+    // Include stats in errors array for cron log observability
     if (emailsFailed > 0) {
       errors.push(`${emailsFailed} emails failed`);
+    }
+    if (pushesFailed > 0) {
+      errors.push(`${pushesFailed} push dispatches failed`);
     }
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);

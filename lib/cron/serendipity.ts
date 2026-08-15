@@ -236,7 +236,10 @@ export async function runSerendipity(): Promise<CronResult> {
     // ========== PHASE 3: ACT ==========
     const actStart = Date.now();
     let notificationsSent = 0;
+    let pushesSent = 0;
+    let pushesFailed = 0;
     const actDetails: Record<string, unknown>[] = [];
+    const pushPromises: Promise<any>[] = [];
 
     for (const event of atRiskEvents) {
       const scores = eventScores.get(event.id) || [];
@@ -274,17 +277,19 @@ export async function runSerendipity(): Promise<CronResult> {
             },
           });
 
-            notificationsSent++;
-            processed++;
-            
+          notificationsSent++;
+          processed++;
+          
+          pushPromises.push(
             sendPushToUser(candidate.userId, {
               title: "You might like this event",
               body: composed.message,
               url: `/event/${event.id}`,
               type: "serendipity_nudge"
-            }).catch(err => console.error('Push error for serendipity:', err));
+            })
+          );
 
-            actDetails.push({
+          actDetails.push({
             userId: candidate.userId,
             userName: candidate.displayName,
             eventId: event.id,
@@ -301,6 +306,20 @@ export async function runSerendipity(): Promise<CronResult> {
           console.error(`Serendipity dispatch error for ${candidate.userId}:`, error);
         }
       }
+    }
+
+    // Await all push dispatches before serverless function termination
+    const pushResults = await Promise.allSettled(pushPromises);
+    for (const res of pushResults) {
+      if (res.status === 'fulfilled' && (res.value as any)?.successCount > 0) {
+        pushesSent++;
+      } else if (res.status === 'rejected' || (res.value as any)?.failureCount > 0) {
+        pushesFailed++;
+      }
+    }
+
+    if (pushesFailed > 0) {
+      errors.push(`${pushesFailed} serendipity push dispatches failed`);
     }
 
     const actMs = Date.now() - actStart;
