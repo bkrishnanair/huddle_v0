@@ -59,7 +59,11 @@ export function TopNavbar() {
                                     className="bg-transparent !border-0 !ring-0 !outline-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 text-[14px] h-full placeholder:text-slate-500 text-foreground"
                                 />
                             </div>
-                            {isAiSearching && <Loader2 className="w-4 h-4 text-primary animate-spin mr-3" />}
+                            {isAiSearching && (
+                                <div className="flex items-center gap-1.5 mr-3">
+                                    <div className="w-2 h-2 rounded-full bg-teal-400 animate-ping" />
+                                </div>
+                            )}
                         </div>
                     </div>
 

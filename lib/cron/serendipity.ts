@@ -10,6 +10,7 @@ import {
   type CandidateScore,
 } from '@/lib/serendipity-scorer';
 import { composeNotification } from '@/lib/serendipity-composer';
+import { sendPushToUser } from '@/lib/push-server';
 import type { CronResult } from './types';
 
 /**
@@ -273,9 +274,17 @@ export async function runSerendipity(): Promise<CronResult> {
             },
           });
 
-          notificationsSent++;
-          processed++;
-          actDetails.push({
+            notificationsSent++;
+            processed++;
+            
+            sendPushToUser(candidate.userId, {
+              title: "You might like this event",
+              body: composed.message,
+              url: `/event/${event.id}`,
+              type: "serendipity_nudge"
+            }).catch(err => console.error('Push error for serendipity:', err));
+
+            actDetails.push({
             userId: candidate.userId,
             userName: candidate.displayName,
             eventId: event.id,

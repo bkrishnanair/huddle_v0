@@ -40,10 +40,38 @@ export default function AppLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen liquid-gradient flex items-center justify-center text-white">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p>Loading...</p>
+      <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between overflow-hidden relative">
+        {/* Top Navbar Skeleton */}
+        <div className="fixed top-4 inset-x-4 max-w-[1800px] mx-auto h-16 bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl px-4 flex items-center justify-between z-50">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-teal-500/20 animate-pulse" />
+            <div className="w-20 h-5 bg-slate-800 rounded-md animate-pulse" />
+          </div>
+          <div className="hidden md:flex flex-1 max-w-md mx-8 h-9 bg-slate-800/60 rounded-xl animate-pulse" />
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-slate-800/80 animate-pulse" />
+            <div className="w-9 h-9 rounded-xl bg-slate-800/80 animate-pulse" />
+          </div>
+        </div>
+
+        {/* Center Map/Content Canvas Skeleton */}
+        <div className="flex-1 flex flex-col items-center justify-center relative p-6">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-teal-950/20 via-slate-950/80 to-slate-950" />
+          <div className="relative z-10 flex flex-col items-center max-w-sm text-center">
+            <div className="w-14 h-14 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center mb-4 animate-pulse">
+              <div className="w-6 h-6 rounded-full bg-teal-400/40" />
+            </div>
+            <div className="w-36 h-4 bg-slate-800 rounded-full mb-2 animate-pulse" />
+            <div className="w-56 h-3 bg-slate-800/60 rounded-full animate-pulse" />
+          </div>
+        </div>
+
+        {/* Bottom Nav Skeleton */}
+        <div className="fixed bottom-3 inset-x-4 max-w-md mx-auto h-14 bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-around px-6 z-50">
+          <div className="w-6 h-6 rounded-full bg-slate-800 animate-pulse" />
+          <div className="w-6 h-6 rounded-full bg-slate-800 animate-pulse" />
+          <div className="w-8 h-8 rounded-full bg-teal-500/30 animate-pulse" />
+          <div className="w-6 h-6 rounded-full bg-slate-800 animate-pulse" />
         </div>
       </div>
     )

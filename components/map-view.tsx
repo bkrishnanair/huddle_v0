@@ -107,6 +107,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isAiSearching, setIsAiSearching] = useState(false);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(true);
   const [aiKeywords, setAiKeywords] = useState<string[]>([]);
   const [eventSearchQuery, setEventSearchQuery] = useState("");
 
@@ -149,7 +150,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   }, [map]);
 
   useEffect(() => {
-    // Show prompt if we aren't deep linking
+    // Show prompt if we aren't deep linking — delayed by 6 seconds so user takes in the map first
     if (!eventId) {
       let isDismissed = false;
       try {
@@ -158,7 +159,10 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
         console.warn("Storage restricted", e);
       }
       if (!isDismissed) {
-        setShowLocationPrompt(true);
+        const timer = setTimeout(() => {
+          setShowLocationPrompt(true);
+        }, 6000);
+        return () => clearTimeout(timer);
       }
     }
 
@@ -178,6 +182,8 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
     if (!map) return;
     const bounds = map.getBounds();
     if (!bounds) return;
+
+    setIsLoadingEvents(true);
 
     if (user?.uid && !userProfile && !profileFetchAttempted.current) {
       profileFetchAttempted.current = true;
@@ -225,6 +231,8 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
       }
     } catch (error) {
       console.error("Failed to load events:", error);
+    } finally {
+      setIsLoadingEvents(false);
     }
   }, [map]);
 
@@ -1009,8 +1017,54 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           {/* AI Searching indicator */}
           {isAiSearching && (
             <div className="pointer-events-auto px-4 py-2 mt-1 mx-2 bg-indigo-500/20 backdrop-blur-md rounded-xl border border-indigo-500/30 w-max flex items-center gap-2 text-xs text-indigo-300 font-bold shadow-lg">
-              <Loader2 className="w-3 h-3 animate-spin" />
+              <div className="w-2 h-2 rounded-full bg-indigo-400 animate-ping" />
               Searching with AI...
+            </div>
+          )}
+
+          {/* Radar Scanning Pill */}
+          {isLoadingEvents && !isAiSearching && (
+            <div className="pointer-events-auto mx-auto mt-1 px-3.5 py-1.5 bg-slate-950/80 backdrop-blur-xl rounded-full border border-teal-500/30 flex items-center gap-2 text-xs font-semibold text-teal-300 shadow-xl animate-pulse">
+              <div className="w-2 h-2 rounded-full bg-teal-400 animate-ping" />
+              Scanning campus radar...
+            </div>
+          )}
+
+          {/* Empty State Banner — Non-intrusive floating guide instead of a blank dark void */}
+          {!isLoadingEvents && !showListPanel && filteredEvents.length === 0 && (
+            <div className="pointer-events-auto mx-auto mt-3 max-w-sm w-full px-4">
+              <div className="bg-slate-950/90 backdrop-blur-2xl border border-white/15 p-4 rounded-2xl shadow-2xl text-center animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="w-10 h-10 rounded-full bg-teal-500/15 text-teal-400 mx-auto flex items-center justify-center mb-2">
+                  <MapIcon className="w-5 h-5" />
+                </div>
+                <h4 className="text-white font-bold text-sm">No events in this area</h4>
+                <p className="text-slate-400 text-xs mt-1 leading-relaxed">
+                  Pan or zoom out to discover what&apos;s happening on campus, or be the first to start a huddle!
+                </p>
+                <div className="flex items-center justify-center gap-2.5 mt-3.5">
+                  {(activeCategory !== 'All' || activeTime !== 'All' || eventSearchQuery) && (
+                    <button
+                      onClick={() => { setActiveCategory('All'); setActiveTime('All'); setEventSearchQuery(''); setAiKeywords([]); }}
+                      className="px-3 py-1.5 bg-white/10 hover:bg-white/15 text-slate-200 text-xs font-bold rounded-xl transition-colors"
+                    >
+                      Reset Filters
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      if (!user) {
+                        toast.error("Please sign in to host an event.");
+                        setTimeout(() => router.push('/login?return_to=/map?intent=create'), 1500);
+                      } else {
+                        setShowCreateModal(true);
+                      }
+                    }}
+                    className="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold rounded-xl transition-colors shadow-lg shadow-teal-900/30"
+                  >
+                    + Host Event
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>

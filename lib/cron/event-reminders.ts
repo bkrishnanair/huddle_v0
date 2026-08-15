@@ -4,6 +4,7 @@ import 'server-only';
 
 import { getFirebaseAdminDb } from '@/lib/firebase-admin';
 import { sendReminderEmail } from '@/lib/email';
+import { sendPushToUser } from '@/lib/push-server';
 import type { CronResult } from './types';
 
 /**
@@ -110,6 +111,17 @@ export async function runEventReminders(): Promise<CronResult> {
 
         batchOps++;
         notificationsSent++;
+
+        const pushTitle = `Reminder: ${eventName}`;
+        const pushBody = `Happening ${hoursUntilEvent < 2 ? 'soon' : 'tomorrow'}! Don't forget to show up.`;
+        
+        // Dispatch push asynchronously
+        sendPushToUser(uid, {
+          title: pushTitle,
+          body: pushBody,
+          url: `/event/${doc.id}`,
+          type: 'event_reminder'
+        }).catch(err => console.error('Push error for reminder:', err));
 
         const userEmail = userData.email;
         if (userEmail) {
