@@ -4,6 +4,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getServerCurrentUser } from "@/lib/auth-server"
 import { getEvents, getNearbyEvents } from "@/lib/db"
 import { getFirebaseAdminDb, GeoPoint, Timestamp } from "@/lib/firebase-admin"
+import { checkRateLimit } from '@/lib/rate-limit';
 import * as geofire from "geofire-common"
 import { z } from "zod"
 
@@ -212,6 +213,11 @@ export async function POST(request: NextRequest) {
     const user = await getServerCurrentUser()
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const limitCheck = await checkRateLimit(user.uid, 'create_event', 20, 86400000); // 20 per day
+    if (!limitCheck.success) {
+      return NextResponse.json({ error: 'Daily event creation limit reached. Please try again tomorrow.' }, { status: 429 });
     }
 
     // Gate event creation behind email verification

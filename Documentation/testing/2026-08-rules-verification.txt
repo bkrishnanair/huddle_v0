@@ -1,0 +1,13 @@
+=== Firebase Rules Verification ===
+
+Setup complete. Running assertions...
+
+✅ PASS: non-owner CANNOT update players
+✅ PASS: non-owner CANNOT update currentPlayers
+✅ PASS: owner CAN update event details
+✅ PASS: participant CAN append to gallery
+✅ PASS: participant CANNOT replace gallery with a shorter array
+✅ PASS: unauthenticated read of an event SUCCEEDS
+✅ PASS: admin CAN update event details
+
+All assertions complete.

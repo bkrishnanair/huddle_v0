@@ -26,17 +26,20 @@ export async function runCleanup(): Promise<CronResult> {
     const staleSnap = await adminDb
       .collection('events')
       .where('date', '<', cutoffStr)
-      .where('status', '!=', 'archived')
-      .limit(100)
+      .limit(200) // Increase limit slightly to account for in-memory filtering
       .get();
 
     if (!staleSnap.empty) {
       const batch = adminDb.batch();
-      staleSnap.forEach((doc) => {
-        batch.update(doc.ref, { status: 'archived' });
+      staleSnap.docs.forEach((doc) => {
+        if (doc.data().status !== 'archived') {
+          batch.update(doc.ref, { status: 'archived' });
+          processed++;
+        }
       });
-      await batch.commit();
-      processed = staleSnap.size;
+      if (processed > 0) {
+        await batch.commit();
+      }
     }
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);

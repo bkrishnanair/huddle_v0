@@ -113,7 +113,7 @@ export async function runSerendipity(): Promise<CronResult> {
 
     // ========== PHASE 2: REASON ==========
     const reasonStart = Date.now();
-    const usersSnap = await adminDb.collection('users').get();
+    const usersSnap = await adminDb.collection('users').limit(500).get();
     const allUsers: CandidateUser[] = [];
     const userFollowing = new Map<string, string[]>();
 

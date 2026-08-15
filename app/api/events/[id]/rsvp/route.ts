@@ -5,6 +5,7 @@ import { getServerCurrentUser } from "@/lib/auth-server"
 import { getFirebaseAdminDb } from "@/lib/firebase-admin"
 import { z } from "zod"
 import { FieldValue } from "firebase-admin/firestore"
+import { checkRateLimit } from '@/lib/rate-limit';
 
 // Helper function to fan-out notifications in the background using Serendipity Logic
 async function notifyFollowersOfJoin(userId: string, eventId: string, eventName: string, eventCategory: string, eventGeopoint: any) {
@@ -100,6 +101,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     if (!user) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 })
+    }
+
+    const limitCheck = await checkRateLimit(user.uid, 'event_rsvp', 30, 60000); // 30 per minute
+    if (!limitCheck.success) {
+      return NextResponse.json({ error: 'Rate limit exceeded. Please try again later.' }, { status: 429 });
     }
 
     const body = await request.json()

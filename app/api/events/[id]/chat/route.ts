@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerCurrentUser } from "@/lib/auth-server"
 import { sendMessage, getChatMessages } from "@/lib/db"
+import { checkRateLimit } from '@/lib/rate-limit';
 import { z } from "zod"
 
 const chatSchema = z.object({
@@ -17,6 +18,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     if (!user) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 })
+    }
+
+    const limitCheck = await checkRateLimit(user.uid, 'event_chat', 30, 60000); // 30 per minute
+    if (!limitCheck.success) {
+      return NextResponse.json({ error: 'Rate limit exceeded. Please try again later.' }, { status: 429 });
     }
 
     const body = await request.json()

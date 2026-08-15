@@ -38,8 +38,9 @@ service cloud.firestore {
         && request.auth.uid == request.resource.data.createdBy;
       
       allow update: if request.auth != null && (
-        // Event organizer can update any field
+        // Event organizer or admin can update any field
         request.auth.uid == resource.data.createdBy ||
+        ('admins' in resource.data && request.auth.uid in resource.data.admins) ||
         // Regular players can only append to the gallery array
         (
           request.auth.uid in resource.data.players &&
