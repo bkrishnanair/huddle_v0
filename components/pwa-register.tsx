@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from 'react'
+import { syncPushPermissionState } from '@/lib/push-client'
 
 export function PWARegister() {
   useEffect(() => {
@@ -16,6 +17,9 @@ export function PWARegister() {
         );
       });
     }
+
+    // Audit native Notification.permission on load and sync to user record
+    syncPushPermissionState();
   }, []);
 
   return null;

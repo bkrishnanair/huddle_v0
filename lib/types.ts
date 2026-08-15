@@ -17,6 +17,7 @@ export interface UserProfile {
   fcmTokens?: string[];
   pushEnabled?: boolean;
   pushPermissionAskedAt?: string | null;
+  pushPermissionState?: "default" | "granted" | "denied";
 }
 
 export interface GameEvent {

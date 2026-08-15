@@ -13,6 +13,11 @@ interface Metrics {
   archivedEvents: number;
   scrapedEvents: number;
   categoryDistribution: { name: string; count: number }[];
+  pushMetrics?: {
+    granted: number;
+    denied: number;
+    default: number;
+  };
 }
 
 interface SerendipityLog {
@@ -256,6 +261,33 @@ export default function AdminDashboardPage() {
             );
           })}
         </div>
+
+        {/* Push Notification Audience Cohort */}
+        {metrics.pushMetrics && (
+          <div className="mb-8 p-5 rounded-2xl bg-slate-900/60 border border-white/10 backdrop-blur-xl">
+            <div className="flex items-center gap-2 mb-4">
+              <BellRing className="w-5 h-5 text-teal-400" />
+              <h2 className="text-sm font-black uppercase tracking-widest text-slate-300">Push Notification Reach Cohort</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Active Reach (Granted)</span>
+                <p className="text-2xl font-black text-emerald-300 mt-1">{metrics.pushMetrics.granted}</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Users ready to receive instant background push</p>
+              </div>
+              <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20">
+                <span className="text-[10px] font-black uppercase tracking-widest text-rose-400">Unreachable Cohort (Denied)</span>
+                <p className="text-2xl font-black text-rose-300 mt-1">{metrics.pushMetrics.denied}</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Users who blocked notifications in browser</p>
+              </div>
+              <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Unprompted (Default)</span>
+                <p className="text-2xl font-black text-slate-300 mt-1">{metrics.pushMetrics.default}</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Eligible for contextual post-RSVP prompt</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ============ SERENDIPITY ACTIVITY LOG ============ */}
         <div className="bg-slate-900/60 border border-violet-500/20 rounded-2xl p-6 mb-8">

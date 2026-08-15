@@ -66,3 +66,35 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }
+
+const stateSchema = z.object({
+  pushPermissionState: z.enum(['default', 'granted', 'denied'])
+})
+
+export async function PATCH(request: NextRequest) {
+  const user = await getServerCurrentUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  try {
+    const body = await request.json()
+    const validation = stateSchema.safeParse(body)
+    
+    if (!validation.success) {
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
+    }
+
+    const { getFirebaseAdminDb } = await import('@/lib/firebase-admin')
+    const adminDb = getFirebaseAdminDb()
+    if (!adminDb) return NextResponse.json({ error: 'DB Unavailable' }, { status: 500 })
+
+    await adminDb.collection('users').doc(user.uid).update({
+      pushPermissionState: validation.data.pushPermissionState,
+      pushPermissionUpdatedAt: new Date().toISOString()
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Push state update error:', error)
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+  }
+}

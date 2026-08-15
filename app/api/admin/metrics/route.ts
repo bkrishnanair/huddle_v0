@@ -62,6 +62,19 @@ export async function GET(req: NextRequest) {
       }
     });
 
+    // Calculate Push Permission Cohort
+    let pushGranted = 0;
+    let pushDenied = 0;
+    let pushDefault = 0;
+
+    usersSnap.forEach((doc) => {
+      const data = doc.data();
+      const state = data.pushPermissionState || (data.pushEnabled ? 'granted' : 'default');
+      if (state === 'granted') pushGranted++;
+      else if (state === 'denied') pushDenied++;
+      else pushDefault++;
+    });
+
     // Sort category distribution
     const categoryDistribution = Object.entries(categoryCounts)
       .sort((a, b) => b[1] - a[1])
@@ -77,6 +90,11 @@ export async function GET(req: NextRequest) {
         archivedEvents: archivedSnap.size,
         scrapedEvents: scrapedSnap.size,
         categoryDistribution,
+        pushMetrics: {
+          granted: pushGranted,
+          denied: pushDenied,
+          default: pushDefault,
+        }
       }
     });
   } catch (error) {
