@@ -3,6 +3,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdminDb, GeoPoint, Timestamp } from '@/lib/firebase-admin';
 import { getServerCurrentUser } from '@/lib/auth-server';
+import { checkRateLimit } from '@/lib/rate-limit';
 import * as geofire from 'geofire-common';
 import { z } from 'zod';
 
@@ -138,6 +139,16 @@ export async function POST(req: NextRequest) {
     const user = await getServerCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Scraping fans out to the TerpLink API and a full Firestore batch write,
+    // so gate it before any of that work starts.
+    const limitCheck = await checkRateLimit(user.uid, 'scrape_terplink', 5, 3600000); // 5 per hour
+    if (!limitCheck.success) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(limitCheck.retryAfterSeconds) } },
+      );
     }
 
     const body = await req.json().catch(() => ({}));

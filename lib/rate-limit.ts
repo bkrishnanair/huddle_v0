@@ -6,6 +6,8 @@ interface RateLimitResult {
   success: boolean;
   limit: number;
   remaining: number;
+  /** Seconds until the current window rolls over. Use for the Retry-After header. */
+  retryAfterSeconds: number;
 }
 
 /**
@@ -49,10 +51,14 @@ export async function checkRateLimit(
   const count = docSnap.data()?.count || 1;
 
   const remaining = Math.max(0, limit - count);
+  // Windows are fixed buckets, so the reset is the start of the next bucket.
+  const windowEndsAt = (windowId + 1) * windowMs;
+  const retryAfterSeconds = Math.max(1, Math.ceil((windowEndsAt - now) / 1000));
 
   return {
     success: count <= limit,
     limit,
     remaining,
+    retryAfterSeconds,
   };
 }

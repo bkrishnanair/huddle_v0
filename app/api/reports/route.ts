@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerCurrentUser } from "@/lib/auth-server"
 import { reportItem } from "@/lib/db"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { z } from "zod"
 
 const reportSchema = z.object({
@@ -25,6 +26,14 @@ export async function POST(request: NextRequest) {
 
         if (!validationResult.success) {
             return NextResponse.json({ error: validationResult.error.flatten().fieldErrors }, { status: 400 })
+        }
+
+        const limitCheck = await checkRateLimit(user.uid, "submit_report", 10, 3600000) // 10 per hour
+        if (!limitCheck.success) {
+            return NextResponse.json(
+                { error: "Rate limit exceeded. Please try again later." },
+                { status: 429, headers: { "Retry-After": String(limitCheck.retryAfterSeconds) } },
+            )
         }
 
         const { targetId, itemType, reason, details } = validationResult.data
