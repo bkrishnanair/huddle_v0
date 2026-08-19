@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Inter } from "next/font/google"
+import { Inter, IBM_Plex_Mono } from "next/font/google"
 import "./globals.css"
 import { FirebaseProvider } from "@/lib/firebase-context"
 import { Analytics } from "@vercel/analytics/react"
@@ -10,7 +10,20 @@ import { PWARegister } from "@/components/pwa-register"
 import { InstallPrompt } from "@/components/install-prompt"
 import { PushPermissionPrompt } from "@/components/push-permission-prompt"
 
-const inter = Inter({ subsets: ["latin"] })
+// Body voice. `variable` exposes --font-inter to the Instrument token layer;
+// `className` is kept so existing surfaces render exactly as before.
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
+
+// Numeral voice — times, distances, counts, show rates (CLAUDE.md). Loaded as
+// a variable only: nothing applies it globally, so no existing surface changes.
+// Bricolage Grotesque is deliberately NOT loaded here. It is display type used
+// only by the marketing landing page, and the app routes already sit near
+// 400 kB First Load JS. It is declared at the landing route instead.
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  variable: "--font-mono",
+})
 
 export const metadata: Metadata = {
   title: "Huddle - Find Pickup Sports Games",
@@ -39,7 +52,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} tracking-tight`}>
+      <body className={`${inter.variable} ${plexMono.variable} ${inter.className} tracking-tight`}>
         <FirebaseProvider>
           <PWARegister />
           <InstallPrompt />
