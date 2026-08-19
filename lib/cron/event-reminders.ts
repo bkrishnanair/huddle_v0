@@ -19,6 +19,11 @@ export async function runEventReminders(): Promise<CronResult> {
   const start = Date.now();
   const errors: string[] = [];
   let processed = 0;
+  // Declared at function scope so the returned delivery counts can read them.
+  let emailsSent = 0;
+  let emailsFailed = 0;
+  let pushesSent = 0;
+  let pushesFailed = 0;
 
   try {
     const adminDb = getFirebaseAdminDb();
@@ -36,10 +41,6 @@ export async function runEventReminders(): Promise<CronResult> {
       .get();
 
     let notificationsSent = 0;
-    let emailsSent = 0;
-    let emailsFailed = 0;
-    let pushesSent = 0;
-    let pushesFailed = 0;
 
     const batch = adminDb.batch();
     const emailPromises: Promise<{ success: boolean; error?: string }>[] = [];
@@ -180,7 +181,18 @@ export async function runEventReminders(): Promise<CronResult> {
 
     // Include stats in errors array for cron log observability
     if (emailsFailed > 0) {
-      errors.push(`${emailsFailed} emails failed`);
+      // Distinguish "Resend rejected it" from "Resend was never configured".
+      // The second is the failure mode that hides: lib/email.ts warns once at
+      // module load and every send returns success:false, so the UI looks fine
+      // while zero email leaves the system.
+      const unconfigured = emailResults.some(
+        (r) => r.status === 'fulfilled' && r.value.error === 'RESEND_NOT_CONFIGURED',
+      );
+      errors.push(
+        unconfigured
+          ? `${emailsFailed} emails NOT SENT — RESEND_API_KEY is not configured. No reminder email has left this deployment. Run \`npm run preflight\`.`
+          : `${emailsFailed} emails failed`,
+      );
     }
     if (pushesFailed > 0) {
       errors.push(`${pushesFailed} push dispatches failed`);
@@ -197,5 +209,6 @@ export async function runEventReminders(): Promise<CronResult> {
     processed,
     errors,
     durationMs: Date.now() - start,
+    delivery: { emailsSent, emailsFailed, pushesSent, pushesFailed },
   };
 }

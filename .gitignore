@@ -18,6 +18,8 @@ yarn-error.log*
 
 # env files
 .env*
+# ...but the template must be tracked; it contains no values.
+!.env.example
 
 # vercel
 .vercel
