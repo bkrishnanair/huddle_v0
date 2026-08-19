@@ -31,10 +31,21 @@ export async function GET(
 
         const eventData = eventDoc.data()
 
-        // Ensure only the organizer can fetch the attendee roster
-        if (eventData?.createdBy !== user.uid) {
+        // Roster access: the organizer, an event admin, or someone actually in the
+        // event. Anyone else is refused — this is the only route that serves the
+        // roster, since GET /api/events projects it away.
+        const isOrganizer = eventData?.createdBy === user.uid
+        const isEventAdmin = Array.isArray(eventData?.admins) && eventData.admins.includes(user.uid)
+        const isMember = Array.isArray(eventData?.players) && eventData.players.includes(user.uid)
+
+        if (!isOrganizer && !isEventAdmin && !isMember) {
             return NextResponse.json({ error: "Forbidden: You do not have permission to view the attendee roster" }, { status: 403 })
         }
+
+        // Organizers and event admins run the event, so they get operational
+        // detail. A plain attendee gets names only — one attendee must not see
+        // another's private note or their no-show record.
+        const canSeeAttendeeDetail = isOrganizer || isEventAdmin
 
         const playerUids = eventData?.players || [];
         if (playerUids.length === 0) {
@@ -43,7 +54,7 @@ export async function GET(
 
         // Fetch users using whereIn. Note: whereIn supports max 10 items per array in Firestore.
         // If there are more than 10 players, we need to batch the queries.
-        const attendees: { id: string, name: string, loyaltyCount: number, note?: string, reliabilityScore?: number | null }[] = [];
+        const attendees: { id: string, name: string, loyaltyCount?: number, note?: string, reliabilityScore?: number | null }[] = [];
         const attendeeNotes = eventData?.attendeeNotes || {};
 
         // Chunk the uids into sizes of 10
@@ -54,6 +65,14 @@ export async function GET(
 
             for (const doc of usersSnapshot.docs) {
                 const userData = doc.data();
+                const name = userData.name || userData.displayName || "Unknown User";
+
+                // Plain attendees get names only. Skipping the detail work also
+                // avoids two extra Firestore reads per attendee for this caller.
+                if (!canSeeAttendeeDetail) {
+                    attendees.push({ id: doc.id, name });
+                    continue;
+                }
 
                 // Count how many events organized by currentUser.uid this specific attendee has joined
                 const countSnapshot = await adminDb.collection("events")
@@ -93,7 +112,7 @@ export async function GET(
 
                 attendees.push({
                     id: doc.id,
-                    name: userData.name || userData.displayName || "Unknown User",
+                    name,
                     loyaltyCount: countSnapshot.data().count,
                     note: attendeeNotes[doc.id] || undefined,
                     reliabilityScore

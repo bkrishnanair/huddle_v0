@@ -14,6 +14,7 @@ import {
   arrayUnion,
   arrayRemove,
   getCountFromServer,
+  limit,
 } from "firebase/firestore"
 import { db } from "./firebase"
 import * as geofire from "geofire-common"
@@ -36,10 +37,44 @@ export const createEvent = async (eventData: any) => {
   }
 }
 
+/** Days back the event window starts. 1 covers events still running from yesterday. */
+const EVENT_WINDOW_DAYS_BACK = 1;
+/** Days forward the event window ends. Nothing on the map looks further out. */
+const EVENT_WINDOW_DAYS_FORWARD = 90;
+/** Hard ceiling so a bad window can never become a full-collection scan. */
+const EVENT_QUERY_LIMIT = 500;
+
+/** ISO date string (YYYY-MM-DD) offset from today, matching the repo's existing
+ *  `now.toISOString().split('T')[0]` convention for the string `date` field. */
+const isoDateOffset = (days: number): string => {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().split("T")[0];
+};
+
 export const getEvents = async () => {
   try {
     const eventsCol = collection(db, "events")
-    const eventSnapshot = await getDocs(eventsCol)
+
+    // Bounded: a date window plus a hard limit. Previously this read the whole
+    // events collection on every call. Both bounds are on `date`, so this needs
+    // only the automatic single-field index — no composite index required.
+    const q = query(
+      eventsCol,
+      where("date", ">=", isoDateOffset(-EVENT_WINDOW_DAYS_BACK)),
+      where("date", "<=", isoDateOffset(EVENT_WINDOW_DAYS_FORWARD)),
+      orderBy("date", "asc"),
+      limit(EVENT_QUERY_LIMIT),
+    )
+
+    const eventSnapshot = await getDocs(q)
+
+    if (eventSnapshot.size === EVENT_QUERY_LIMIT) {
+      console.warn(
+        `[getEvents] hit the ${EVENT_QUERY_LIMIT}-document limit — the window is returning more than expected. Consider narrowing EVENT_WINDOW_DAYS_FORWARD or paginating.`,
+      )
+    }
+
     return eventSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
   } catch (error) {
     console.error("Error fetching events from Firestore:", error)
