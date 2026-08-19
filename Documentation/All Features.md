@@ -1,5 +1,12 @@
 # Huddle: Master Feature List
 
+> **📖 Descriptive, not normative.** This is an inventory of what has been
+> built, written in the product's own marketing voice. It is **not** a style
+> guide and must not be used to brief an agent. Words like "premium",
+> "glassmorphic" and "cinematic" appear here describing the current UI; they are
+> **banned** by the "Instrument" design system in `CLAUDE.md`, which is the
+> source of truth for all new work.
+
 This document cleanly separates the core value propositions and technical features of the Huddle platform, split into our two primary user bases: **Users (Players/Attendees)** and **Organizers (Captains/Club Leaders)**.
 
 ---
