@@ -56,8 +56,13 @@ export interface GameEvent {
   pinnedMessage?: string;
   players: string[];
   waitlist?: string[];
+  /** @deprecated Moved to events/{id}/roster/{uid}.note — the event document is
+   *  world-readable. Still present on documents that predate
+   *  scripts/migrate-roster-fields.ts. Read via GET /api/events/[id]/attendees. */
   attendeeNotes?: Record<string, string>;
+  /** @deprecated Moved to events/{id}/roster/{uid}.answers. See attendeeNotes. */
   attendeeAnswers?: Record<string, Record<string, string>>;
+  /** @deprecated Moved to events/{id}/roster/{uid}.pickup. See attendeeNotes. */
   attendeePickup?: Record<string, string>;
   questions?: string[];
   pickupPoints?: { id: string; location: string; time: string }[];
@@ -94,6 +99,16 @@ export interface GameEvent {
     type: "weekly" | "biweekly" | "monthly";
     endDate: string;
   };
+}
+
+/** One attendee's free-text RSVP data, stored at events/{eventId}/roster/{uid}.
+ *  Deny-all to clients in firestore.rules; served only by
+ *  GET /api/events/[id]/attendees, which authorizes the caller. */
+export interface RosterEntry {
+  note?: string;
+  answers?: Record<string, string>;
+  pickup?: string;
+  updatedAt?: any;
 }
 
 export interface AppNotification {

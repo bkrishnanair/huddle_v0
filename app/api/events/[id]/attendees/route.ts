@@ -54,8 +54,26 @@ export async function GET(
 
         // Fetch users using whereIn. Note: whereIn supports max 10 items per array in Firestore.
         // If there are more than 10 players, we need to batch the queries.
-        const attendees: { id: string, name: string, loyaltyCount?: number, note?: string, reliabilityScore?: number | null }[] = [];
-        const attendeeNotes = eventData?.attendeeNotes || {};
+        const attendees: {
+            id: string,
+            name: string,
+            loyaltyCount?: number,
+            note?: string,
+            answers?: Record<string, string>,
+            pickup?: string,
+            reliabilityScore?: number | null,
+        }[] = [];
+
+        // Free-text roster data lives in events/{id}/roster/{uid}, which denies all
+        // client access — this route is the only way to read it. Fetched once for
+        // the whole event, and only for callers entitled to the detail.
+        const roster: Record<string, { note?: string, answers?: Record<string, string>, pickup?: string }> = {};
+        if (canSeeAttendeeDetail) {
+            const rosterSnap = await eventRef.collection("roster").get();
+            for (const rosterDoc of rosterSnap.docs) {
+                roster[rosterDoc.id] = rosterDoc.data() as { note?: string, answers?: Record<string, string>, pickup?: string };
+            }
+        }
 
         // Chunk the uids into sizes of 10
         const chunkSize = 10;
@@ -110,11 +128,15 @@ export async function GET(
                 const reliabilityScore = totalTracked > 0 ? Math.round((attended / totalTracked) * 100) : null;
 
 
+                const rosterEntry = roster[doc.id];
+
                 attendees.push({
                     id: doc.id,
                     name,
                     loyaltyCount: countSnapshot.data().count,
-                    note: attendeeNotes[doc.id] || undefined,
+                    note: rosterEntry?.note || undefined,
+                    answers: rosterEntry?.answers || undefined,
+                    pickup: rosterEntry?.pickup || undefined,
                     reliabilityScore
                 });
             }

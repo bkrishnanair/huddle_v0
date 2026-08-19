@@ -123,13 +123,29 @@ async function main() {
       players: Array.from(mergedPlayers),
       currentPlayers: mergedPlayers.size,
       guestRsvps: mergedGuestRsvps,
-      attendeeNotes: mergedAttendeeNotes,
-      attendeeAnswers: mergedAttendeeAnswers,
-      attendeePickup: mergedAttendeePickup,
       checkIns: mergedCheckIns,
       checkedInPlayers: Array.from(mergedCheckedInPlayers),
       viewCount: mergedViewCount,
+      // attendeeNotes/attendeeAnswers/attendeePickup are deliberately NOT written
+      // back here. They live in events/{id}/roster/{uid} — writing them onto the
+      // parent document would reintroduce the PII exposure the subcollection
+      // exists to prevent. Merged into the roster subcollection below instead.
+      attendeeNotes: FieldValue.delete(),
+      attendeeAnswers: FieldValue.delete(),
+      attendeePickup: FieldValue.delete(),
     };
+
+    // Fold the merged free-text into the roster subcollection, one doc per uid.
+    const mergedRoster: Record<string, { note?: string; answers?: Record<string, string>; pickup?: string }> = {};
+    for (const uid of Object.keys(mergedAttendeeNotes)) {
+      mergedRoster[uid] = { ...(mergedRoster[uid] || {}), note: mergedAttendeeNotes[uid] };
+    }
+    for (const uid of Object.keys(mergedAttendeeAnswers)) {
+      mergedRoster[uid] = { ...(mergedRoster[uid] || {}), answers: mergedAttendeeAnswers[uid] };
+    }
+    for (const uid of Object.keys(mergedAttendeePickup)) {
+      mergedRoster[uid] = { ...(mergedRoster[uid] || {}), pickup: mergedAttendeePickup[uid] };
+    }
 
     // Preserve pinnedMessage if claimed doesn't have one
     if (!claimed.pinnedMessage && archived.pinnedMessage) {
@@ -142,16 +158,19 @@ async function main() {
       mergeUpdate.reportedAttendance = archived.reportedAttendance;
     }
 
-    console.log(`  → Merge result: ${mergedPlayers.size} players, ${mergedViewCount} views, ${Object.keys(mergedGuestRsvps).length} guest RSVPs`);
+    console.log(`  → Merge result: ${mergedPlayers.size} players, ${mergedViewCount} views, ${Object.keys(mergedGuestRsvps).length} guest RSVPs, ${Object.keys(mergedRoster).length} roster entries`);
 
     if (!DRY_RUN) {
       const batch = db.batch();
       batch.update(claimedDoc.ref, mergeUpdate);
+      for (const [uid, entry] of Object.entries(mergedRoster)) {
+        batch.set(claimedDoc.ref.collection('roster').doc(uid), entry, { merge: true });
+      }
       batch.delete(archivedRef); // Remove the archived duplicate
       await batch.commit();
-      console.log(`  ✓ Merged and deleted archived duplicate`);
+      console.log(`  ✓ Merged (roster -> subcollection) and deleted archived duplicate`);
     } else {
-      console.log(`  [DRY RUN] Would merge data and delete ${archivedSnap.id}`);
+      console.log(`  [DRY RUN] Would merge data, write ${Object.keys(mergedRoster).length} roster docs under ${claimedDoc.id}/roster, and delete ${archivedSnap.id}`);
     }
 
     mergedCount++;

@@ -72,6 +72,16 @@ service cloud.firestore {
       match /guestContacts/{contactId} {
         allow read, write: if false;
       }
+
+      // Attendee free-text roster: the note, question answers and pickup choice
+      // a student submits when they RSVP. The parent event document is
+      // world-readable and rules cannot project fields, so this data has to live
+      // in its own subcollection to be protected at all.
+      // Deny-all for clients; reachable only through
+      // GET /api/events/[id]/attendees, which authorizes the caller.
+      match /roster/{uid} {
+        allow read, write: if false;
+      }
     }
     
     function isEventParticipant(eventId) {
