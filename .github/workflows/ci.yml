@@ -34,6 +34,8 @@ jobs:
     - name: Build
       run: npm run build
       env:
-        # Prevent Firebase Admin SDK from crashing during build
-        NEXT_PUBLIC_FIREBASE_PROJECT_ID: "huddlev0git"
-        FIREBASE_PROJECT_ID: "huddlev0git"
+        # Build-time stub so the Firebase Admin SDK does not crash during
+        # prerender. Must match .firebaserc and .env.local — CI never contacts
+        # the project, but a mismatched id makes the config confusing to read.
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: "huddle-dca59"
+        FIREBASE_PROJECT_ID: "huddle-dca59"
