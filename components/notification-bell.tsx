@@ -15,6 +15,25 @@ import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/lib/firebase-context";
 import { toast } from "sonner";
 
+/**
+ * How often the bell re-checks for notifications, in ms.
+ *
+ * Was 30_000. At 30s a single user with a tab open issues 2,880 requests/day,
+ * which exhausts Vercel's 1M monthly invocations at roughly 350 daily actives
+ * doing nothing but leaving the tab open. At 5 minutes that ceiling moves to
+ * ~3,500, and the visibility guard below cuts it much further in practice
+ * because most open tabs are backgrounded.
+ *
+ * TODO(remove-polling): delete this poll entirely once web push delivery is
+ * verified end to end. The infrastructure already exists — lib/push-client.ts,
+ * lib/push-server.ts, public/firebase-messaging-sw.js — but it has never
+ * delivered a notification because NEXT_PUBLIC_VAPID_KEY has never been set
+ * (no Web Push certificate has been generated). Once a real push arrives on a
+ * real device, this component should subscribe via onMessage instead of
+ * polling, and this constant should go with it.
+ */
+const NOTIFICATION_POLL_INTERVAL_MS = 5 * 60 * 1000;
+
 export function NotificationBell() {
     const { user } = useAuth();
     const [notifications, setNotifications] = useState<any[]>([]);
@@ -30,6 +49,8 @@ export function NotificationBell() {
     useEffect(() => {
         if (!user) return;
 
+        let cancelled = false;
+
         const fetchNotifications = async () => {
             try {
                 const idToken = await user.getIdToken();
@@ -40,6 +61,7 @@ export function NotificationBell() {
                 });
                 if (res.ok) {
                     const data = await res.json();
+                    if (cancelled) return;
                     setNotifications(data.notifications || []);
                     setUnreadCount(data.notifications?.filter((n: any) => !n.read).length || 0);
                 }
@@ -50,10 +72,27 @@ export function NotificationBell() {
 
         fetchNotifications();
 
-        // In a real app with FCM, we'd use onMessage here.
-        // For this MVP, we'll poll every 30s as a fallback for "real-time" feel without socket.io/FCM
-        const interval = setInterval(fetchNotifications, 30000);
-        return () => clearInterval(interval);
+        // Only poll while the tab is actually in front. A backgrounded tab kept
+        // open all day was previously issuing a request every 30 seconds
+        // forever, which is the dominant source of serverless invocations.
+        const tick = () => {
+            if (document.visibilityState === "visible") fetchNotifications();
+        };
+
+        const interval = setInterval(tick, NOTIFICATION_POLL_INTERVAL_MS);
+
+        // Catch up immediately when the tab comes back, so the longer interval
+        // is not felt: the badge is fresh by the time the user looks at it.
+        const onVisibilityChange = () => {
+            if (document.visibilityState === "visible") fetchNotifications();
+        };
+        document.addEventListener("visibilitychange", onVisibilityChange);
+
+        return () => {
+            cancelled = true;
+            clearInterval(interval);
+            document.removeEventListener("visibilitychange", onVisibilityChange);
+        };
     }, [user]);
 
     const markAsRead = async (id: string, isRead: boolean) => {
