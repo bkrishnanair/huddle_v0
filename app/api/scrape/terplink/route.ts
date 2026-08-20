@@ -31,10 +31,14 @@ interface TerpLinkEvent {
   organizationName?: string;
 }
 
-async function geocodeLocation(address: string) {
-  // Jitter helper to prevent exact stacking
+/** Campus-centre coordinate with jitter, so co-located pins do not stack exactly. */
+function campusFallback() {
   const jitter = () => (Math.random() - 0.5) * 0.002;
-  const fallback = { lat: 38.9897 + jitter(), lng: -76.9378 + jitter(), geocoded: false };
+  return { lat: UMD_LAT + jitter(), lng: UMD_LNG + jitter(), geocoded: false };
+}
+
+async function geocodeLocation(address: string) {
+  const fallback = campusFallback();
 
   if (!address) {
     console.warn('[Scraper] No address provided, using campus center fallback');
@@ -244,7 +248,12 @@ export async function POST(req: NextRequest) {
                        loc.toLowerCase().includes('virtual') ||
                        loc.toLowerCase().includes('remote');
                        
-      const { lat, lng } = await geocodeLocation(loc);
+      // Virtual events have no physical address to resolve, so skip the billed
+      // Geocoding call entirely. They still need a coordinate because every
+      // event document carries a geohash for the radius query in
+      // getNearbyEvents(); campus centre is the same value geocoding would
+      // have fallen back to anyway.
+      const { lat, lng } = isOnline ? campusFallback() : await geocodeLocation(loc);
       const geohash = geofire.geohashForLocation([lat, lng]);
 
       const eventDoc: Record<string, any> = {
