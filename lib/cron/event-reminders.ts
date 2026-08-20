@@ -5,6 +5,8 @@ import 'server-only';
 import { getFirebaseAdminDb } from '@/lib/firebase-admin';
 import { sendReminderEmail } from '@/lib/email';
 import { sendPushToUser } from '@/lib/push-server';
+import { getEventStartUTC } from '@/lib/datetime';
+import type { GameEvent } from '@/lib/types';
 import type { CronResult } from './types';
 
 /**
@@ -54,16 +56,8 @@ export async function runEventReminders(): Promise<CronResult> {
       if (data.status === 'archived') continue;
       if (data.isScraped) continue;
 
-      const eventDate = data.date || '';
-      const eventTime = data.time || '18:00';
-
-      let eventStart: Date;
-      try {
-        eventStart = new Date(`${eventDate}T${eventTime}`);
-        if (isNaN(eventStart.getTime())) continue;
-      } catch {
-        continue;
-      }
+      const eventStart = getEventStartUTC(data as GameEvent);
+      if (isNaN(eventStart.getTime())) continue;
 
       const hoursUntilEvent =
         (eventStart.getTime() - now.getTime()) / (1000 * 60 * 60);
@@ -87,11 +81,15 @@ export async function runEventReminders(): Promise<CronResult> {
         });
       }
 
-      const domain =
-        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'localhost:3000';
-      const protocol = domain.includes('localhost') ? 'http' : 'https';
-      const eventUrl = `${protocol}://${domain}/event/${doc.id}`;
+      const baseUrl = (
+        process.env.NEXT_PUBLIC_APP_URL ||
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+        'https://huddlemap.live'
+      ).replace(/\/$/, '');
+      const eventUrl = `${baseUrl}/event/${doc.id}`;
       const eventName = data.name || data.title || 'Your event';
+      const eventDate = data.date || '';
+      const eventTime = data.time || '18:00';
 
       for (const [uid, userData] of userDocs) {
         if (userData.notifyReminders === false) continue;

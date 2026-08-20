@@ -5,6 +5,7 @@ import { getFirebaseAdminDb, GeoPoint, Timestamp } from '@/lib/firebase-admin';
 import { getServerCurrentUser } from '@/lib/auth-server';
 import { checkRateLimit } from '@/lib/rate-limit';
 import * as geofire from 'geofire-common';
+import { toZonedTime, format } from 'date-fns-tz';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -206,21 +207,31 @@ export async function POST(req: NextRequest) {
       // Skip if already imported
       if (existingSourceUrls.has(sourceUrl)) continue;
 
-      // Parse dates
+      // Parse dates in UMD local timezone (America/New_York)
+      const eventTz = 'America/New_York';
       let date = '';
       let time = '12:00';
-      let endTime = '';
+      let endDate: string | undefined = undefined;
+      let endTime: string | undefined = undefined;
+
       if (te.startsOn) {
         const dt = new Date(te.startsOn);
         if (!isNaN(dt.getTime())) {
-          date = dt.toISOString().split('T')[0];
-          time = dt.toTimeString().slice(0, 5);
+          const zonedStart = toZonedTime(dt, eventTz);
+          date = format(zonedStart, 'yyyy-MM-dd', { timeZone: eventTz });
+          time = format(zonedStart, 'HH:mm', { timeZone: eventTz });
         }
       }
+
       if (te.endsOn) {
-        const dt = new Date(te.endsOn);
-        if (!isNaN(dt.getTime())) {
-          endTime = dt.toTimeString().slice(0, 5);
+        const dtEnd = new Date(te.endsOn);
+        if (!isNaN(dtEnd.getTime())) {
+          const zonedEnd = toZonedTime(dtEnd, eventTz);
+          const endCalDate = format(zonedEnd, 'yyyy-MM-dd', { timeZone: eventTz });
+          endTime = format(zonedEnd, 'HH:mm', { timeZone: eventTz });
+          if (endCalDate && endCalDate !== date) {
+            endDate = endCalDate;
+          }
         }
       }
 
@@ -245,8 +256,9 @@ export async function POST(req: NextRequest) {
         eventType: isOnline ? 'virtual' : 'physical',
         date,
         time,
-        endTime,
-        endDate: '',
+        timezone: eventTz,
+        ...(endTime ? { endTime } : {}),
+        ...(endDate ? { endDate } : {}),
         location: loc,
         maxPlayers: 50,
         currentPlayers: 0,

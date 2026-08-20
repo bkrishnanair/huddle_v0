@@ -3,6 +3,8 @@
 import 'server-only';
 
 import { getFirebaseAdminDb } from '@/lib/firebase-admin';
+import { getEventEndUTC } from '@/lib/datetime';
+import type { GameEvent } from '@/lib/types';
 import type { CronResult } from './types';
 
 /**
@@ -41,17 +43,7 @@ export async function runPostEventPrompt(): Promise<CronResult> {
       if (data.postEventPromptSent) continue;
       if (data.isScraped || data.status === 'archived') continue;
 
-      const endTime = data.endTime || '';
-      const startTime = data.time || '18:00';
-      const eventDate = data.date || '';
-
-      let eventEnd: Date;
-      if (endTime) {
-        eventEnd = new Date(`${eventDate}T${endTime}`);
-      } else {
-        const s = new Date(`${eventDate}T${startTime}`);
-        eventEnd = new Date(s.getTime() + 2 * 60 * 60 * 1000);
-      }
+      const eventEnd = getEventEndUTC(data as GameEvent);
 
       if (isNaN(eventEnd.getTime())) continue;
       if (eventEnd > now) continue;

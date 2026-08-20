@@ -317,7 +317,7 @@ export async function POST(request: NextRequest) {
       const newEvent: Record<string, any> = {
         ...rest,
         date: eventDateStr,
-        endDate: eventEndDateStr || "",
+        ...(eventEndDateStr && eventEndDateStr.trim() !== "" ? { endDate: eventEndDateStr.trim() } : {}),
         title: rest.name,
         sport: rest.category,
         location: rest.location || null,

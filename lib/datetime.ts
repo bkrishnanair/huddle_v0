@@ -25,7 +25,11 @@ const DEFAULT_TIMEZONE = 'America/New_York';
  */
 export function getEventStartUTC(event: GameEvent): Date {
   const tz = event.timezone || DEFAULT_TIMEZONE;
-  const localString = `${event.date}T${event.time || '00:00'}:00`;
+  const dateStr = event.date?.trim();
+  if (!dateStr) return new Date(NaN);
+  const timeStr = event.time?.trim() || '00:00';
+  const normalizedTime = timeStr.length === 5 ? `${timeStr}:00` : timeStr;
+  const localString = `${dateStr}T${normalizedTime}`;
   return fromZonedTime(localString, tz);
 }
 
@@ -33,16 +37,35 @@ export function getEventStartUTC(event: GameEvent): Date {
  * Get the UTC Date when the event ends.
  *
  * If endTime is set, uses it. Otherwise defaults to start + 2 hours.
+ * Resilient against empty/whitespace endDate strings and cross-midnight times.
  */
 export function getEventEndUTC(event: GameEvent): Date {
   const tz = event.timezone || DEFAULT_TIMEZONE;
   const startUTC = getEventStartUTC(event);
+  if (isNaN(startUTC.getTime())) return new Date(NaN);
 
-  if (event.endTime) {
-    const endDateStr = event.endDate || event.date;
-    const localEnd = `${endDateStr}T${event.endTime}:00`;
-    const endUTC = fromZonedTime(localEnd, tz);
-    if (!isNaN(endUTC.getTime())) return endUTC;
+  const endTimeStr = event.endTime?.trim();
+  if (endTimeStr) {
+    const endDateStr = (event.endDate && event.endDate.trim().length > 0)
+      ? event.endDate.trim()
+      : (event.date && event.date.trim().length > 0 ? event.date.trim() : '');
+
+    if (endDateStr) {
+      const normalizedEndTime = endTimeStr.length === 5 ? `${endTimeStr}:00` : endTimeStr;
+      const localEnd = `${endDateStr}T${normalizedEndTime}`;
+      const endUTC = fromZonedTime(localEnd, tz);
+
+      if (!isNaN(endUTC.getTime())) {
+        // If end time is earlier than start time on same date, advance by 24 hours
+        if (
+          endUTC.getTime() <= startUTC.getTime() &&
+          (!event.endDate || event.endDate.trim() === '' || event.endDate.trim() === event.date?.trim())
+        ) {
+          return new Date(endUTC.getTime() + 24 * 60 * 60 * 1000);
+        }
+        return endUTC;
+      }
+    }
   }
 
   // Default: start + 2 hours

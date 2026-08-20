@@ -11,6 +11,8 @@ import {
 } from '@/lib/serendipity-scorer';
 import { composeNotification } from '@/lib/serendipity-composer';
 import { sendPushToUser } from '@/lib/push-server';
+import { getEventStartUTC } from '@/lib/datetime';
+import type { GameEvent } from '@/lib/types';
 import type { CronResult } from './types';
 
 /**
@@ -55,13 +57,9 @@ export async function runSerendipity(): Promise<CronResult> {
       const data = doc.data();
       if (data.isPrivate || data.status === 'archived' || data.status === 'past') return;
 
-      try {
-        const eventDateTime = new Date(`${data.date}T${data.time}`);
-        if (isNaN(eventDateTime.getTime())) return;
-        if (eventDateTime < now || eventDateTime > in48Hours) return;
-      } catch {
-        return;
-      }
+      const eventDateTime = getEventStartUTC(data as GameEvent);
+      if (isNaN(eventDateTime.getTime())) return;
+      if (eventDateTime < now || eventDateTime > in48Hours) return;
 
       const maxPlayers = data.maxPlayers || 50;
       const currentPlayers = data.currentPlayers || (data.players?.length || 0);
