@@ -1,3 +1,21 @@
+// app/api/cron/dispatch/route.ts
+// Single consolidated Vercel cron dispatcher.
+//
+// Schedule & Timezone Mapping (EDT = UTC-4 / EST = UTC-5):
+// --------------------------------------------------------------------------------------
+// Handler             Cadence           UTC Hours          EDT Equivalent (Local UMD)
+// --------------------------------------------------------------------------------------
+// event-reminders     Hourly            Every hour (*)     Every hour
+// scheduled-messages  Hourly            Every hour (*)     Every hour
+// serendipity         Every 6 hours     1, 7, 13, 19       9:00 PM, 3:00 AM, 9:00 AM, 3:00 PM
+// cleanup             Daily             6                  2:00 AM
+// post-event-prompt   Daily             2                  10:00 PM
+// --------------------------------------------------------------------------------------
+//
+// TODO: Once push delivery is verified working in production, move serendipity
+// to its own dedicated schedule "*/15 8-23 * * *" so at-risk detection happens
+// inside the 45-minute window the product pitch claims.
+
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,7 +28,7 @@ import { runScheduledMessages } from '@/lib/cron/scheduled-messages';
 import type { CronResult } from '@/lib/cron/types';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60; // 60s max for Vercel Hobby/Pro
+export const maxDuration = 300; // 300s max for Vercel Pro
 
 export async function GET(req: NextRequest) {
   const start = Date.now();
@@ -56,7 +74,8 @@ export async function GET(req: NextRequest) {
 
   for (const handler of handlersToRun) {
     const elapsed = Date.now() - start;
-    if (elapsed > 50000 && handler.deferrable) {
+    // With 300s maxDuration on Vercel Pro, allow up to 270s before dropping deferrable handlers
+    if (elapsed > 270000 && handler.deferrable) {
       console.warn(`[Cron Dispatch] Skipping ${handler.name} due to time budget (${elapsed}ms elapsed)`);
       results.push({
         handler: handler.name,
