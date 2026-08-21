@@ -7,10 +7,14 @@
 // --------------------------------------------------------------------------------------
 // event-reminders     Hourly            Every hour (*)     Every hour
 // scheduled-messages  Hourly            Every hour (*)     Every hour
-// serendipity         Every 6 hours     1, 7, 13, 19       9:00 PM, 3:00 AM, 9:00 AM, 3:00 PM
+// serendipity         4x Daily          14, 18, 22, 1      10:00 AM, 2:00 PM, 6:00 PM, 9:00 PM
 // cleanup             Daily             6                  2:00 AM
 // post-event-prompt   Daily             2                  10:00 PM
 // --------------------------------------------------------------------------------------
+//
+// Mode Support:
+// - CRON_MODE='hourly' (default): Runs handlers based on current UTC hour schedule above.
+// - CRON_MODE='daily': Runs all 5 handlers on every invocation (fallback for daily crons).
 //
 // TODO: Once push delivery is verified working in production, move serendipity
 // to its own dedicated schedule "*/15 8-23 * * *" so at-risk detection happens
@@ -47,29 +51,70 @@ export async function GET(req: NextRequest) {
     return new NextResponse('Unauthorized', { status: 401 });
   }
 
-  // 2. Determine Handlers for Current Hour
+  // 2. Determine Mode & Handlers for Current Invocation
   const now = new Date();
   const currentHour = now.getUTCHours();
-  
-  const handlersToRun: { name: string; fn: () => Promise<CronResult>; deferrable: boolean }[] = [
-    { name: 'event-reminders', fn: runEventReminders, deferrable: false },
-    { name: 'scheduled-messages', fn: runScheduledMessages, deferrable: false }
+  const cronMode = (process.env.CRON_MODE || 'hourly').toLowerCase();
+  const isDailyMode = cronMode === 'daily';
+
+  interface HandlerDef {
+    name: string;
+    fn: () => Promise<CronResult>;
+    deferrable: boolean;
+    shouldRun: boolean;
+    skipReason?: string;
+  }
+
+  const allHandlers: HandlerDef[] = [
+    {
+      name: 'event-reminders',
+      fn: runEventReminders,
+      deferrable: false,
+      shouldRun: true,
+    },
+    {
+      name: 'scheduled-messages',
+      fn: runScheduledMessages,
+      deferrable: false,
+      shouldRun: true,
+    },
+    {
+      name: 'serendipity',
+      fn: runSerendipity,
+      deferrable: false,
+      shouldRun: isDailyMode || [14, 18, 22, 1].includes(currentHour),
+      skipReason: `Not scheduled for UTC hour ${currentHour} in hourly mode (scheduled for 14, 18, 22, 1 UTC)`,
+    },
+    {
+      name: 'cleanup',
+      fn: runCleanup,
+      deferrable: true,
+      shouldRun: isDailyMode || currentHour === 6,
+      skipReason: `Not scheduled for UTC hour ${currentHour} in hourly mode (scheduled for 6 UTC / 2:00 AM EDT)`,
+    },
+    {
+      name: 'post-event-prompt',
+      fn: runPostEventPrompt,
+      deferrable: true,
+      shouldRun: isDailyMode || currentHour === 2,
+      skipReason: `Not scheduled for UTC hour ${currentHour} in hourly mode (scheduled for 2 UTC / 10:00 PM EDT)`,
+    },
   ];
 
-  if ([1, 7, 13, 19].includes(currentHour)) {
-    handlersToRun.push({ name: 'serendipity', fn: runSerendipity, deferrable: false });
-  }
-  if (currentHour === 6) {
-    handlersToRun.push({ name: 'cleanup', fn: runCleanup, deferrable: true });
-  }
-  if (currentHour === 2) {
-    handlersToRun.push({ name: 'post-event-prompt', fn: runPostEventPrompt, deferrable: true });
-  }
+  const handlersToRun = allHandlers.filter((h) => h.shouldRun);
+  const skippedHandlers = allHandlers
+    .filter((h) => !h.shouldRun)
+    .map((h) => ({
+      handler: h.name,
+      ok: true,
+      processed: 0,
+      skipped: true,
+      reason: h.skipReason || 'Not scheduled',
+      durationMs: 0,
+    }));
 
-  // 3. Execute Handlers Safely
+  // 3. Execute Handlers Safely (Sort: non-deferrable first)
   const results: CronResult[] = [];
-  
-  // Sort: non-deferrable first
   handlersToRun.sort((a, b) => (a.deferrable === b.deferrable ? 0 : a.deferrable ? 1 : -1));
 
   for (const handler of handlersToRun) {
@@ -81,8 +126,8 @@ export async function GET(req: NextRequest) {
         handler: handler.name,
         ok: false,
         processed: 0,
-        errors: ['Skipped: execution time budget exceeded'],
-        durationMs: 0
+        errors: ['Skipped: execution time budget exceeded (>270s)'],
+        durationMs: 0,
       });
       continue;
     }
@@ -97,20 +142,23 @@ export async function GET(req: NextRequest) {
         ok: false,
         processed: 0,
         errors: [`Uncaught error: ${msg}`],
-        durationMs: 0
+        durationMs: 0,
       });
     }
   }
 
   const totalDurationMs = Date.now() - start;
 
-  // 4. Record Execution
+  // 4. Record Execution & Audit State in Firestore
   try {
     const adminDb = getFirebaseAdminDb();
     if (adminDb) {
       await adminDb.collection('cronRuns').add({
         runAt: now.toISOString(),
+        utcHour: currentHour,
+        cronMode,
         handlers: results,
+        skipped: skippedHandlers,
         totalDurationMs,
       });
     }
@@ -120,7 +168,10 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     message: 'Cron dispatch complete',
+    cronMode,
+    utcHour: currentHour,
     totalDurationMs,
-    results
+    executed: results,
+    skipped: skippedHandlers,
   });
 }
