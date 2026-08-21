@@ -1,6 +1,14 @@
 import { defineConfig, configDefaults } from 'vitest/config';
+import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
+  // Mirror the `@/*` path alias from tsconfig.json so tests import modules the
+  // same way the app does.
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('.', import.meta.url)),
+    },
+  },
   test: {
     // No vitest suites exist yet. CI must stay green until the first one lands.
     passWithNoTests: true,
