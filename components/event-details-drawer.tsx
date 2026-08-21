@@ -512,6 +512,10 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
         const data = await response.json()
         onEventUpdated(data.event)
 
+        if (action === "join") {
+          window.dispatchEvent(new CustomEvent("huddle:rsvp"))
+        }
+
         let msg = "Success!";
         if (action === "join") {
           msg = isFull ? "You've joined the waitlist!" : "You've joined the game!";
