@@ -28,6 +28,13 @@ jobs:
     - name: Lint
       run: npm run lint
 
+    - name: Env template drift
+      # Value checks need real secrets and cannot run here. This verifies the
+      # cheaper, CI-safe invariant: every process.env.X in the source is
+      # documented in .env.example. Undocumented variables are how
+      # RESEND_API_KEY and NEXT_PUBLIC_VAPID_KEY went unset for months.
+      run: npm run preflight -- --check-template
+
     - name: Test
       run: npx vitest run
 
