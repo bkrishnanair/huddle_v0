@@ -1,284 +1,348 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { MapPin, Users, Link as LinkIcon, Plus, Target, Compass } from "lucide-react";
-import { motion } from "framer-motion";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-const HuddleLogo = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-white drop-shadow-md">
-    <path d="M4 4V20M20 4V20M4 12H20M12 4V12C12 14.2091 10.2091 16 8 16C5.79086 16 4 14.2091 4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
-const AbstractMapVisual = () => {
-  return (
-    <div className="relative w-full h-full min-h-[400px] flex items-center justify-center pointer-events-none">
-      <motion.div
-        animate={{ scale: [1, 1.05, 1], opacity: [0.6, 0.4, 0.6] }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute w-72 h-72 rounded-full bg-teal-400/20 blur-[100px] mix-blend-screen"
-      />
-      <motion.div
-        animate={{ scale: [1, 1.1, 1], opacity: [0.4, 0.6, 0.4] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-        className="absolute w-80 h-80 rounded-full bg-amber-400/20 blur-[120px] mix-blend-screen ml-40 mt-20"
-      />
-      <div className="relative z-10 w-full max-w-sm aspect-square bg-slate-900/40 backdrop-blur-2xl border border-white/10 rounded-full shadow-[0_0_80px_rgba(45,212,191,0.15)] flex items-center justify-center p-8 overflow-hidden">
-        {/* Radar Rings */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-full h-full rounded-full border border-teal-500/10" />
-          <motion.div
-            animate={{ scale: [1, 2], opacity: [0.5, 0] }}
-            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-            className="absolute w-1/2 h-1/2 rounded-full border border-teal-500/30"
-          />
-          <motion.div
-            animate={{ scale: [1, 2], opacity: [0.5, 0] }}
-            transition={{ duration: 3, repeat: Infinity, ease: "linear", delay: 1.5 }}
-            className="absolute w-1/2 h-1/2 rounded-full border border-teal-500/30"
-          />
-        </div>
-
-        {/* Floating Pins */}
-        <motion.div
-          animate={{ y: [0, -10, 0] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-1/4 left-1/4 w-3 h-3 bg-amber-400 rounded-full shadow-[0_0_20px_rgba(212,175,55,1)]"
-        />
-        <motion.div
-          animate={{ y: [0, -15, 0] }}
-          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          className="absolute bottom-1/3 right-1/4 w-4 h-4 bg-teal-400 rounded-full shadow-[0_0_20px_rgba(45,212,191,1)]"
-        />
-        <motion.div
-          animate={{ y: [0, -8, 0] }}
-          transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          className="absolute top-1/2 right-1/4 w-2 h-2 bg-indigo-400 rounded-full shadow-[0_0_15px_rgba(129,140,248,1)]"
-        />
-
-        {/* Center Pulse */}
-        <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center border border-white/20 backdrop-blur-md z-20 shadow-[0_0_30px_rgba(255,255,255,0.1)]">
-          <Target className="w-6 h-6 text-teal-400" />
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const valueProps = [
-  {
-    icon: <Compass className="w-7 h-7 text-teal-400" />,
-    title: "Hyperlocal Discovery",
-    description: "See real-time events, study groups, and meetups happening within walking distance."
-  },
-  {
-    icon: <Users className="w-7 h-7 text-amber-400" />,
-    title: "Kill the Flake Rate",
-    description: "Frictionless RSVPs and attendee tracking. Know exactly who is showing up before you even leave your room."
-  },
-  {
-    icon: <LinkIcon className="w-7 h-7 text-indigo-400" />,
-    title: "One-Tap Sharing",
-    description: "Generate dynamic preview links for WhatsApp or iMessage. No app download required for friends to view and join."
-  }
-];
+/**
+ * Marketing landing page — the "Instrument" surface (design block 7).
+ *
+ * This is the only route that uses the display face (Bricolage Grotesque, via
+ * --font-display). Everything else here is the shared Instrument token set from
+ * app/globals.css: paper ground, ink text, blue for action, green for liveness.
+ *
+ * Two rules this page exists to respect:
+ *   1. Blue (`action`) is anything you can press. Green (`live`) is a fact about
+ *      the world and is never a control.
+ *   2. All numerals are mono, uppercase, tabular — see the `.ins-mono` utility.
+ */
 
 interface LandingPageProps {
   onGetStarted: () => void;
   isAuthenticated?: boolean;
 }
 
-export default function LandingPage({ onGetStarted, isAuthenticated = false }: LandingPageProps) {
-  const router = useRouter();
+/* ---------------------------------------------------------------- wordmark */
 
-  const handleOpenMap = () => {
-    router.push('/map');
-  };
+function Wordmark({ className = "" }: { className?: string }) {
+  return (
+    <span
+      className={`font-display text-[22px] leading-6 font-bold text-ink ${className}`}
+    >
+      Huddle
+    </span>
+  );
+}
 
-  const handleHostEvent = () => {
-    // Navigate to map with an intent state or just tell them
-    router.push('/map?intent=create');
-  };
+/* ------------------------------------------------------------- hero visual */
+
+/**
+ * Abstract campus map in Instrument tones. Deliberately not a screenshot: it
+ * shows the pin language (live ring, upcoming dot, cluster) at a glance without
+ * claiming to be a literal capture of the app. Self-contained inline SVG — the
+ * previous version pulled a noise texture from a third-party domain, which put
+ * someone else's uptime in front of our hero.
+ */
+function CampusMapVisual() {
+  const venues = [
+    { x: 30, y: 44, label: "Flower Power Hour", live: true },
+    { x: 62, y: 66, label: "Mario Kart Tournament", live: true },
+    { x: 24, y: 28, label: "Softball v. Rutgers", live: false },
+    { x: 71, y: 30, label: "EnTERPreneur Conf.", live: false },
+    { x: 44, y: 78, label: "Open Mic Night", live: false },
+    { x: 82, y: 56, label: "Arboretum Walk", live: false },
+  ];
 
   return (
-    <div className="min-h-screen bg-[#121212] text-slate-50 overflow-hidden font-sans selection:bg-teal-500/30">
-      {/* Background Noise & Atmosphere */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(45,212,191,0.05)_0%,transparent_50%)]" />
-      </div>
+    <div
+      className="relative w-full overflow-hidden rounded-sheet border border-line bg-surface shadow-raised"
+      style={{ aspectRatio: "5 / 4" }}
+    >
+      <svg
+        viewBox="0 0 500 400"
+        preserveAspectRatio="xMidYMid slice"
+        role="img"
+        aria-label="Stylised map of the University of Maryland campus showing live and upcoming events"
+        className="absolute inset-0 h-full w-full"
+      >
+        <rect width="500" height="400" fill="var(--ins-surface)" />
+        {/* green space */}
+        <ellipse cx="250" cy="196" rx="140" ry="42" fill="var(--ins-live-tint)" opacity="0.5" />
+        <ellipse cx="432" cy="300" rx="72" ry="86" fill="var(--ins-live-tint)" opacity="0.55" />
+        {/* blocks */}
+        {[
+          [160, 150, 170, 46], [96, 88, 92, 50], [316, 92, 96, 52],
+          [120, 262, 96, 54], [300, 258, 84, 48], [156, 330, 100, 44],
+        ].map(([x, y, w, h], i) => (
+          <rect key={i} x={x} y={y} width={w} height={h} rx="4" fill="var(--ins-surface-sunk)" />
+        ))}
+        {/* roads: sunk casing under a white centre reads as paper cartography */}
+        {[
+          "M0,150 C150,142 330,148 500,140",
+          "M0,246 C170,238 330,242 500,234",
+          "M250,20 C254,150 256,280 252,400",
+          "M78,60 C68,180 78,290 116,380",
+        ].map((d, i) => (
+          <g key={i}>
+            <path d={d} stroke="var(--ins-surface-sunk)" strokeWidth="11" fill="none" />
+            <path d={d} stroke="#FFFFFF" strokeWidth="6" fill="none" />
+          </g>
+        ))}
+        <text x="250" y="182" textAnchor="middle" fontSize="11" fill="var(--ins-ink-3)">
+          McKeldin Mall
+        </text>
+        <text x="432" y="292" textAnchor="middle" fontSize="10" fill="var(--ins-live-ink)">
+          Arboretum
+        </text>
+      </svg>
 
-      <div className="relative z-10 flex flex-col min-h-screen">
-        {/* Header */}
-        <motion.header
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.6 }}
-          className="flex items-center justify-between p-6 px-6 md:px-12 w-full max-w-7xl mx-auto"
+      {/* pins */}
+      {venues.map((v) => (
+        <div
+          key={v.label}
+          className="absolute flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center"
+          style={{ left: `${v.x}%`, top: `${v.y}%` }}
         >
-          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => router.push('/')}>
-            <div className="w-10 h-10 bg-white/5 backdrop-blur-md rounded-xl flex items-center justify-center border border-white/10 shadow-[0_0_15px_rgba(0,0,0,0.5)] transition-colors hover:bg-white/10">
-              <HuddleLogo />
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-md">Huddle</h1>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="outline"
-              onClick={onGetStarted}
-              className="px-6 h-11 rounded-full bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-all duration-300 font-medium tracking-tight text-white shadow-lg"
+          {v.live && (
+            <span
+              aria-hidden="true"
+              className="ins-radarping absolute h-[26px] w-[26px] rounded-full border-[1.5px] border-live"
+            />
+          )}
+          <span
+            aria-hidden="true"
+            className={`relative flex items-center justify-center rounded-full border-2 border-white shadow-raised ${
+              v.live ? "h-[26px] w-[26px] bg-live" : "h-[18px] w-[18px] bg-ink"
+            }`}
+          />
+        </div>
+      ))}
+
+      {/* live chip — a fact, so green, and never clickable */}
+      <div className="absolute left-3 top-3 flex items-center gap-2 rounded-chip border border-line bg-sheet px-2.5 py-1.5 shadow-raised">
+        <span aria-hidden="true" className="h-[7px] w-[7px] rounded-full bg-live" />
+        <span className="ins-mono text-[10px] leading-none text-ink">2 live now · College Park</span>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------- page */
+
+export default function LandingPage({
+  onGetStarted,
+  isAuthenticated = false,
+}: LandingPageProps) {
+  const router = useRouter();
+
+  // The app is still dark-themed: `body` inherits --background (a dark navy) from
+  // the legacy token set. This page is the first Instrument surface, so while it
+  // is mounted we paint the document ground paper and restore it on unmount.
+  // Without this, iOS rubber-band scrolling and route transitions flash navy
+  // behind a light page. Remove once the whole app has migrated and :root is light.
+  useEffect(() => {
+    const { body } = document;
+    const previous = body.style.backgroundColor;
+    body.style.backgroundColor = "var(--ins-paper)";
+    return () => {
+      body.style.backgroundColor = previous;
+    };
+  }, []);
+
+  const handleOpenMap = () => router.push("/map");
+  const handleHostEvent = () => router.push("/map?intent=create");
+
+  const steps = [
+    { n: "01", title: "Open the map", body: "Events near you appear as pins. No account, no download." },
+    { n: "02", title: "Tap a pin", body: "Time, place, how many people are going." },
+    { n: "03", title: "Show up", body: "Get a reminder before it starts." },
+  ];
+
+  const organizerClaims = [
+    { label: "Show-rate tracking", body: "Every event's show rate is computed from real check-ins, not RSVPs." },
+    { label: "One-tap check-ins", body: "Open check-in at start time; attendees confirm themselves." },
+    { label: "Roster export", body: "Download any roster as CSV, including answers to your RSVP questions." },
+  ];
+
+  return (
+    <div className="min-h-screen bg-paper font-body text-ink">
+      {/* ---------------------------------------------------------- nav --- */}
+      <header className="border-b border-line bg-paper">
+        <nav
+          aria-label="Primary"
+          className="mx-auto flex h-16 max-w-[1120px] items-center justify-between gap-4 px-6"
+        >
+          <button
+            type="button"
+            onClick={() => router.push("/")}
+            className="-my-2 rounded-chip py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action"
+            aria-label="Huddle home"
+          >
+            <Wordmark />
+          </button>
+
+          <div className="flex items-center gap-3 sm:gap-5">
+            <a
+              href="#organizers"
+              className="-my-2 hidden rounded-chip py-2 text-[15px] font-medium text-ink-2 transition-colors duration-micro ease-ins hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action sm:inline"
             >
-              {isAuthenticated ? "Open App" : "Sign In"}
-            </Button>
+              I organize events
+            </a>
+            {!isAuthenticated && (
+              <button
+                type="button"
+                onClick={onGetStarted}
+                className="inline-flex h-9 items-center rounded-chip border border-line bg-sheet px-4 text-sm font-semibold text-ink transition-colors duration-micro ease-ins hover:bg-surface"
+              >
+                Sign in
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleOpenMap}
+              className="inline-flex h-9 items-center rounded-chip bg-action px-4 text-sm font-semibold text-white transition-colors duration-micro ease-ins hover:bg-action-hover"
+            >
+              Open the map
+            </button>
           </div>
-        </motion.header>
+        </nav>
+      </header>
 
-        {/* Split Screen Hero */}
-        <main className="flex-1 w-full max-w-7xl mx-auto px-6 md:px-12 flex flex-col justify-center py-12 lg:py-0">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center min-h-[75vh]">
+      <main>
+        {/* -------------------------------------------------------- hero --- */}
+        <section className="mx-auto max-w-[1120px] px-6 py-14 sm:py-16">
+          <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-12">
+            <div>
+              <h1 className="font-display text-[34px] font-bold leading-[1.1] text-ink sm:text-[40px] sm:leading-[44px]">
+                See what&rsquo;s happening around campus.{" "}
+                <span className="whitespace-nowrap text-action">Right now.</span>
+              </h1>
 
-            {/* Left Content */}
-            <div className="flex flex-col justify-center space-y-8 z-20 text-center lg:text-left pt-10 lg:pt-0">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-              >
-                <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-sm font-semibold tracking-wide uppercase mb-6">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
-                  </span>
-                  <span>Your Social Life, Visualized</span>
-                </div>
+              <p className="mt-5 max-w-[40ch] text-[15px] leading-[22px] text-ink-2">
+                Live events near you — no app, no account, no missing out.
+              </p>
 
-                <h1 className="text-5xl sm:text-7xl font-black text-white leading-[1.05] tracking-tighter mb-6 drop-shadow-2xl">
-                  The Live Map for<br className="hidden lg:block" />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 via-emerald-400 to-amber-300">
-                    Local Connection.
-                  </span>
-                </h1>
-
-                <p className="text-lg md:text-xl text-slate-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-medium tracking-tight">
-                  Discover what's happening around you right now. Drop a pin, ditch the chaotic group chats, and instantly connect with your local community.
-                </p>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.3 }}
-                className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4"
-              >
-                <Button
+              <div className="mt-8 flex flex-col items-start gap-4">
+                <button
+                  type="button"
                   onClick={handleOpenMap}
-                  size="lg"
-                  className="w-full sm:w-auto h-14 px-8 text-lg font-bold bg-teal-500 hover:bg-teal-400 text-slate-950 rounded-full shadow-[0_0_30px_rgba(45,212,191,0.3)] hover:shadow-[0_0_40px_rgba(45,212,191,0.5)] transition-all duration-300 transform hover:-translate-y-1 tracking-tight"
+                  className="inline-flex h-11 items-center rounded-control bg-action px-7 text-[15px] font-semibold text-white transition-[background-color,transform] duration-micro ease-ins hover:bg-action-hover active:scale-[0.98]"
                 >
-                  <MapPin className="mr-2 w-5 h-5" />
-                  Open Live Map
-                </Button>
-
-                <Button
-                  onClick={handleHostEvent}
-                  variant="outline"
-                  size="lg"
-                  className="w-full sm:w-auto h-14 px-8 text-lg font-bold bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 hover:border-amber-400/50 text-white rounded-full transition-all duration-300 tracking-tight shadow-xl group"
-                >
-                  <Plus className="mr-2 w-5 h-5 text-amber-400 group-hover:rotate-90 transition-transform duration-300" />
-                  Host an Event
-                </Button>
-              </motion.div>
+                  Open the map
+                </button>
+                <p className="ins-mono text-xs leading-4 text-ink-3">
+                  Free · no signup · works in your browser
+                </p>
+              </div>
             </div>
 
-            {/* Right Visual */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
-              className="relative w-full aspect-square max-w-[600px] mx-auto lg:ml-auto"
-            >
-              <AbstractMapVisual />
-            </motion.div>
-
+            <div className="lg:pl-4">
+              <CampusMapVisual />
+            </div>
           </div>
-        </main>
+        </section>
 
-        {/* 3-Column Bento Box Value Props */}
-        <section className="w-full max-w-7xl mx-auto px-6 md:px-12 py-24 z-20">
-          <div className="grid md:grid-cols-3 gap-6">
-            {valueProps.map((prop, idx) => (
-              <motion.div
-                key={idx}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-100px" }}
-                transition={{ duration: 0.6, delay: idx * 0.15 }}
-              >
-                <Card className="h-full bg-[#1A1A1A]/80 backdrop-blur-xl border border-white/10 hover:border-teal-500/30 transition-colors duration-500 rounded-3xl overflow-hidden group shadow-2xl">
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none" />
-                  <CardContent className="p-8 relative z-10 flex flex-col h-full">
-                    <div className="w-14 h-14 bg-black/50 border border-white/5 rounded-2xl flex items-center justify-center mb-6 shadow-md group-hover:scale-110 transition-transform duration-500">
-                      {prop.icon}
-                    </div>
-                    <h3 className="text-xl font-bold text-white mb-3 tracking-tight group-hover:text-amber-400 transition-colors duration-300">
-                      {prop.title}
-                    </h3>
-                    <p className="text-slate-400 leading-relaxed font-medium">
-                      {prop.description}
-                    </p>
-                  </CardContent>
-                </Card>
-              </motion.div>
+        {/* ------------------------------------------------ how it works --- */}
+        <section
+          aria-labelledby="how-it-works"
+          className="mx-auto max-w-[1120px] px-6 py-14 sm:py-16"
+        >
+          <h2 id="how-it-works" className="ins-mono text-xs leading-4 text-ink-3">
+            How it works
+          </h2>
+          <div className="mt-8 grid gap-8 sm:grid-cols-3">
+            {steps.map((s) => (
+              <div key={s.n} className="border-l border-line pl-6">
+                <div className="ins-mono text-xs leading-4 text-ink-4">{s.n}</div>
+                <h3 className="mt-3 text-lg font-semibold leading-6 text-ink">{s.title}</h3>
+                <p className="mt-2 text-[15px] leading-[22px] text-ink-2">{s.body}</p>
+              </div>
             ))}
           </div>
         </section>
 
-        {/* Bottom CTA */}
-        <motion.section
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
-          className="w-full max-w-4xl mx-auto px-6 py-24 text-center z-20"
+        {/* -------------------------------------------------- organizers --- */}
+        <section
+          id="organizers"
+          aria-labelledby="organizers-heading"
+          className="border-y border-line bg-surface"
         >
-          <div className="p-16 rounded-[3rem] bg-gradient-to-b from-[#1A1A1A] to-[#121212] border border-white/10 shadow-[0_0_80px_rgba(0,0,0,0.5)] relative overflow-hidden">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-px bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
+          <div className="mx-auto grid max-w-[1120px] items-start gap-10 px-6 py-14 sm:py-16 lg:grid-cols-2 lg:gap-12">
+            <div>
+              <p className="ins-mono text-xs leading-4 text-ink-3">For organizers</p>
+              <h2
+                id="organizers-heading"
+                className="mt-3 font-display text-[28px] font-bold leading-[1.15] text-ink sm:text-[32px] sm:leading-9"
+              >
+                Run events people actually show up to.
+              </h2>
 
-            <h2 className="text-4xl md:text-5xl font-black text-white mb-6 tracking-tight drop-shadow-md">
-              Your community is waiting.
-            </h2>
-            <p className="text-xl text-slate-300 mb-10 max-w-2xl mx-auto tracking-tight font-medium">
-              Join thousands of locals turning screen time into real-world connection.
-            </p>
+              <dl className="mt-6">
+                {organizerClaims.map((c, i) => (
+                  <div
+                    key={c.label}
+                    className={`border-t border-line py-4 ${
+                      i === organizerClaims.length - 1 ? "border-b" : ""
+                    }`}
+                  >
+                    <dt className="ins-mono text-xs leading-4 text-ink-3">{c.label}</dt>
+                    <dd className="mt-1.5 text-[15px] leading-[22px] text-ink">{c.body}</dd>
+                  </div>
+                ))}
+              </dl>
 
-            <Button
-              onClick={handleOpenMap}
-              size="lg"
-              className="h-16 px-12 text-xl font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-full shadow-[0_0_30px_rgba(212,175,55,0.3)] transition-all duration-300 transform hover:scale-105 tracking-tight border border-transparent"
-            >
-              Explore the Map
-            </Button>
-          </div>
-        </motion.section>
-
-        {/* Minimal Footer */}
-        <footer className="p-8 text-center relative z-20 border-t border-white/5 w-full mt-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center max-w-7xl mx-auto text-slate-500 text-sm font-medium">
-            <div className="mb-4 md:mb-0">
-              © 2026 Huddle. All rights reserved.
+              <button
+                type="button"
+                onClick={handleHostEvent}
+                className="mt-8 inline-flex h-11 items-center rounded-control border border-line bg-sheet px-7 text-[15px] font-semibold text-ink transition-colors duration-micro ease-ins hover:bg-surface-sunk"
+              >
+                Create your first event
+              </button>
             </div>
-            <div className="flex items-center space-x-6">
-              <span className="hover:text-slate-300 transition-colors cursor-pointer">Privacy Policy</span>
-              <span className="hover:text-slate-300 transition-colors cursor-pointer">Terms of Service</span>
+
+            <div className="rounded-sheet border border-line bg-sheet p-5 shadow-raised">
+              <p className="ins-mono text-xs leading-4 text-ink-3">Already on Huddle</p>
+              <p className="mt-3 text-[15px] leading-[22px] text-ink-2">
+                Campus events from TerpLink are already on the map. If one of them is
+                yours, claim it — the RSVPs students have already made come with it.
+              </p>
+              <dl className="mt-6 grid grid-cols-2 gap-4">
+                <div>
+                  <dt className="ins-mono text-[10px] leading-[14px] text-ink-3">Events on the map</dt>
+                  <dd className="ins-mono mt-1 text-[22px] font-semibold leading-7 text-ink">565</dd>
+                </div>
+                <div>
+                  <dt className="ins-mono text-[10px] leading-[14px] text-ink-3">Campus</dt>
+                  <dd className="mt-1 text-[15px] font-semibold leading-7 text-ink">UMD</dd>
+                </div>
+              </dl>
             </div>
           </div>
-        </footer>
+        </section>
+      </main>
 
-      </div>
+      {/* ------------------------------------------------------- footer --- */}
+      <footer className="bg-paper">
+        <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-3 px-6 py-6">
+          <p className="text-[13px] leading-5 text-ink-3">
+            Huddle Map, LLC · College Park, MD
+          </p>
+          <nav aria-label="Footer" className="flex gap-5">
+            {[
+              { href: "/privacy", label: "Privacy" },
+              { href: "/terms", label: "Terms" },
+              { href: "/contact", label: "Contact" },
+            ].map((l) => (
+              <a
+                key={l.href}
+                href={l.href}
+                className="-my-2 rounded-chip py-2 text-[13px] leading-5 text-ink-2 transition-colors duration-micro ease-ins hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action"
+              >
+                {l.label}
+              </a>
+            ))}
+          </nav>
+        </div>
+      </footer>
     </div>
   );
 }
