@@ -1,3 +1,6 @@
+// NOTE: this writes lib/mock-data.ts, which nothing currently imports. The
+// generated file was deleted as dead code. Run this only if you deliberately
+// want mock fixtures back; wire them up yourself afterwards.
 const fs = require('fs');
 
 const events = [

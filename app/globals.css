@@ -190,3 +190,108 @@
 .pac-item {
   cursor: pointer;
 }
+/* ============================================================================
+   INSTRUMENT DESIGN SYSTEM — TOKEN LAYER (Block 3)
+   ----------------------------------------------------------------------------
+   Extracted from the Claude Design project "Huddle Landing Redesign"
+   (61f93be0-3ce5-496a-8a06-623cd79f21e9). Reference artboards live in
+   Documentation/design/. See Documentation/design/TOKENS.md for the contract.
+
+   ADDITIVE BY DESIGN. These are namespaced --ins-* and do NOT touch the
+   existing :root shadcn tokens, which still hold the legacy dark palette that
+   all 86 current components render against. Overwriting :root would restyle
+   every surface at once; instead each surface opts in as it is rebuilt, one
+   block at a time, so a regression is always isolated to one screen.
+
+   Do not delete the legacy tokens until every surface has migrated.
+   ========================================================================== */
+@layer base {
+  :root {
+    /* --- Ground & surface (paper) --------------------------------------- */
+    --ins-paper:            #FCFBF9;  /* page ground, bottom nav */
+    --ins-surface:          #F4F2EE;  /* recessed surface, map canvas */
+    --ins-surface-sunk:     #E9E6E0;  /* borders, muted fills, buildings */
+    --ins-surface-sunk-2:   #E0DCD4;  /* deepest paper fill */
+    --ins-card:             #FFFFFF;  /* elevated card, sheet, drawer */
+
+    /* --- Ink (text) ------------------------------------------------------ */
+    --ins-ink:              #191C1E;  /* primary text, active chip fill */
+    --ins-ink-2:            #43484D;  /* body copy, inactive chip label */
+    --ins-ink-3:            #767D85;  /* meta, mono labels, icon stroke */
+    --ins-ink-4:            #A8AEB5;  /* placeholder, disabled, dimmed pin */
+
+    /* --- Lines ----------------------------------------------------------- */
+    --ins-line:             #E9E6E0;  /* hairline divider, input border */
+    --ins-line-strong:      #DAD6CE;  /* emphasised building outline */
+
+    /* --- Accent: action -------------------------------------------------- */
+    --ins-accent:           #1D4FD7;  /* primary CTA, links, active nav */
+    --ins-accent-hover:     #173FB0;
+    --ins-accent-tint:      #E4EBFC;  /* selected category, avatar ground */
+
+    /* --- Accent: live ---------------------------------------------------- */
+    --ins-live:             #0BA95B;  /* live pin, RadarPing, live dot */
+    --ins-live-tint:        #DCF5E8;  /* live badge ground, park fill */
+    --ins-live-ink:         #8AAE97;  /* muted green label on map */
+
+    /* --- Status ---------------------------------------------------------- */
+    --ins-warn:             #B45309;  /* scarcity: <= 5 spots left */
+
+    /* --- Elevation ------------------------------------------------------- */
+    --ins-shadow-raised:  0 1px 2px rgba(25,28,30,.06), 0 4px 12px rgba(25,28,30,.06);
+    --ins-shadow-overlay: 0 8px 32px rgba(25,28,30,.16);
+
+    /* --- Radius ---------------------------------------------------------- */
+    --ins-radius-sm:        8px;      /* chips, inputs, toasts, badges */
+    --ins-radius-md:        12px;     /* buttons, cards, search bar */
+    --ins-radius-lg:        20px;     /* sheets, drawers, screen shell */
+
+    /* --- Motion ---------------------------------------------------------- */
+    --ins-ease:             cubic-bezier(.2, 0, 0, 1);
+    --ins-dur-micro:        120ms;    /* hover, press */
+    --ins-dur-move:         200ms;    /* chevron, accordion */
+    --ins-dur-sheet:        300ms;    /* drawer travel */
+
+    /* --- Type ------------------------------------------------------------ */
+    /* --font-inter / --font-mono / --font-display are emitted by next/font
+       in app/layout.tsx. Fallbacks keep the tokens usable in isolation. */
+    --ins-font-body:    var(--font-inter, Inter), system-ui, sans-serif;
+    --ins-font-mono:    var(--font-mono, "IBM Plex Mono"), ui-monospace, monospace;
+    --ins-font-display: var(--font-display, "Bricolage Grotesque"), Inter, sans-serif;
+
+    /* Mono is the numeral voice: times, distances, counts, show rates.
+       Always uppercase with this tracking. */
+    --ins-mono-tracking:   0.04em;
+  }
+}
+
+/* --- RadarPing ------------------------------------------------------------
+   The ONLY looping animation permitted by CLAUDE.md. 3s, ease, infinite.
+   Honours prefers-reduced-motion by freezing at a steady expanded ring. */
+@keyframes ins-radarping {
+  0%      { transform: scale(1);   opacity: 0.5; }
+  66.67%  { transform: scale(2.2); opacity: 0; }
+  100%    { transform: scale(2.2); opacity: 0; }
+}
+
+@layer utilities {
+  .ins-radarping {
+    animation: ins-radarping 3000ms var(--ins-ease) infinite;
+  }
+  /* Uppercase mono label — the numeral/meta voice used across every surface. */
+  .ins-mono {
+    font-family: var(--ins-font-mono);
+    font-weight: 500;
+    letter-spacing: var(--ins-mono-tracking);
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ins-radarping {
+    animation: none !important;
+    transform: scale(1.6);
+    opacity: 0.5;
+  }
+}

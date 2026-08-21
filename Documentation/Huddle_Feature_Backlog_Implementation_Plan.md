@@ -6,16 +6,24 @@
 
 ## ARCHITECTURAL CONTEXT FOR AGENTS
 
-This document is designed to be fed directly into Antigravity (Gemini) or Claude Code agents with full workspace context. All implementations must follow these rules:
+This document is designed to be fed directly into Antigravity (Gemini) or Claude Code agents with full workspace context.
+
+> **⚠️ CLAUDE.md IS THE SOURCE OF TRUTH FOR DESIGN AND ARCHITECTURE.**
+> Where this document and `CLAUDE.md` disagree, `CLAUDE.md` wins — always. This
+> file is a *feature backlog*, not a style guide. It was written in April 2026,
+> before the "Instrument" design system was adopted, and the design direction
+> here was inverted by that decision. Read `CLAUDE.md` first, then this.
 
 - **Framework:** Next.js 15 App Router, Turbopack, TypeScript strict
 - **Backend:** Firebase (Auth, Firestore, Admin SDK, Storage), Vercel deployment
-- **Styling:** Tailwind CSS + Shadcn/ui, dark glassmorphism aesthetic (bg-slate-950)
+- **Styling:** Tailwind CSS + Shadcn/ui. **Follow the "Instrument" design system in `CLAUDE.md`** — light-first, paper-and-ink. Glassmorphism, gradients, dark backgrounds on new surfaces and arbitrary Tailwind values are **banned**. (This line previously read "dark glassmorphism aesthetic (bg-slate-950)", which is what the codebase currently *is*, not what it should become.)
 - **Icons:** Lucide React only
 - **Server isolation:** `import 'server-only'` on all server modules. Admin SDK never in client bundles.
 - **Validation:** Zod on every API route input
 - **Counters:** `FieldValue.increment()` — never read-then-write
-- **Existing patterns:** Review `lib/constants.ts` for CATEGORY_COLORS and CATEGORY_EMOJI maps
+- **Existing patterns:** ⚠️ **`lib/constants.ts` does not exist and never did.** Do not look for it.
+  - Category colors: `getCategoryColor()` in `lib/utils.ts`
+  - Category emoji: currently duplicated across 9 files with no single source of truth (`map-view`, `event-details-drawer`, `map-pins/medium-pin`, `map-pins/live-pin`, `events/event-card`, `home/page`, `profile/page`, `profile/[uid]/page`, `lib/serendipity-composer`). They have already diverged — `serendipity-composer` uses 🏀 for Sports where the other eight use ⚽. Consolidate before extending; do not add a tenth copy.
 
 ---
 

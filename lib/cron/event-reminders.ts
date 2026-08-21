@@ -4,6 +4,9 @@ import 'server-only';
 
 import { getFirebaseAdminDb } from '@/lib/firebase-admin';
 import { sendReminderEmail } from '@/lib/email';
+import { sendPushToUser } from '@/lib/push-server';
+import { getEventStartUTC } from '@/lib/datetime';
+import type { GameEvent } from '@/lib/types';
 import type { CronResult } from './types';
 
 /**
@@ -18,6 +21,11 @@ export async function runEventReminders(): Promise<CronResult> {
   const start = Date.now();
   const errors: string[] = [];
   let processed = 0;
+  // Declared at function scope so the returned delivery counts can read them.
+  let emailsSent = 0;
+  let emailsFailed = 0;
+  let pushesSent = 0;
+  let pushesFailed = 0;
 
   try {
     const adminDb = getFirebaseAdminDb();
@@ -35,11 +43,10 @@ export async function runEventReminders(): Promise<CronResult> {
       .get();
 
     let notificationsSent = 0;
-    let emailsSent = 0;
-    let emailsFailed = 0;
 
     const batch = adminDb.batch();
     const emailPromises: Promise<{ success: boolean; error?: string }>[] = [];
+    const pendingPushes: { uid: string; payload: { title: string; body: string; url: string; type: "event_reminder" } }[] = [];
     let batchOps = 0;
 
     for (const doc of eventsSnap.docs) {
@@ -49,16 +56,8 @@ export async function runEventReminders(): Promise<CronResult> {
       if (data.status === 'archived') continue;
       if (data.isScraped) continue;
 
-      const eventDate = data.date || '';
-      const eventTime = data.time || '18:00';
-
-      let eventStart: Date;
-      try {
-        eventStart = new Date(`${eventDate}T${eventTime}`);
-        if (isNaN(eventStart.getTime())) continue;
-      } catch {
-        continue;
-      }
+      const eventStart = getEventStartUTC(data as GameEvent);
+      if (isNaN(eventStart.getTime())) continue;
 
       const hoursUntilEvent =
         (eventStart.getTime() - now.getTime()) / (1000 * 60 * 60);
@@ -82,11 +81,15 @@ export async function runEventReminders(): Promise<CronResult> {
         });
       }
 
-      const domain =
-        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'localhost:3000';
-      const protocol = domain.includes('localhost') ? 'http' : 'https';
-      const eventUrl = `${protocol}://${domain}/event/${doc.id}`;
+      const baseUrl = (
+        process.env.NEXT_PUBLIC_APP_URL ||
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+        'https://huddlemap.live'
+      ).replace(/\/$/, '');
+      const eventUrl = `${baseUrl}/event/${doc.id}`;
       const eventName = data.name || data.title || 'Your event';
+      const eventDate = data.date || '';
+      const eventTime = data.time || '18:00';
 
       for (const [uid, userData] of userDocs) {
         if (userData.notifyReminders === false) continue;
@@ -111,6 +114,20 @@ export async function runEventReminders(): Promise<CronResult> {
         batchOps++;
         notificationsSent++;
 
+        const pushTitle = `Reminder: ${eventName}`;
+        const pushBody = `Happening ${hoursUntilEvent < 2 ? 'soon' : 'tomorrow'}! Don't forget to show up.`;
+        
+        // Queue push to execute only AFTER successful batch commit
+        pendingPushes.push({
+          uid,
+          payload: {
+            title: pushTitle,
+            body: pushBody,
+            url: `/event/${doc.id}`,
+            type: 'event_reminder'
+          }
+        });
+
         const userEmail = userData.email;
         if (userEmail) {
           emailPromises.push(
@@ -134,7 +151,21 @@ export async function runEventReminders(): Promise<CronResult> {
     }
 
     if (batchOps > 0) {
+      // 1. Commit in-app notifications first
       await batch.commit();
+
+      // 2. Only dispatch and await push notifications after commit succeeds
+      const pushPromises = pendingPushes.map((p) =>
+        sendPushToUser(p.uid, p.payload),
+      );
+      const pushResults = await Promise.allSettled(pushPromises);
+      for (const res of pushResults) {
+        if (res.status === 'fulfilled' && (res.value as any)?.successCount > 0) {
+          pushesSent++;
+        } else if (res.status === 'rejected' || (res.value as any)?.failureCount > 0) {
+          pushesFailed++;
+        }
+      }
     }
 
     const emailResults = await Promise.allSettled(emailPromises);
@@ -146,9 +177,23 @@ export async function runEventReminders(): Promise<CronResult> {
       }
     }
 
-    // Include email stats in processed count for logging
+    // Include stats in errors array for cron log observability
     if (emailsFailed > 0) {
-      errors.push(`${emailsFailed} emails failed`);
+      // Distinguish "Resend rejected it" from "Resend was never configured".
+      // The second is the failure mode that hides: lib/email.ts warns once at
+      // module load and every send returns success:false, so the UI looks fine
+      // while zero email leaves the system.
+      const unconfigured = emailResults.some(
+        (r) => r.status === 'fulfilled' && r.value.error === 'RESEND_NOT_CONFIGURED',
+      );
+      errors.push(
+        unconfigured
+          ? `${emailsFailed} emails NOT SENT — RESEND_API_KEY is not configured. No reminder email has left this deployment. Run \`npm run preflight\`.`
+          : `${emailsFailed} emails failed`,
+      );
+    }
+    if (pushesFailed > 0) {
+      errors.push(`${pushesFailed} push dispatches failed`);
     }
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
@@ -162,5 +207,6 @@ export async function runEventReminders(): Promise<CronResult> {
     processed,
     errors,
     durationMs: Date.now() - start,
+    delivery: { emailsSent, emailsFailed, pushesSent, pushesFailed },
   };
 }

@@ -7,25 +7,7 @@ import { useFirebase } from "@/lib/firebase-context"
 import { toast } from "sonner"
 import { useState, useEffect } from "react"
 import { HuddleLogo } from "./huddle-logo"
-
-
-
-// Checks if an event is currently happening
-function isEventLive(event: any): boolean {
-  if (!event.date || !event.time) return false;
-  try {
-    const start = new Date(`${event.date}T${event.time}`);
-    if (isNaN(start.getTime())) return false;
-    const now = new Date();
-    if (now < start) return false;
-    const end = event.endTime
-      ? new Date(`${event.date}T${event.endTime}`)
-      : new Date(start.getTime() + 3 * 60 * 60 * 1000); // default 3hr
-    return now <= end;
-  } catch {
-    return false;
-  }
-}
+import { isEventLive } from "@/lib/utils"
 
 export default function BottomNavigation() {
   const pathname = usePathname()

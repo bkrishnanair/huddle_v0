@@ -2,6 +2,10 @@
 
 Huddle is a modern, full-stack web application designed to help users discover, create, and join local events. Centered around an interactive map and a curated Home feed, it provides a seamless experience for finding nearby events, creating events, and engaging with other participants through real-time chat, social profiles, and automated reminders.
 
+> **Contributing or briefing an agent?** `CLAUDE.md` is the source of truth for
+> architecture and design. Feature descriptions below describe the current UI,
+> which predates the "Instrument" design system and is mid-migration.
+
 This production-ready application features a complete authentication system, real-time event management, and interactive social features, creating an engaging and reliable user experience for sports enthusiasts.
 
 | Landing Page | Maps Feed | Discover |

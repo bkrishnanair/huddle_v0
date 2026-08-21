@@ -201,6 +201,14 @@ async function notifyFollowersOfNewEvent(
       }
 
       await batch.commit();
+
+      const { sendPushToUsers } = await import("@/lib/push-server");
+      await sendPushToUsers(chunk, {
+        title: "New Event",
+        body: `📢 ${organizerName} just created a new ${eventCategory} event: "${eventName}"`,
+        url: `/event/${eventId}`,
+        type: "new_event_from_followed"
+      }).catch(err => console.error("Push fan-out error:", err));
     }
   } catch (error) {
     console.error("Failed to notify followers of new event:", error);
@@ -309,7 +317,7 @@ export async function POST(request: NextRequest) {
       const newEvent: Record<string, any> = {
         ...rest,
         date: eventDateStr,
-        endDate: eventEndDateStr || "",
+        ...(eventEndDateStr && eventEndDateStr.trim() !== "" ? { endDate: eventEndDateStr.trim() } : {}),
         title: rest.name,
         sport: rest.category,
         location: rest.location || null,

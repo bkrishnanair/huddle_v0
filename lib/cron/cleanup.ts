@@ -22,11 +22,17 @@ export async function runCleanup(): Promise<CronResult> {
     const cutoff = new Date();
     cutoff.setHours(cutoff.getHours() - 48);
     const cutoffStr = cutoff.toISOString().split('T')[0];
+    
+    // Moving window: events from exactly 7 days before cutoff, up to cutoff.
+    // This avoids fetching extremely old events that are already archived.
+    const cutoffMinus7 = new Date(cutoff.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const cutoffMinus7Str = cutoffMinus7.toISOString().split('T')[0];
 
     const staleSnap = await adminDb
       .collection('events')
+      .where('date', '>=', cutoffMinus7Str)
       .where('date', '<', cutoffStr)
-      .limit(200) // Increase limit slightly to account for in-memory filtering
+      .limit(200)
       .get();
 
     if (!staleSnap.empty) {

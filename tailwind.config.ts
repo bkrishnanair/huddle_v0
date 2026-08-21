@@ -52,11 +52,75 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+
+        // --- Instrument palette (Block 3) ---
+        paper: "var(--ins-paper)",
+        surface: {
+          DEFAULT: "var(--ins-surface)",
+          sunk: "var(--ins-surface-sunk)",
+          deep: "var(--ins-surface-sunk-2)",
+        },
+        sheet: "var(--ins-card)",
+        ink: {
+          DEFAULT: "var(--ins-ink)",
+          2: "var(--ins-ink-2)",
+          3: "var(--ins-ink-3)",
+          4: "var(--ins-ink-4)",
+        },
+        line: {
+          DEFAULT: "var(--ins-line)",
+          strong: "var(--ins-line-strong)",
+        },
+        action: {
+          DEFAULT: "var(--ins-accent)",
+          hover: "var(--ins-accent-hover)",
+          tint: "var(--ins-accent-tint)",
+        },
+        live: {
+          DEFAULT: "var(--ins-live)",
+          tint: "var(--ins-live-tint)",
+          ink: "var(--ins-live-ink)",
+        },
+        warn: "var(--ins-warn)",
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+
+        // --- Instrument (Block 3) ---
+        // Named by role, not by size, so a surface cannot pick the wrong one.
+        chip: "var(--ins-radius-sm)",      //  8px — chips, inputs, badges, toasts
+        control: "var(--ins-radius-md)",   // 12px — buttons, cards, search bar
+        sheet: "var(--ins-radius-lg)",     // 20px — drawers, sheets, screen shell
+      },
+
+      // ======================================================================
+      // INSTRUMENT SEMANTIC NAMES (Block 3)
+      // Deliberately namespaced away from the shadcn set above (background /
+      // foreground / primary / card / accent), which still drives every
+      // un-migrated surface. Nothing here changes existing rendering; a surface
+      // adopts Instrument by switching to these names when it is rebuilt.
+      // ======================================================================
+      fontFamily: {
+        body: ["var(--ins-font-body)"],
+        mono: ["var(--ins-font-mono)"],
+        display: ["var(--ins-font-display)"],
+      },
+      boxShadow: {
+        raised: "var(--ins-shadow-raised)",
+        overlay: "var(--ins-shadow-overlay)",
+      },
+      transitionTimingFunction: {
+        ins: "var(--ins-ease)",
+      },
+      transitionDuration: {
+        micro: "var(--ins-dur-micro)",
+        move: "var(--ins-dur-move)",
+        sheet: "var(--ins-dur-sheet)",
+      },
+      letterSpacing: {
+        mono: "var(--ins-mono-tracking)",
       },
       keyframes: {
         "accordion-down": {

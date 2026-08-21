@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { type NextRequest, NextResponse } from "next/server"
 import { adminAuth, adminDb } from "@/lib/firebase-admin"
+import { checkRateLimit } from "@/lib/rate-limit"
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -18,6 +19,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const token = authHeader.split("Bearer ")[1]
     const decodedToken = await adminAuth.verifyIdToken(token)
     const userId = decodedToken.uid
+
+    const limitCheck = await checkRateLimit(userId, "event_boost", 10, 86400000) // 10 per day
+    if (!limitCheck.success) {
+      return NextResponse.json(
+        { error: "Daily boost limit reached. Please try again tomorrow." },
+        { status: 429, headers: { "Retry-After": String(limitCheck.retryAfterSeconds) } },
+      )
+    }
 
     const eventRef = adminDb.collection("events").doc(eventId)
     const eventDoc = await eventRef.get()

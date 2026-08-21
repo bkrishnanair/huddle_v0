@@ -14,6 +14,10 @@ export interface UserProfile {
   savedTransitTips?: string[];
   accountType?: "individual" | "organization";
   verificationStatus?: "pending" | "verified" | "rejected";
+  fcmTokens?: string[];
+  pushEnabled?: boolean;
+  pushPermissionAskedAt?: string | null;
+  pushPermissionState?: "default" | "granted" | "denied";
 }
 
 export interface GameEvent {

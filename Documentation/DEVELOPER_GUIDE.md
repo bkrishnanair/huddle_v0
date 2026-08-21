@@ -51,15 +51,30 @@ To get a functional map with realistic events for development and testing, use t
 
 ## 🎨 3. Coding Standards
 
-Huddle maintains a cinematic, **Dark Glassmorphism** aesthetic. All UI work must adhere strictly to these guidelines.
+> **⚠️ `CLAUDE.md` is the source of truth for design.** Where this section and
+> `CLAUDE.md` disagree, `CLAUDE.md` wins. The guidance below described the
+> *pre-Instrument* aesthetic and is retained only to explain what you will find
+> in existing files.
+
+The target design system is **"Instrument"** — light-first, paper-and-ink. See
+`CLAUDE.md` for the full specification.
+
+**Banned in new work:** glassmorphism / `backdrop-blur` · gradients · dark
+backgrounds on new surfaces · arbitrary Tailwind values (`p-[13px]`, `z-[60]`,
+unlisted hex) · emoji in chrome or copy · any looping animation other than
+RadarPing.
 
 ### UI Components & Styling
 *   **Shadcn UI**: We use `components/ui/*` for all primitive elements.
-*   **Tailwind CSS**: Utilize our custom utility classes aggressively.
-    *   Dark backgrounds: `bg-slate-950`.
-    *   Frosted glass: Use the `glass-surface` class.
-    *   Interactive items: Use `animate-ping` for active states.
+*   **Tailwind CSS**: Use the semantic tokens defined in `globals.css` and
+    `tailwind.config.ts`. Do not introduce raw colour values.
 *   **Icons**: We exclusively use [Lucide React](https://lucide.dev/).
+
+**What the existing codebase actually looks like** (migration debt, not a
+pattern to copy): `bg-slate-950` and `glass-surface` appear across 26+ files,
+and `:root` and `.dark` in `globals.css` currently hold identical dark values —
+there is no light palette yet. `animate-ping` is used in `map-pins/live-pin.tsx`;
+it is a looping animation and is banned going forward.
 
 ### Architectural Rules
 Huddle prioritizes structural safety in the serverless environment.

@@ -17,7 +17,8 @@ export function generateGoogleCalendarUrl(event: GameEvent): string {
 
         const startStr = formatGCalDate(startDate);
         const endStr = formatGCalDate(endDate);
-        const eventUrl = `https://huddlev1.vercel.app/map?eventId=${event.id}`;
+        const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://huddlemap.live').replace(/\/$/, '');
+        const eventUrl = `${baseUrl}/event/${event.id}`;
         const finalDetails = details ? `${details}%0A%0A${encodeURIComponent(eventUrl)}` : encodeURIComponent(eventUrl);
 
         return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startStr}/${endStr}&details=${finalDetails}&location=${location}`;
@@ -41,6 +42,9 @@ export function generateIcsContent(event: GameEvent): string {
             return date.toISOString().replace(/-|:|\.\d\d\d/g, "");
         };
 
+        const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://huddlemap.live').replace(/\/$/, '');
+        const eventUrl = `${baseUrl}/event/${event.id}`;
+
         return [
             "BEGIN:VCALENDAR",
             "VERSION:2.0",
@@ -57,7 +61,7 @@ export function generateIcsContent(event: GameEvent): string {
             `DTEND:${formatIcsDate(endDate)}`,
             `DTSTAMP:${formatIcsDate(now)}`,
             `LOCATION:${locationStr}`,
-            `DESCRIPTION:${details.replace(/\n/g, "\\n")}\\n\\nhttps://huddlev1.vercel.app/map?eventId=${event.id}`,
+            `DESCRIPTION:${details.replace(/\n/g, "\\n")}\\n\\n${eventUrl}`,
             "END:VEVENT",
             "END:VCALENDAR"
         ].join("\r\n");
