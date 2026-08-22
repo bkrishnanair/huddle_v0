@@ -37,7 +37,7 @@ export function TopNavbar() {
     }
 
     return (
-        <header className="fixed top-4 inset-x-4 max-w-[1800px] mx-auto z-[100] h-16 glass-surface border border-foreground/5 dark:border-white/10 rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.1)] dark:shadow-[0_0_30px_rgba(0,0,0,0.6)] pointer-events-auto">
+        <header className="fixed top-4 inset-x-4 max-w-[1800px] mx-auto z-[100] h-16 bg-white/85 dark:bg-slate-950/90 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-raised pointer-events-auto transition-colors">
             <div className="h-full px-4 flex items-center justify-between gap-4">
                 {/* Logo Section */}
                 <Link href="/home" className="flex items-center gap-3 shrink-0">
@@ -49,14 +49,14 @@ export function TopNavbar() {
                 <div className="hidden md:flex flex-1 max-w-4xl px-4 gap-2 animate-in fade-in slide-in-from-top-2 duration-500">
                     {/* Location Search */}
                     <div className="flex-1 min-w-0 relative group">
-                        <div className="absolute inset-0 bg-primary/20 rounded-xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none" />
-                        <div className="relative h-[38px] bg-black/5 dark:bg-slate-900/60 backdrop-blur-2xl rounded-xl border border-black/5 dark:border-white/10 p-[1px] flex items-center group-focus-within:border-primary/50 transition-all">
-                            <Search className="w-4 h-4 ml-3 text-slate-500 group-focus-within:text-primary transition-colors shrink-0" />
+                        <div className="absolute inset-0 bg-teal-500/10 rounded-xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none" />
+                        <div className="relative h-[38px] bg-slate-100/90 dark:bg-slate-800/90 backdrop-blur-2xl rounded-xl border border-slate-200/80 dark:border-slate-700/80 p-[1px] flex items-center group-focus-within:border-teal-500/70 transition-all">
+                            <Search className="w-4 h-4 ml-3 text-slate-400 dark:text-slate-400 group-focus-within:text-teal-500 transition-colors shrink-0" />
                             <div className="flex-1 h-full flex items-center pr-2">
                                 <LocationSearchInput
                                     onPlaceSelect={handlePlaceSelect}
                                     onAiSearch={handleAiSearch}
-                                    className="bg-transparent !border-0 !ring-0 !outline-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 text-[14px] h-full placeholder:text-slate-500 text-foreground"
+                                    className="bg-transparent !border-0 !ring-0 !outline-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 text-[14px] h-full placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-900 dark:text-slate-100 font-medium"
                                 />
                             </div>
                             {isAiSearching && (
@@ -69,13 +69,13 @@ export function TopNavbar() {
 
                     {/* Event Text Search */}
                     <div className="flex-1 min-w-0 relative group shrink-0">
-                        <div className="absolute inset-0 bg-primary/20 rounded-xl blur-xl opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity pointer-events-none" />
-                        <div className="relative h-[38px] bg-black/5 dark:bg-slate-900/60 backdrop-blur-2xl rounded-xl border border-black/5 dark:border-white/10 p-[1px] flex items-center hover:border-primary/50 focus-within:border-primary/50 transition-all">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                        <div className="absolute inset-0 bg-teal-500/10 rounded-xl blur-xl opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity pointer-events-none" />
+                        <div className="relative h-[38px] bg-slate-100/90 dark:bg-slate-800/90 backdrop-blur-2xl rounded-xl border border-slate-200/80 dark:border-slate-700/80 p-[1px] flex items-center hover:border-teal-500/50 focus-within:border-teal-500/70 transition-all">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-400 pointer-events-none" />
                             <input
                                 type="text"
                                 placeholder="Search by Event"
-                                className="w-full h-full pl-9 pr-3 bg-transparent !border-0 !ring-0 !outline-none text-[14px] text-foreground placeholder:text-slate-500 transition-all rounded-xl"
+                                className="w-full h-full pl-9 pr-3 bg-transparent !border-0 !ring-0 !outline-none text-[14px] text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 font-medium transition-all rounded-xl"
                                 onChange={(e) => {
                                     window.dispatchEvent(new CustomEvent('huddle-text-search', { detail: { query: e.target.value } }));
                                 }}
@@ -91,7 +91,7 @@ export function TopNavbar() {
                             variant="ghost"
                             size="icon"
                             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                            className="w-10 h-10 rounded-xl text-slate-500 hover:text-black dark:text-slate-400 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+                            className="w-10 h-10 rounded-xl text-slate-600 hover:text-black dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
                         >
                             {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                         </Button>

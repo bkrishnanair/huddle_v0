@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { signInWithEmail, signUpWithEmail, signInWithGoogle } from "@/lib/auth"
-
 import { useRouter } from "next/navigation"
+import { ArrowLeft, Loader2, Mail } from "lucide-react"
 
 interface AuthScreenProps {
   onLogin: (user: any) => void
@@ -29,16 +29,16 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
     setIsLoading(true)
     setError(null)
     try {
-      let user
+      let authUser
       if (action === "signup") {
-        user = await signUpWithEmail(email, password, name)
+        authUser = await signUpWithEmail(email, password, name)
         setShowVerifyBanner(true)
       } else {
-        user = await signInWithEmail(email, password)
+        authUser = await signInWithEmail(email, password)
       }
-      onLogin(user)
+      onLogin(authUser)
     } catch (err: any) {
-      setError(err.message)
+      setError(err.message || "Authentication failed. Please check your credentials.")
     } finally {
       setIsLoading(false)
     }
@@ -48,10 +48,10 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
     setIsLoading(true)
     setError(null)
     try {
-      const user = await signInWithGoogle()
-      onLogin(user)
+      const authUser = await signInWithGoogle()
+      onLogin(authUser)
     } catch (err: any) {
-      setError(err.message)
+      setError(err.message || "Google sign-in failed.")
     } finally {
       setIsLoading(false)
     }
@@ -59,164 +59,229 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
 
   if (user) {
     return (
-      <div className="min-h-screen liquid-gradient flex items-center justify-center text-white">
-        <p>You are already logged in. Redirecting...</p>
+      <div className="p-8 text-center bg-sheet rounded-sheet border border-line">
+        <Loader2 className="w-6 h-6 animate-spin text-action mx-auto mb-3" />
+        <p className="text-sm font-medium text-ink">You are already signed in. Redirecting...</p>
       </div>
     )
   }
 
   return (
-    <div className="p-6">
-      {/* Hero Section */}
-      <div className="text-center mb-10">
-        <h2 className="text-4xl md:text-5xl font-black text-white mb-4 leading-tight tracking-tight">
-          Your community is waiting discover events and network<br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-orange-400 to-amber-500 drop-shadow-sm">Find Your Huddle.</span>
+    <div className="w-full">
+      {/* Back button if landing callback provided */}
+      {onBackToLanding && (
+        <button
+          onClick={onBackToLanding}
+          className="inline-flex items-center gap-1.5 text-xs text-ink-3 hover:text-ink transition-colors mb-6 font-medium"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Back to map
+        </button>
+      )}
+
+      {/* Header */}
+      <div className="text-center mb-6">
+        <div className="inline-flex items-center justify-center w-10 h-10 rounded-control bg-action-tint text-action font-black text-lg mb-3">
+          H
+        </div>
+        <h2 className="font-display text-2xl font-bold text-ink tracking-tight">
+          Welcome to Huddle
         </h2>
-        <p className="text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed font-medium">
-          Discover and join local events in real-time. Drop a pin, connect with your community, organize effortlessly, and never miss out on what's happening around you.
+        <p className="text-xs text-ink-2 mt-1">
+          The live map for campus events and pickup games
         </p>
       </div>
 
       {showVerifyBanner && (
-        <div className="max-w-sm mx-auto mb-6 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 text-center">
-          <p className="text-emerald-400 text-sm font-bold mb-1">📧 Check your email!</p>
-          <p className="text-slate-400 text-xs">We sent a verification link to <span className="text-white font-medium">{email}</span>. Verify to unlock event creation.</p>
+        <div className="mb-5 bg-live-tint border border-live/25 rounded-chip p-3.5 text-center">
+          <div className="flex items-center justify-center gap-1.5 text-live-ink font-semibold text-xs mb-1">
+            <Mail className="w-3.5 h-3.5" /> Check your email
+          </div>
+          <p className="text-xs text-ink-2">
+            We sent a verification link to <span className="font-semibold text-ink">{email}</span>.
+          </p>
         </div>
       )}
 
-      <Tabs defaultValue="login" className="w-full max-w-sm mx-auto">
-        <TabsList className="grid w-full grid-cols-2 bg-white/10 border border-white/20 rounded-lg p-1 h-auto">
+      <Tabs defaultValue="login" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 bg-surface border border-line rounded-control p-1 h-auto mb-5">
           <TabsTrigger
             value="login"
-            className="data-[state=active]:bg-white/20 data-[state=active]:shadow-md text-white"
+            className="data-[state=active]:bg-sheet data-[state=active]:text-ink data-[state=active]:shadow-sm text-ink-3 text-xs font-medium rounded-chip py-2 transition-all"
           >
-            Login
+            Sign In
           </TabsTrigger>
           <TabsTrigger
             value="signup"
-            className="data-[state=active]:bg-white/20 data-[state=active]:shadow-md text-white"
+            className="data-[state=active]:bg-sheet data-[state=active]:text-ink data-[state=active]:shadow-sm text-ink-3 text-xs font-medium rounded-chip py-2 transition-all"
           >
-            Sign Up
+            Create Account
           </TabsTrigger>
         </TabsList>
 
-        <div className="pt-6">
-          <div className="space-y-4">
-            <Button
-              onClick={handleGoogleSignIn}
-              className="w-full bg-white/90 text-black hover:bg-white h-11 rounded-xl shadow-lg font-medium"
-              disabled={isLoading}
-            >
-              Continue with Google
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                if (onLogin) onLogin(null); // Close modal
-                router.push('/discover');
-              }}
-              className="w-full h-11 rounded-xl glass-surface border-white/10 hover:bg-white/10 text-white shadow-lg font-medium"
-              disabled={isLoading}
-            >
-              Continue as Guest
-            </Button>
+        <div className="space-y-4">
+          {/* Google Sign In */}
+          <Button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={isLoading}
+            variant="outline"
+            className="w-full h-11 border-line bg-sheet hover:bg-surface text-ink font-medium text-sm rounded-control shadow-sm transition-all flex items-center justify-center gap-2.5"
+          >
+            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+              <path
+                fill="#4285F4"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+              />
+            </svg>
+            Continue with Google
+          </Button>
 
-            <div className="relative py-2">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-white/10" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase font-bold tracking-widest">
-                <span className="px-3 bg-slate-900 text-slate-500">Or continue with email</span>
-              </div>
+          {/* Divider */}
+          <div className="relative py-1">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-line" />
             </div>
-
-            {/* Login Tab */}
-            <TabsContent value="login" className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email-login" className="text-white/90">
-                  Email
-                </Label>
-                <Input
-                  id="email-login"
-                  type="email"
-                  placeholder="m@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="glass border-white/30 text-white placeholder:text-white/60"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password-login" className="text-white/90">
-                  Password
-                </Label>
-                <Input
-                  id="password-login"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="glass border-white/30 text-white"
-                />
-              </div>
-              <Button
-                onClick={() => handleAuthAction("login")}
-                disabled={isLoading}
-                className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(234,88,12,0.3)] font-bold transition-all"
-              >
-                {isLoading ? "Logging in..." : "Login"}
-              </Button>
-            </TabsContent>
-
-            {/* Sign Up Tab */}
-            <TabsContent value="signup" className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name-signup" className="text-white/90">
-                  Name
-                </Label>
-                <Input
-                  id="name-signup"
-                  placeholder="Your Name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="glass border-white/30 text-white placeholder:text-white/60"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email-signup" className="text-white/90">
-                  Email
-                </Label>
-                <Input
-                  id="email-signup"
-                  type="email"
-                  placeholder="m@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="glass border-white/30 text-white placeholder:text-white/60"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password-signup" className="text-white/90">
-                  Password
-                </Label>
-                <Input
-                  id="password-signup"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="glass border-white/30 text-white"
-                />
-              </div>
-              <Button
-                onClick={() => handleAuthAction("signup")}
-                disabled={isLoading}
-                className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(234,88,12,0.3)] font-bold transition-all"
-              >
-                {isLoading ? "Creating account..." : "Sign Up"}
-              </Button>
-            </TabsContent>
-
-            {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+            <div className="relative flex justify-center text-[11px] font-mono uppercase tracking-wider">
+              <span className="px-3 bg-sheet text-ink-3">or continue with email</span>
+            </div>
           </div>
+
+          {/* Login Tab Form */}
+          <TabsContent value="login" className="space-y-3.5 mt-0">
+            <div className="space-y-1.5">
+              <Label htmlFor="email-login" className="text-xs font-medium text-ink-2">
+                Email address
+              </Label>
+              <Input
+                id="email-login"
+                type="email"
+                placeholder="student@umd.edu"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="h-10 bg-paper border-line text-ink placeholder:text-ink-4 text-sm rounded-chip focus:border-action focus:ring-1 focus:ring-action/20"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password-login" className="text-xs font-medium text-ink-2">
+                  Password
+                </Label>
+              </div>
+              <Input
+                id="password-login"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-10 bg-paper border-line text-ink placeholder:text-ink-4 text-sm rounded-chip focus:border-action focus:ring-1 focus:ring-action/20"
+              />
+            </div>
+            <Button
+              type="button"
+              onClick={() => handleAuthAction("login")}
+              disabled={isLoading || !email || !password}
+              className="w-full h-11 rounded-control bg-action hover:bg-action-hover text-white font-medium text-sm shadow-sm transition-all active:scale-[0.99]"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Signing in...
+                </>
+              ) : (
+                "Sign In"
+              )}
+            </Button>
+          </TabsContent>
+
+          {/* Sign Up Tab Form */}
+          <TabsContent value="signup" className="space-y-3.5 mt-0">
+            <div className="space-y-1.5">
+              <Label htmlFor="name-signup" className="text-xs font-medium text-ink-2">
+                Your Name
+              </Label>
+              <Input
+                id="name-signup"
+                placeholder="Alex Morgan"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="h-10 bg-paper border-line text-ink placeholder:text-ink-4 text-sm rounded-chip focus:border-action focus:ring-1 focus:ring-action/20"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="email-signup" className="text-xs font-medium text-ink-2">
+                Email address
+              </Label>
+              <Input
+                id="email-signup"
+                type="email"
+                placeholder="student@umd.edu"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="h-10 bg-paper border-line text-ink placeholder:text-ink-4 text-sm rounded-chip focus:border-action focus:ring-1 focus:ring-action/20"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="password-signup" className="text-xs font-medium text-ink-2">
+                Password
+              </Label>
+              <Input
+                id="password-signup"
+                type="password"
+                placeholder="At least 6 characters"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-10 bg-paper border-line text-ink placeholder:text-ink-4 text-sm rounded-chip focus:border-action focus:ring-1 focus:ring-action/20"
+              />
+            </div>
+            <Button
+              type="button"
+              onClick={() => handleAuthAction("signup")}
+              disabled={isLoading || !email || !password}
+              className="w-full h-11 rounded-control bg-action hover:bg-action-hover text-white font-medium text-sm shadow-sm transition-all active:scale-[0.99]"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Creating account...
+                </>
+              ) : (
+                "Create Account"
+              )}
+            </Button>
+          </TabsContent>
+
+          {/* Guest fallback button */}
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              if (onLogin) onLogin(null);
+              router.push('/map');
+            }}
+            disabled={isLoading}
+            className="w-full h-10 text-ink-3 hover:text-ink hover:bg-surface text-xs font-medium rounded-control"
+          >
+            Continue as Guest without signing in
+          </Button>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-xs rounded-chip p-3 text-center">
+              {error}
+            </div>
+          )}
         </div>
       </Tabs>
     </div>

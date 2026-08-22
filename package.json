@@ -41,6 +41,7 @@
     "@radix-ui/react-toggle-group": "1.1.1",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@radix-ui/react-visually-hidden": "^1.2.4",
+    "@sentry/nextjs": "^10.70.0",
     "@vercel/analytics": "latest",
     "@vercel/speed-insights": "latest",
     "@vis.gl/react-google-maps": "latest",

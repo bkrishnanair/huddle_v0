@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { trackFunnelEvent } from "@/lib/analytics";
 
 /**
  * Marketing landing page — the "Instrument" surface (design block 7).
@@ -139,6 +140,7 @@ export default function LandingPage({
   // Without this, iOS rubber-band scrolling and route transitions flash navy
   // behind a light page. Remove once the whole app has migrated and :root is light.
   useEffect(() => {
+    trackFunnelEvent({ name: "landing_view" });
     const { body } = document;
     const previous = body.style.backgroundColor;
     body.style.backgroundColor = "var(--ins-paper)";

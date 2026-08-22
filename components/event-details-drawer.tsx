@@ -41,6 +41,7 @@ import { ShieldAlert, Ban, ImageIcon } from "lucide-react"
 import EventGallery from "./events/event-gallery"
 import { FollowButton } from "@/components/follow-button"
 import { getEventStartUTC, formatEventTimeRange } from "@/lib/datetime"
+import { trackFunnelEvent } from "@/lib/analytics"
 
 function EventCountdown({ date, time, timezone }: { date: string; time: string; timezone?: string }) {
   const [label, setLabel] = useState("");
@@ -119,8 +120,16 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
     if (isOpen && initialEvent?.id && !viewedEvents.current.has(initialEvent.id)) {
       viewedEvents.current.add(initialEvent.id);
       fetch(`/api/events/${initialEvent.id}/view`, { method: 'POST' }).catch(() => {});
+      trackFunnelEvent({
+        name: 'event_open',
+        properties: {
+          eventId: initialEvent.id,
+          category: initialEvent.category,
+          isVirtual: initialEvent.eventType === 'virtual' || initialEvent.eventType === 'hybrid',
+        },
+      });
     }
-  }, [isOpen, initialEvent?.id]);
+  }, [isOpen, initialEvent?.id, initialEvent?.category, initialEvent?.eventType]);
 
   useEffect(() => {
     const fetchAttendees = async () => {
@@ -453,6 +462,10 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
         const data = await response.json();
         onEventUpdated(data.event);
         toast.success("Successfully checked in! 🎉");
+        trackFunnelEvent({
+          name: 'check_in',
+          properties: { eventId: event.id },
+        });
       } else {
         const data = await response.json();
         toast.error(data.error || "Failed to check in.");
@@ -467,6 +480,16 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
 
   const handleRSVPClick = () => {
     if (loading) return;
+    if (event?.id) {
+      trackFunnelEvent({
+        name: 'rsvp_click',
+        properties: {
+          eventId: event.id,
+          category: event.category,
+          isFull,
+        },
+      });
+    }
     if (!user || (!hasJoined && !isWaitlisted)) {
       // Open the prompt for both guests and logged-in users who are joining
       setShowRsvpPrompt(true)
@@ -511,6 +534,14 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
       if (response.ok) {
         const data = await response.json()
         onEventUpdated(data.event)
+
+        trackFunnelEvent({
+          name: 'rsvp_success',
+          properties: {
+            eventId: event.id,
+            action,
+          },
+        });
 
         if (action === "join") {
           window.dispatchEvent(new CustomEvent("huddle:rsvp"))

@@ -1,3 +1,5 @@
+"use client"
+
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { CalendarRange, Sparkles, Trophy, Users } from "lucide-react"
@@ -13,88 +15,81 @@ export function AuthGateModal({ isOpen, onClose, triggerContext }: AuthGateModal
   const router = useRouter()
 
   const headlines = {
-    events: "Create an account to see your events",
+    events: "Sign in to manage your events",
     profile: "Create an account to build your profile",
-    general: "Join Huddle to unlock your experience"
+    general: "Join Huddle to unlock full access"
   }
 
   const headline = headlines[triggerContext] || headlines.general
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="glass-surface border-white/10 sm:max-w-md p-6 bg-slate-900/90 backdrop-blur-xl rounded-2xl overflow-hidden shadow-2xl">
+      <DialogContent className="sm:max-w-md p-6 sm:p-8 bg-sheet border border-line rounded-sheet shadow-overlay overflow-hidden">
         <div className="text-center mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/30 to-violet-500/30 flex items-center justify-center mx-auto mb-4 border border-white/5 shadow-inner">
-            <Sparkles className="w-8 h-8 text-primary drop-shadow-md" />
+          <div className="w-12 h-12 rounded-control bg-action-tint text-action flex items-center justify-center mx-auto mb-3.5 border border-line">
+            <Sparkles className="w-6 h-6" />
           </div>
-          <DialogTitle className="text-2xl font-black text-white tracking-tight leading-tight">
+          <DialogTitle className="font-display text-2xl font-bold text-ink tracking-tight leading-tight">
             {headline}
           </DialogTitle>
+          <p className="text-xs text-ink-3 mt-1.5">
+            Free forever · Takes 10 seconds with Google
+          </p>
         </div>
 
-        <div className="space-y-4 mb-8">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
-              <CalendarRange className="w-4 h-4 text-emerald-400" />
+        <div className="space-y-3.5 mb-7">
+          <div className="flex items-start gap-3 p-2.5 rounded-control bg-surface/60 border border-line/60">
+            <div className="w-7 h-7 rounded-chip bg-live-tint text-live flex items-center justify-center shrink-0 mt-0.5">
+              <CalendarRange className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-sm font-bold text-white">Save your RSVPs</p>
-              <p className="text-xs text-slate-400 mt-0.5">Never lose track of the events you want to attend.</p>
+              <p className="text-sm font-semibold text-ink">Save your RSVPs</p>
+              <p className="text-xs text-ink-2 mt-0.5">Never lose track of upcoming games and campus meetups.</p>
             </div>
           </div>
 
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-violet-500/10 flex items-center justify-center shrink-0 mt-0.5">
-              <Users className="w-4 h-4 text-violet-400" />
+          <div className="flex items-start gap-3 p-2.5 rounded-control bg-surface/60 border border-line/60">
+            <div className="w-7 h-7 rounded-chip bg-action-tint text-action flex items-center justify-center shrink-0 mt-0.5">
+              <Users className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-sm font-bold text-white">Follow organizers</p>
-              <p className="text-xs text-slate-400 mt-0.5">Get notified when your friends are going.</p>
+              <p className="text-sm font-semibold text-ink">Follow organizers & friends</p>
+              <p className="text-xs text-ink-2 mt-0.5">Get automatic alerts when your crew joins an event.</p>
             </div>
           </div>
 
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0 mt-0.5">
-              <Trophy className="w-4 h-4 text-orange-400" />
+          <div className="flex items-start gap-3 p-2.5 rounded-control bg-surface/60 border border-line/60">
+            <div className="w-7 h-7 rounded-chip bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+              <Trophy className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-sm font-bold text-white">Build reliability</p>
-              <p className="text-xs text-slate-400 mt-0.5">Increase your score and unlock priority access.</p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
-              <Sparkles className="w-4 h-4 text-blue-400" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-white">Takes 10 seconds</p>
-              <p className="text-xs text-slate-400 mt-0.5">Sign up instantly with your Google account.</p>
+              <p className="text-sm font-semibold text-ink">Build attendance reliability</p>
+              <p className="text-xs text-ink-2 mt-0.5">Unlock organizer badges and priority waitlist spots.</p>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2.5">
           <Button
             onClick={() => {
               onClose()
               router.push("/login")
             }}
-            className="w-full h-12 bg-primary hover:bg-primary/90 text-white font-bold text-[15px] shadow-lg hover:shadow-primary/20 transition-all rounded-xl"
+            className="w-full h-11 bg-action hover:bg-action-hover text-white font-medium text-sm rounded-control shadow-sm transition-all active:scale-[0.99]"
           >
-            Sign Up
+            Continue to Sign In
           </Button>
           <Button
             onClick={() => {
               onClose()
               if (!window.location.pathname.includes('/map') && !window.location.pathname.includes('/discover')) {
-                  router.push("/map")
+                router.push("/map")
               }
             }}
             variant="ghost"
-            className="w-full h-12 text-slate-400 hover:text-white hover:bg-white/5 font-bold text-sm rounded-xl"
+            className="w-full h-10 text-ink-3 hover:text-ink hover:bg-surface text-xs font-medium rounded-control"
           >
-            Continue Browsing
+            Continue browsing without account
           </Button>
         </div>
       </DialogContent>

@@ -8,14 +8,13 @@ export const dynamic = 'force-dynamic';
 export default function SignupPage() {
     const router = useRouter()
 
-    const handleLogin = (user: any) => {
-        router.push("/map")
-    }
-
     return (
-        <div className="min-h-screen liquid-gradient flex items-center justify-center p-4">
-            <div className="w-full max-w-4xl glass-card rounded-2xl overflow-hidden shadow-2xl">
-                <AuthScreen onLogin={handleLogin} />
+        <div className="min-h-screen bg-paper flex items-center justify-center p-4 sm:p-6">
+            <div className="w-full max-w-md bg-sheet border border-line rounded-sheet shadow-raised p-6 sm:p-8 relative overflow-hidden">
+                <AuthScreen
+                    onLogin={() => router.push("/map")}
+                    onBackToLanding={() => router.push("/")}
+                />
             </div>
         </div>
     )
