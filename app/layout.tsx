@@ -36,14 +36,32 @@ const bricolage = Bricolage_Grotesque({
 })
 
 export const metadata: Metadata = {
-  title: "Huddle - Find Pickup Sports Games",
-  description: "Find and join pickup sports games in your local community",
-  generator: 'v.dev',
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || 'https://huddlemap.live'
+  ),
+  title: {
+    default: "Huddle — The Live Map for Campus Events",
+    template: "%s | Huddle",
+  },
+  description: "See what's happening around campus right now. Live events, student meetups, and pickup games near you — no app, no account required.",
+  openGraph: {
+    title: "Huddle — The Live Map for Campus Events",
+    description: "See what's happening around campus right now. Live events, student meetups, and pickup games near you — no app, no account required.",
+    url: "https://huddlemap.live",
+    siteName: "Huddle",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Huddle — The Live Map for Campus Events",
+    description: "See what's happening around campus right now. Live events, student meetups, and pickup games near you — no app, no account required.",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "Huddle",
-  }
+  },
 }
 
 export const viewport: Viewport = {
