@@ -110,9 +110,8 @@ function CampusMapVisual() {
           )}
           <span
             aria-hidden="true"
-            className={`relative flex items-center justify-center rounded-full border-2 border-white shadow-raised ${
-              v.live ? "h-[26px] w-[26px] bg-live" : "h-[18px] w-[18px] bg-ink"
-            }`}
+            className={`relative flex items-center justify-center rounded-full border-2 border-white shadow-raised ${v.live ? "h-[26px] w-[26px] bg-live" : "h-[18px] w-[18px] bg-ink"
+              }`}
           />
         </div>
       ))}
@@ -218,7 +217,7 @@ export default function LandingPage({
               </h1>
 
               <p className="mt-5 max-w-[40ch] text-[15px] leading-[22px] text-ink-2">
-                Live events near you — no app, no account, no missing out.
+                Live events near you with no app, no account, no missing out.
               </p>
 
               <div className="mt-8 flex flex-col items-start gap-4">
@@ -280,9 +279,8 @@ export default function LandingPage({
                 {organizerClaims.map((c, i) => (
                   <div
                     key={c.label}
-                    className={`border-t border-line py-4 ${
-                      i === organizerClaims.length - 1 ? "border-b" : ""
-                    }`}
+                    className={`border-t border-line py-4 ${i === organizerClaims.length - 1 ? "border-b" : ""
+                      }`}
                   >
                     <dt className="ins-mono text-xs leading-4 text-ink-3">{c.label}</dt>
                     <dd className="mt-1.5 text-[15px] leading-[22px] text-ink">{c.body}</dd>
@@ -303,7 +301,7 @@ export default function LandingPage({
               <p className="ins-mono text-xs leading-4 text-ink-3">Already on Huddle</p>
               <p className="mt-3 text-[15px] leading-[22px] text-ink-2">
                 Campus events from TerpLink are already on the map. If one of them is
-                yours, claim it — the RSVPs students have already made come with it.
+                yours, claim it and the RSVPs students have already made come with it.
               </p>
               <dl className="mt-6 grid grid-cols-2 gap-4">
                 <div>
