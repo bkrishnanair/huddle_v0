@@ -140,11 +140,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const eventData = eventDoc.data() as any
       const players = eventData.players || []
       const waitlist = eventData.waitlist || []
-      const attendeeNotes = eventData.attendeeNotes || {}
       const maxPlayers = eventData.maxPlayers || 0
 
-      const attendeeAnswers = eventData.attendeeAnswers || {}
-      const attendeePickup = eventData.attendeePickup || {}
+      // Free-text roster data lives in events/{id}/roster/{uid}, not on the event
+      // document, because the event document is world-readable. Writes stay in
+      // this transaction so roster and membership can never diverge.
+      const rosterRef = (uid: string) => eventRef.collection("roster").doc(uid)
 
       if (action === "join") {
         if (players.includes(user.uid) || waitlist.includes(user.uid)) {
@@ -163,41 +164,31 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           }
         }
 
-        // Process Note if provided
-        const newAttendeeNotes = { ...attendeeNotes };
-        if (note && note.trim().length > 0) {
-          newAttendeeNotes[user.uid] = note.trim();
-        }
+        // Roster entry for this attendee. Written only when there is something to
+        // store, so we do not litter the subcollection with empty documents.
+        const rosterEntry: Record<string, any> = {}
+        if (note && note.trim().length > 0) rosterEntry.note = note.trim()
+        if (answers && Object.keys(answers).length > 0) rosterEntry.answers = answers
+        if (pickupPointId) rosterEntry.pickup = pickupPointId
 
-        const newAttendeeAnswers = { ...attendeeAnswers };
-        if (answers && Object.keys(answers).length > 0) {
-          newAttendeeAnswers[user.uid] = answers;
-        }
-
-        const newAttendeePickup = { ...attendeePickup };
-        if (pickupPointId) {
-          newAttendeePickup[user.uid] = pickupPointId;
+        if (Object.keys(rosterEntry).length > 0) {
+          rosterEntry.updatedAt = FieldValue.serverTimestamp()
+          transaction.set(rosterRef(user.uid), rosterEntry, { merge: true })
         }
 
         if (players.length >= maxPlayers) {
           // Join waitlist
           transaction.update(eventRef, {
             waitlist: FieldValue.arrayUnion(user.uid),
-            attendeeNotes: newAttendeeNotes,
-            attendeeAnswers: newAttendeeAnswers,
-            attendeePickup: newAttendeePickup
           })
-          updatedEventData = { ...eventData, waitlist: [...waitlist, user.uid], attendeeNotes: newAttendeeNotes, attendeeAnswers: newAttendeeAnswers, attendeePickup: newAttendeePickup }
+          updatedEventData = { ...eventData, waitlist: [...waitlist, user.uid] }
         } else {
           // Join players
           transaction.update(eventRef, {
             players: FieldValue.arrayUnion(user.uid),
             currentPlayers: players.length + 1,
-            attendeeNotes: newAttendeeNotes,
-            attendeeAnswers: newAttendeeAnswers,
-            attendeePickup: newAttendeePickup
           })
-          updatedEventData = { ...eventData, players: [...players, user.uid], currentPlayers: players.length + 1, attendeeNotes: newAttendeeNotes, attendeeAnswers: newAttendeeAnswers, attendeePickup: newAttendeePickup }
+          updatedEventData = { ...eventData, players: [...players, user.uid], currentPlayers: players.length + 1 }
           joinedPlayers = true;
         }
       } else if (action === "leave" || action === "remove") {
@@ -211,22 +202,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           throw new Error("NOT_JOINED")
         }
 
-        const newAttendeeNotes = { ...attendeeNotes };
-        delete newAttendeeNotes[actingUserId];
-        const newAttendeeAnswers = { ...attendeeAnswers };
-        delete newAttendeeAnswers[actingUserId];
-        const newAttendeePickup = { ...attendeePickup };
-        delete newAttendeePickup[actingUserId];
+        // Drop their roster entry. Deleting a document that does not exist is a
+        // no-op, so this is safe for attendees who never left a note.
+        transaction.delete(rosterRef(actingUserId))
 
         if (waitlist.includes(actingUserId)) {
           // Leave waitlist
           transaction.update(eventRef, {
             waitlist: FieldValue.arrayRemove(actingUserId),
-            attendeeNotes: newAttendeeNotes,
-            attendeeAnswers: newAttendeeAnswers,
-            attendeePickup: newAttendeePickup
           })
-          updatedEventData = { ...eventData, waitlist: waitlist.filter((uid: string) => uid !== actingUserId), attendeeNotes: newAttendeeNotes, attendeeAnswers: newAttendeeAnswers, attendeePickup: newAttendeePickup }
+          updatedEventData = { ...eventData, waitlist: waitlist.filter((uid: string) => uid !== actingUserId) }
         } else if (players.includes(actingUserId)) {
           // Leave players
           const newPlayers = players.filter((uid: string) => uid !== actingUserId)
@@ -257,22 +242,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             transaction.update(eventRef, {
               players: newPlayers,
               waitlist: newWaitlist,
-              attendeeNotes: newAttendeeNotes,
-              attendeeAnswers: newAttendeeAnswers,
-              attendeePickup: newAttendeePickup
               // currentPlayers remains the same since we swapped one for one
             })
-            updatedEventData = { ...eventData, players: newPlayers, waitlist: newWaitlist, attendeeNotes: newAttendeeNotes, attendeeAnswers: newAttendeeAnswers, attendeePickup: newAttendeePickup }
+            updatedEventData = { ...eventData, players: newPlayers, waitlist: newWaitlist }
           } else {
             // Just normal leave
             transaction.update(eventRef, {
               players: FieldValue.arrayRemove(actingUserId),
               currentPlayers: newPlayers.length,
-              attendeeNotes: newAttendeeNotes,
-              attendeeAnswers: newAttendeeAnswers,
-              attendeePickup: newAttendeePickup
             })
-            updatedEventData = { ...eventData, players: newPlayers, currentPlayers: newPlayers.length, attendeeNotes: newAttendeeNotes, attendeeAnswers: newAttendeeAnswers, attendeePickup: newAttendeePickup }
+            updatedEventData = { ...eventData, players: newPlayers, currentPlayers: newPlayers.length }
           }
         }
       }
@@ -299,7 +278,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       notifyFollowersOfJoin(user.uid, id, eventName, eventCategory, eventGeopoint).catch(console.error)
     }
 
-    return NextResponse.json({ event: { id, ...updatedEventData } })
+    // updatedEventData spreads the stored document. Strip the legacy roster maps
+    // so this response cannot leak them before the migration has run.
+    const { attendeeNotes: _n, attendeeAnswers: _a, attendeePickup: _p, ...safeEventData } = updatedEventData || {}
+
+    return NextResponse.json({ event: { id, ...safeEventData } })
   } catch (error: any) {
     console.error("RSVP error:", error)
     if (error.message === "EVENT_NOT_FOUND") {

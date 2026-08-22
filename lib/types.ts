@@ -56,8 +56,13 @@ export interface GameEvent {
   pinnedMessage?: string;
   players: string[];
   waitlist?: string[];
+  /** @deprecated Moved to events/{id}/roster/{uid}.note — the event document is
+   *  world-readable. Still present on documents that predate
+   *  scripts/migrate-roster-fields.ts. Read via GET /api/events/[id]/attendees. */
   attendeeNotes?: Record<string, string>;
+  /** @deprecated Moved to events/{id}/roster/{uid}.answers. See attendeeNotes. */
   attendeeAnswers?: Record<string, Record<string, string>>;
+  /** @deprecated Moved to events/{id}/roster/{uid}.pickup. See attendeeNotes. */
   attendeePickup?: Record<string, string>;
   questions?: string[];
   pickupPoints?: { id: string; location: string; time: string }[];
@@ -96,6 +101,16 @@ export interface GameEvent {
   };
 }
 
+/** One attendee's free-text RSVP data, stored at events/{eventId}/roster/{uid}.
+ *  Deny-all to clients in firestore.rules; served only by
+ *  GET /api/events/[id]/attendees, which authorizes the caller. */
+export interface RosterEntry {
+  note?: string;
+  answers?: Record<string, string>;
+  pickup?: string;
+  updatedAt?: any;
+}
+
 export interface AppNotification {
   id: string;
   userId: string;
@@ -106,4 +121,87 @@ export interface AppNotification {
   actions?: string[];
   read: boolean;
   createdAt: string; // ISO String
+}
+
+/**
+ * Fields GET /api/events may return to an unauthenticated caller.
+ *
+ * The events collection is world-readable by design — guest browsing is core
+ * positioning and the map depends on it. That makes the list payload the wrong
+ * place for roster data. Everything omitted here is either attendee PII or
+ * organizer-only operational state, and lives behind
+ * GET /api/events/[id]/attendees instead.
+ *
+ * Deliberately omitted: attendeeNotes, attendeeAnswers, attendeePickup (free
+ * text written by students), checkIns, checkedInPlayers, waitlist,
+ * playerDetails, reportedAttendance, scheduledMessages, questions,
+ * pickupPoints, stayUntil, transitTips, pinnedMessage, lastAnnouncementAt,
+ * postEventPromptSent, reminderSentAt, checkInOpen, claimedFrom, claimedAt,
+ * createdAt, isBoosted, organizerPhotoURL, orgLocation, geohash, isPrivate.
+ *
+ * players[] is included: it is an array of UIDs with no free text, and two
+ * client features read it from list data — the "Joined" filter
+ * (components/map-view.tsx) and the friends-attending badge
+ * (components/events/event-card.tsx).
+ */
+export const PUBLIC_EVENT_FIELDS = [
+  "id",
+  "name",
+  "title",
+  "category",
+  "sport",
+  "tags",
+  "date",
+  "endDate",
+  "time",
+  "endTime",
+  "timezone",
+  "geopoint",
+  "orgGeopoint",
+  "venue",
+  "location",
+  "description",
+  "icon",
+  "eventType",
+  "virtualLink",
+  "currentPlayers",
+  "maxPlayers",
+  "players",
+  "organizerName",
+  "createdBy",
+  "isOrganizerVerified",
+  "source",
+  "isScraped",
+  "sourceUrl",
+  "viewCount",
+  "status",
+  "recurrence",
+  "parentEventId",
+  "distance",
+  // Attached at runtime by deduplicateRecurring() in app/api/events/route.ts,
+  // read by components/events/event-card.tsx. Not part of the stored document.
+  "recurringCount",
+  "recurrenceType",
+] as const;
+
+export type PublicEventField = (typeof PUBLIC_EVENT_FIELDS)[number];
+
+/**
+ * Copies only allowlisted fields off an event. Allowlist, not blocklist — a new
+ * field added to the document is omitted until it is named here, so the default
+ * for anything new is private.
+ *
+ * Absent keys are skipped rather than emitted as undefined, so the JSON payload
+ * carries no dead keys.
+ */
+export function pickPublicFields<T extends Record<string, unknown>>(
+  event: T,
+): Partial<Record<PublicEventField, unknown>> {
+  const out: Partial<Record<PublicEventField, unknown>> = {};
+  for (const field of PUBLIC_EVENT_FIELDS) {
+    if (event[field] !== undefined) {
+      out[field] = event[field];
+    }
+  }
+  return out;
 }

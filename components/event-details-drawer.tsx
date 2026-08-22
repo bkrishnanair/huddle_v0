@@ -93,7 +93,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
   const router = useRouter()
   const [event, setEvent] = useState<GameEvent | null>(initialEvent)
   const [isLoading, setIsLoading] = useState(false)
-  const [attendees, setAttendees] = useState<{ id: string, name: string, loyaltyCount?: number, note?: string, reliabilityScore?: number | null }[]>([])
+  const [attendees, setAttendees] = useState<{ id: string, name: string, loyaltyCount?: number, note?: string, answers?: Record<string, string>, pickup?: string, reliabilityScore?: number | null }[]>([])
   const [isFetchingAttendees, setIsFetchingAttendees] = useState(false)
   const [isCloning, setIsCloning] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -186,13 +186,13 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
         ];
 
         if (hasPickup) {
-          const pickupId = event?.attendeePickup?.[a.id];
+          const pickupId = a.pickup;
           const pickupObj = event?.pickupPoints?.find(p => p.id === pickupId);
           row.push(`"${pickupObj ? `${pickupObj.location} @ ${pickupObj.time}` : 'None'}"`);
         }
 
         questions.forEach(q => {
-          const ans = event?.attendeeAnswers?.[a.id]?.[q] || "";
+          const ans = a.answers?.[q] || "";
           row.push(`"${ans}"`);
         });
 
@@ -823,7 +823,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                       <h3 className="font-black text-[10px] uppercase tracking-widest text-emerald-400">Logistics Summary</h3>
 
                       {event.questions?.map(q => {
-                        const yesCount = attendees.filter(a => event?.attendeeAnswers?.[a.id]?.[q] === "Yes").length;
+                        const yesCount = attendees.filter(a => a.answers?.[q] === "Yes").length;
                         return (
                           <div key={q} className="flex justify-between items-center text-xs">
                             <span className="text-slate-400">{q} (Yes)</span>
@@ -836,7 +836,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                         <div className="pt-2 border-t border-white/5 space-y-2">
                           <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Pickup Headcounts</p>
                           {event.pickupPoints.map(pt => {
-                            const count = attendees.filter(a => event?.attendeePickup?.[a.id] === pt.id).length;
+                            const count = attendees.filter(a => a.pickup === pt.id).length;
                             return (
                               <div key={pt.id} className="flex justify-between items-center text-xs">
                                 <span className="text-slate-400">{pt.location} @ {pt.time}</span>

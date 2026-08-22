@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerCurrentUser } from "@/lib/auth-server"
 import { getEvents, getNearbyEvents } from "@/lib/db"
+import { pickPublicFields } from "@/lib/types"
 import { getFirebaseAdminDb, GeoPoint, Timestamp } from "@/lib/firebase-admin"
 import { checkRateLimit } from '@/lib/rate-limit';
 import * as geofire from "geofire-common"
@@ -83,7 +84,14 @@ export async function GET(request: NextRequest) {
       events = await getEvents()
     }
 
-    // Filter out private events
+    // Filter out private events.
+    // TODO(deferred): move this into the Firestore query. Blocked on a backfill —
+    // `isPrivate` is optional, and a Firestore equality/inequality filter skips
+    // documents where the field is absent, so `where("isPrivate","==",false)`
+    // would silently drop every legacy public event that predates the field.
+    // Backfill isPrivate:false across the events collection first, then this
+    // becomes where("isPrivate","==",false) plus a composite index on
+    // (isPrivate ASC, date ASC).
     let combinedEvents = events.filter((e: any) => !e.isPrivate)
 
     // Group recurring events — only return the soonest future instance per series
@@ -91,8 +99,14 @@ export async function GET(request: NextRequest) {
       combinedEvents = deduplicateRecurring(combinedEvents)
     }
 
+    // Project last. deduplicateRecurring attaches recurringCount/recurrenceType,
+    // and both are in the allowlist, so projecting after it keeps them while
+    // still stripping roster PII. This route is unauthenticated by design, so
+    // nothing outside PUBLIC_EVENT_FIELDS may leave here.
+    const publicEvents = combinedEvents.map((e: any) => pickPublicFields(e))
+
     return NextResponse.json(
-      { events: combinedEvents },
+      { events: publicEvents },
       { headers: { 'Cache-Control': 'no-store, max-age=0' } }
     )
   } catch (error) {
