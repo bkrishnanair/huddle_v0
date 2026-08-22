@@ -15,8 +15,70 @@
  * Exits 1 if any LAUNCH-CRITICAL variable is missing.
  */
 import { readFileSync, existsSync } from 'fs';
+import { readdirSync, statSync } from 'fs';
+import { join, extname } from 'path';
 
 const RED = '\x1b[31m', GRN = '\x1b[32m', YEL = '\x1b[33m', DIM = '\x1b[2m', BLD = '\x1b[1m', RST = '\x1b[0m';
+
+// ---------------------------------------------------------------------------
+// --check-template: CI-safe drift guard.
+//
+// The value check below needs real secrets, so it cannot run in CI. This mode
+// checks something CI *can* verify: that every process.env.X referenced in the
+// source is documented in .env.example. Undocumented variables are how
+// RESEND_API_KEY and NEXT_PUBLIC_VAPID_KEY stayed unset for months — nothing
+// pointed at them, and both subsystems fail silently.
+// ---------------------------------------------------------------------------
+if (process.argv.includes('--check-template')) {
+  const SCAN_DIRS = ['app', 'lib', 'components', 'scripts'];
+  // Provided by the runtime or intentionally local-only; never in .env.example.
+  const EXEMPT = new Set(['NODE_ENV', 'DRY_RUN', 'VERCEL_URL', 'CI']);
+
+  const walk = (dir, acc = []) => {
+    if (!existsSync(dir)) return acc;
+    for (const name of readdirSync(dir)) {
+      const full = join(dir, name);
+      if (name === 'node_modules' || name.startsWith('.')) continue;
+      if (full === join('scripts', 'preflight.mjs')) continue; // the scanner's own prose matches its pattern
+      if (statSync(full).isDirectory()) walk(full, acc);
+      else if (['.ts', '.tsx', '.mjs', '.js'].includes(extname(name))) acc.push(full);
+    }
+    return acc;
+  };
+
+  const referenced = new Map(); // VAR -> first file that references it
+  for (const file of SCAN_DIRS.flatMap((d) => walk(d))) {
+    const src = readFileSync(file, 'utf8');
+    for (const m of src.matchAll(/process\.env\.([A-Z_][A-Z0-9_]*)/g)) {
+      if (!referenced.has(m[1])) referenced.set(m[1], file);
+    }
+  }
+
+  const template = existsSync('.env.example') ? readFileSync('.env.example', 'utf8') : '';
+  const documented = new Set(
+    [...template.matchAll(/^\s*#?\s*([A-Z_][A-Z0-9_]*)\s*=/gm)].map((m) => m[1]),
+  );
+
+  const undocumented = [...referenced.keys()]
+    .filter((v) => !documented.has(v) && !EXEMPT.has(v))
+    .sort();
+
+  console.log(`\n${BLD}Env template drift check${RST}`);
+  console.log(`  ${referenced.size} variables referenced in source, ${documented.size} documented in .env.example\n`);
+
+  if (undocumented.length === 0) {
+    console.log(`  ${GRN}✓ every referenced variable is documented${RST}\n`);
+    process.exit(0);
+  }
+  for (const v of undocumented) {
+    console.log(`  ${RED}✗${RST} ${BLD}${v}${RST} ${DIM}— read in ${referenced.get(v)}, missing from .env.example${RST}`);
+  }
+  console.log(
+    `\n${RED}${undocumented.length} undocumented variable(s).${RST} Add them to .env.example` +
+      ` with a line saying what breaks when unset — several of these fail silently.\n`,
+  );
+  process.exit(1);
+}
 
 const env = { ...process.env };
 if (existsSync('.env.local')) {

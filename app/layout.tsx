@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Inter, IBM_Plex_Mono } from "next/font/google"
+import { Inter, IBM_Plex_Mono, Bricolage_Grotesque } from "next/font/google"
 import "./globals.css"
 import { FirebaseProvider } from "@/lib/firebase-context"
 import { Analytics } from "@vercel/analytics/react"
@@ -23,6 +23,16 @@ const plexMono = IBM_Plex_Mono({
   subsets: ["latin"],
   weight: ["500", "600"],
   variable: "--font-mono",
+})
+
+// Display voice — marketing headlines only (landing page). Declared here because
+// next/font cannot be called from a "use client" module and app/page.tsx is one.
+// Declaring it costs nothing on app routes: next/font emits an @font-face rule,
+// and a browser never downloads a face no rendered element actually uses.
+const bricolage = Bricolage_Grotesque({
+  subsets: ["latin"],
+  weight: ["700"],
+  variable: "--font-display",
 })
 
 export const metadata: Metadata = {
@@ -52,7 +62,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${plexMono.variable} ${inter.className} tracking-tight`}>
+      <body className={`${inter.variable} ${plexMono.variable} ${bricolage.variable} ${inter.className} tracking-tight`}>
         <FirebaseProvider>
           <PWARegister />
           <InstallPrompt />
