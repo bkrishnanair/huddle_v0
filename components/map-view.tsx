@@ -20,6 +20,7 @@ import DotPin from "./map-pins/dot-pin"
 import MediumPin from "./map-pins/medium-pin"
 import LivePin from "./map-pins/live-pin"
 import { MapListPanel } from "@/components/map-list-panel"
+import { trackFunnelEvent } from "@/lib/analytics"
 
 interface MapViewProps {
   user: any
@@ -123,6 +124,11 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID;
+
+  // Track map_view funnel event on mount
+  useEffect(() => {
+    trackFunnelEvent({ name: 'map_view' });
+  }, []);
 
   // External Header Search Listener
   useEffect(() => {

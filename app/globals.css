@@ -184,11 +184,40 @@
   z-index: 10000 !important;
   pointer-events: auto !important;
   touch-action: interpolation !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+  margin-top: 4px !important;
 }
 
 /* Improve tap reliability on mobile */
 .pac-item {
   cursor: pointer;
+  padding: 8px 12px !important;
+  font-size: 13px !important;
+}
+
+.dark .pac-container {
+  background-color: #0f172a !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6) !important;
+}
+
+.dark .pac-item {
+  color: #cbd5e1 !important;
+  border-top-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark .pac-item:hover,
+.dark .pac-item-selected {
+  background-color: #1e293b !important;
+}
+
+.dark .pac-item-query {
+  color: #f8fafc !important;
+}
+
+.dark .pac-matched {
+  color: #2dd4bf !important;
 }
 /* ============================================================================
    INSTRUMENT DESIGN SYSTEM — TOKEN LAYER (Block 3)
