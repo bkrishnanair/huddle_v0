@@ -7,6 +7,15 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('.', import.meta.url)),
+      // `server-only` throws on import outside a React Server Component, which
+      // makes any module carrying it untestable — and CLAUDE.md requires it at
+      // the top of every server module, so removing it is not an option.
+      //
+      // Stubbing it here affects the test runner only. The real guarantee is
+      // enforced by the Next bundler at build time and by the
+      // `grep -rn "firebase-admin" components/ hooks/` check, neither of which
+      // this alias touches.
+      'server-only': fileURLToPath(new URL('./__tests__/stubs/server-only.ts', import.meta.url)),
     },
   },
   test: {
