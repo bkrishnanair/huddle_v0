@@ -3,17 +3,27 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdminDb, GeoPoint, Timestamp } from '@/lib/firebase-admin';
 import { getServerCurrentUser } from '@/lib/auth-server';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { isAdminUid } from '@/lib/admin-auth';
 import * as geofire from 'geofire-common';
 import { toZonedTime, format } from 'date-fns-tz';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
 
-const scrapeInputSchema = z.object({
-  // Optional: pass the TerpLink Engage API URL directly
-  apiUrl: z.string().url().optional(),
-});
+// Literal, not an expression — Next rejects MemberExpression and
+// ConditionalExpression forms for this export (CLAUDE.md). A run makes up to
+// 100 sequential geocoding calls, so the default 10s ceiling is not enough.
+export const maxDuration = 60;
+
+// The caller-supplied `apiUrl` was removed. `z.string().url()` accepts any
+// scheme and any host, and the value reached fetch() below — an open
+// server-side request proxy, reachable by any signed-in user. The TerpLink
+// endpoint is a constant, so there is nothing for a caller to configure.
+const scrapeInputSchema = z.object({}).strict();
+
+/** Only host this route will fetch from. */
+const TERPLINK_HOST = 'terplink.umd.edu';
 
 // UMD campus center
 const UMD_LAT = 38.9897;
@@ -146,9 +156,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Admin only. A run fans out to up to 100 billed Google Geocoding calls,
+    // and accounts are free to create, so leaving this open to any signed-in
+    // user put an unmetered cost lever in anyone's hands.
+    if (!isAdminUid(user.uid)) {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
     // Scraping fans out to the TerpLink API and a full Firestore batch write,
     // so gate it before any of that work starts.
-    const limitCheck = await checkRateLimit(user.uid, 'scrape_terplink', 5, 3600000); // 5 per hour
+    const limitCheck = await checkRateLimit(user.uid, 'scrape_terplink', 5, 3600000, getClientIp(req)); // 5 per hour
     if (!limitCheck.success) {
       return NextResponse.json(
         { error: 'Rate limit exceeded. Please try again later.' },
@@ -158,11 +175,12 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json().catch(() => ({}));
     const validation = scrapeInputSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json({ error: 'This endpoint takes no parameters' }, { status: 400 });
+    }
 
-    // Default TerpLink Engage API URL for UMD
-    const apiUrl = validation.success && validation.data.apiUrl
-      ? validation.data.apiUrl
-      : `https://terplink.umd.edu/api/discovery/event/search?orderByField=startsOn&orderByDirection=ascending&status=Approved&take=100&startsAfter=${new Date().toISOString()}&query=`;
+    // Constant, and built here rather than accepted from the caller.
+    const apiUrl = `https://${TERPLINK_HOST}/api/discovery/event/search?orderByField=startsOn&orderByDirection=ascending&status=Approved&take=100&startsAfter=${new Date().toISOString()}&query=`;
 
     // Fetch from TerpLink API
     const response = await fetch(apiUrl, {

@@ -3,19 +3,17 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdminDb } from '@/lib/firebase-admin';
 import { getServerCurrentUser } from '@/lib/auth-server';
+import { isAdminUid } from '@/lib/admin-auth';
 
 export const dynamic = 'force-dynamic';
-
-// Allowed admin UIDs — add your UIDs here
-const ADMIN_UIDS = new Set([
-  // Add admin UIDs to this set
-  process.env.ADMIN_UID || '',
-]);
 
 export async function GET(req: NextRequest) {
   try {
     const user = await getServerCurrentUser();
-    if (!user || !ADMIN_UIDS.has(user.uid)) {
+    // Was a Set seeded with `process.env.ADMIN_UID || ''`, which happened to
+    // fail closed. Routed through the shared helper so both admin gates have
+    // one definition rather than two that can drift.
+    if (!user || !isAdminUid(user.uid)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

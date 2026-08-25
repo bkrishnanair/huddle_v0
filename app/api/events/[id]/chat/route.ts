@@ -3,7 +3,8 @@ export const dynamic = "force-dynamic";
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerCurrentUser } from "@/lib/auth-server"
 import { sendMessage, getChatMessages } from "@/lib/db"
-import { checkRateLimit } from '@/lib/rate-limit';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { loadEventAccess } from "@/lib/event-access"
 import { z } from "zod"
 
 const chatSchema = z.object({
@@ -20,9 +21,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: "Authentication required" }, { status: 401 })
     }
 
-    const limitCheck = await checkRateLimit(user.uid, 'event_chat', 30, 60000); // 30 per minute
+    const limitCheck = await checkRateLimit(user.uid, 'event_chat', 30, 60000, getClientIp(request)); // 30 per minute
     if (!limitCheck.success) {
       return NextResponse.json({ error: 'Rate limit exceeded. Please try again later.' }, { status: 429 });
+    }
+
+    // Posting into an event chat requires being in the event. Same reasoning as
+    // the GET handler: the Admin SDK bypasses the Firestore rule that covers this.
+    const { exists, access } = await loadEventAccess(id, user.uid)
+    if (!exists) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 })
+    }
+    if (!access.canSeeRoster) {
+      return NextResponse.json({ error: "Forbidden: You are not a participant in this event" }, { status: 403 })
     }
 
     const body = await request.json()
@@ -110,6 +121,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     if (!user) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 })
+    }
+
+    // firestore.rules gates chat behind isEventParticipant(), but this route
+    // reads through the Admin SDK, which bypasses rules — so the check has to
+    // happen here or it does not happen at all. Without it any signed-in user,
+    // including a one-click anonymous account, could read any event's chat.
+    const { exists, access } = await loadEventAccess(id, user.uid)
+    if (!exists) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 })
+    }
+    if (!access.canSeeRoster) {
+      return NextResponse.json({ error: "Forbidden: You are not a participant in this event" }, { status: 403 })
     }
 
     const messages = await getChatMessages(id)

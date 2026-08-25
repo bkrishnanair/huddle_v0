@@ -5,6 +5,7 @@ import { getServerCurrentUser } from "@/lib/auth-server"
 import { getFirebaseAdminDb } from "@/lib/firebase-admin"
 import { FieldPath } from "firebase-admin/firestore"
 import { getUserJoinedEvents } from "@/lib/db"
+import { getEventAccess } from "@/lib/event-access"
 
 export async function GET(
     request: NextRequest,
@@ -34,18 +35,14 @@ export async function GET(
         // Roster access: the organizer, an event admin, or someone actually in the
         // event. Anyone else is refused — this is the only route that serves the
         // roster, since GET /api/events projects it away.
-        const isOrganizer = eventData?.createdBy === user.uid
-        const isEventAdmin = Array.isArray(eventData?.admins) && eventData.admins.includes(user.uid)
-        const isMember = Array.isArray(eventData?.players) && eventData.players.includes(user.uid)
+        //
+        // The tiers live in lib/event-access.ts so that this route and
+        // /api/events/[id]/details cannot drift apart on who may see what.
+        const { canSeeRoster, canSeeAttendeeDetail } = getEventAccess(eventData, user.uid)
 
-        if (!isOrganizer && !isEventAdmin && !isMember) {
+        if (!canSeeRoster) {
             return NextResponse.json({ error: "Forbidden: You do not have permission to view the attendee roster" }, { status: 403 })
         }
-
-        // Organizers and event admins run the event, so they get operational
-        // detail. A plain attendee gets names only — one attendee must not see
-        // another's private note or their no-show record.
-        const canSeeAttendeeDetail = isOrganizer || isEventAdmin
 
         const playerUids = eventData?.players || [];
         if (playerUids.length === 0) {
