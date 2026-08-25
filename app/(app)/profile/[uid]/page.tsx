@@ -85,7 +85,7 @@ export default function PublicProfilePage() {
     if (!uid) return
     setLoading(true)
     try {
-      const res = await fetch(`/api/users/${uid}/profile`)
+      const res = await fetch(`/api/users/${uid}/public-profile`)
       if (res.ok) {
         const data = await res.json()
         setUserProfile(data.profile)

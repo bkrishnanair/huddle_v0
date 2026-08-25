@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { trackFunnelEvent } from "@/lib/analytics";
 
 /**
@@ -149,8 +150,15 @@ export default function LandingPage({
     };
   }, []);
 
-  const handleOpenMap = () => router.push("/map");
-  const handleHostEvent = () => router.push("/map?intent=create");
+  const handleOpenMap = (placement: 'hero' | 'nav' | 'footer' = 'hero') => {
+    trackFunnelEvent({ name: "landing_cta_click", properties: { placement } });
+    router.push("/map");
+  };
+
+  const handleHostEvent = () => {
+    trackFunnelEvent({ name: "landing_cta_click", properties: { placement: "organizer" } });
+    router.push("/map?intent=create");
+  };
 
   const steps = [
     { n: "01", title: "Open the map", body: "Events near you appear as pins. No account, no download." },
@@ -199,7 +207,7 @@ export default function LandingPage({
             )}
             <button
               type="button"
-              onClick={handleOpenMap}
+              onClick={() => handleOpenMap('nav')}
               className="inline-flex h-9 items-center rounded-chip bg-action px-4 text-sm font-semibold text-white transition-colors duration-micro ease-ins hover:bg-action-hover"
             >
               Open the map
@@ -225,7 +233,7 @@ export default function LandingPage({
               <div className="mt-8 flex flex-col items-start gap-4">
                 <button
                   type="button"
-                  onClick={handleOpenMap}
+                  onClick={() => handleOpenMap('hero')}
                   className="inline-flex h-11 items-center rounded-control bg-action px-7 text-[15px] font-semibold text-white transition-[background-color,transform] duration-micro ease-ins hover:bg-action-hover active:scale-[0.98]"
                 >
                   Open the map
@@ -332,13 +340,13 @@ export default function LandingPage({
               { href: "/terms", label: "Terms" },
               { href: "/contact", label: "Contact" },
             ].map((l) => (
-              <a
+              <Link
                 key={l.href}
                 href={l.href}
                 className="-my-2 rounded-chip py-2 text-[13px] leading-5 text-ink-2 transition-colors duration-micro ease-ins hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action"
               >
                 {l.label}
-              </a>
+              </Link>
             ))}
           </nav>
         </div>
