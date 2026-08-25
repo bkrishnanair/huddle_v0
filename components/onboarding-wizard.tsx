@@ -58,7 +58,9 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
     try {
       const idToken = await user.getIdToken();
       const res = await fetch(`/api/users/${user.uid}/profile`, {
-        method: "PATCH",
+        // PUT, not PATCH. The route exports only GET and PUT, so this returned
+        // 405 every time and step 1 of organizer onboarding could never complete.
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${idToken}`,
@@ -71,7 +73,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
       });
 
       if (res.ok) {
-        toast.success("Profile saved! 🎉");
+        toast.success("Profile saved");
         setStep(2);
       } else {
         toast.error("Failed to save profile.");

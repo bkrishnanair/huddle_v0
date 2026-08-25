@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
+import { pickPublicFields } from "@/lib/types";
+
+/**
+ * Upper bound on documents read per request. The query was previously
+ * unbounded; a heavy user's history would grow without limit.
+ */
+const PAST_EVENTS_LIMIT = 200;
 
 export async function GET(request: Request) {
     try {
@@ -38,15 +45,20 @@ export async function GET(request: Request) {
         // Use ISO string comparison for date filtering
         const dateStr = now.toISOString().split('T')[0];
 
+        // `players`, not `attendees`. No document has ever carried an
+        // `attendees` field — the RSVP path writes `players`
+        // (app/api/events/route.ts:343, lib/db.ts:402, lib/types.ts:57) — so
+        // this query matched nothing and every user's history was empty.
         const snapshot = await eventsRef
-            .where("attendees", "array-contains", userId)
+            .where("players", "array-contains", userId)
+            .limit(PAST_EVENTS_LIMIT)
             .get();
 
         const events = snapshot.docs
-            .map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
-            }))
+            // Projected. The raw event document carries every attendee's free
+            // text and the whole check-in map, so spreading it here would show
+            // one student another student's notes and no-show record.
+            .map((doc) => pickPublicFields({ id: doc.id, ...doc.data() }))
             .filter((event: any) => event.date <= dateStr);
 
         return NextResponse.json({ events });

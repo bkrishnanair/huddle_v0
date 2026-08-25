@@ -132,15 +132,43 @@ export async function PUT(
 
     const body = await request.json();
 
-    // Whitelist allowed fields for update
+    // Whitelist allowed fields for update.
+    //
+    // Type-checked rather than presence-checked. `if (x !== undefined)` accepted
+    // an object or an array as a display name and wrote it straight to the
+    // document; the sibling route app/api/users/profile/route.ts:9-12 enforces
+    // min(3).max(50) on the same field, so the two disagreed and the looser one
+    // was reachable.
     const updates: Record<string, any> = {};
     if (Array.isArray(body.savedQuestions)) updates.savedQuestions = body.savedQuestions;
     if (Array.isArray(body.savedTransitTips)) updates.savedTransitTips = body.savedTransitTips;
-    if (body.displayName !== undefined) updates.displayName = body.displayName;
-    if (body.bio !== undefined) updates.bio = body.bio;
-    if (body.notifyAnnouncements !== undefined) updates.notifyAnnouncements = body.notifyAnnouncements;
-    if (body.notifyPromotions !== undefined) updates.notifyPromotions = body.notifyPromotions;
-    if (body.notifyReminders !== undefined) updates.notifyReminders = body.notifyReminders;
+    if (body.displayName !== undefined) {
+      const name = typeof body.displayName === "string" ? body.displayName.trim() : "";
+      // Rejected explicitly rather than dropped, so a too-short name reports
+      // itself instead of falling through to "No valid fields to update".
+      if (name.length < 3 || name.length > 50) {
+        return NextResponse.json(
+          { error: "Display name must be between 3 and 50 characters" },
+          { status: 400 },
+        );
+      }
+      updates.displayName = name;
+    }
+    if (body.bio !== undefined) {
+      if (typeof body.bio !== "string" || body.bio.length > 160) {
+        return NextResponse.json(
+          { error: "Bio must be text of 160 characters or fewer" },
+          { status: 400 },
+        );
+      }
+      updates.bio = body.bio;
+    }
+    if (typeof body.notifyAnnouncements === "boolean") updates.notifyAnnouncements = body.notifyAnnouncements;
+    if (typeof body.notifyPromotions === "boolean") updates.notifyPromotions = body.notifyPromotions;
+    if (typeof body.notifyReminders === "boolean") updates.notifyReminders = body.notifyReminders;
+    // Sent by components/onboarding-wizard.tsx and previously dropped on the
+    // floor, because it was never in this list.
+    if (typeof body.onboardingComplete === "boolean") updates.onboardingComplete = body.onboardingComplete;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
