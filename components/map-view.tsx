@@ -645,10 +645,10 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             mapId={mapId}
 
             // @ts-ignore
-            colorScheme="DARK"
+            colorScheme={theme === "dark" ? "DARK" : "LIGHT"}
             gestureHandling={'greedy'}
           >
-            <MapRenderer onMapLoad={setMap} isDarkMode={true}>
+            <MapRenderer onMapLoad={setMap} isDarkMode={theme === "dark"}>
               {map && (
                 <>
                   {userLocation && (
@@ -795,8 +795,8 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                             const globalIndex = filteredEvents.findIndex(e => e.id === event.id);
                             const hasActiveFilters = activeCategory !== 'All' || activeTime !== 'Any time' || eventSearchQuery.trim() !== '';
                             
-                            // If filtered OR in top 15 of default view -> show as full pin (imminent)
-                            if (hasActiveFilters || globalIndex < 15) {
+                            // If filtered OR in top 5 of default view -> show as full pin (imminent)
+                            if (hasActiveFilters || globalIndex < 5) {
                                 pinTier = 'imminent';
                             } else {
                                 pinTier = 'future';
@@ -818,7 +818,10 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                       // We use 'live' or 'imminent' as the signal to render the full teardrop pin
                       const forceFullPin = pinTier === 'live' || pinTier === 'imminent';
                       
-                      if (!isHovered && !forceFullPin) {
+                      // Also simplify to dots if zoomed far out (unless it's a live event)
+                      const isZoomedOut = currentZoom <= 14;
+                      
+                      if (!isHovered && (!forceFullPin || (isZoomedOut && pinTier !== 'live'))) {
                         return (
                           <AdvancedMarker
                             key={event.id}
