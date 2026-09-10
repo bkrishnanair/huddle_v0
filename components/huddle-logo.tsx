@@ -2,38 +2,44 @@ import * as React from "react";
 
 interface HuddleLogoProps extends React.SVGProps<SVGSVGElement> {
     size?: number;
-    color?: string; // We can ignore or use as override
+    color?: string;
 }
 
-export function HuddleLogo({ size = 24, className = "", color, ...props }: HuddleLogoProps) {
-    // The Ping: A central dot with two concentric arcs simulating a radar sweep.
-    // Using currentColor makes it adaptable (e.g. text-live or text-ink)
+export function HuddleLogo({ size = 24, className = "", ...props }: HuddleLogoProps) {
     return (
         <svg
             width={size}
             height={size}
-            viewBox="0 0 100 100"
+            viewBox="0 0 512 512"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
             className={className}
-            stroke={color || "currentColor"}
             {...props}
         >
-            {/* Core Ping */}
-            <circle cx="50" cy="50" r="14" fill={color || "currentColor"} stroke="none" />
-            
-            {/* Inner arc */}
+            <defs>
+                <linearGradient id="huddleTeal" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#2DD4BF" />
+                    <stop offset="1" stopColor="#0D9488" />
+                </linearGradient>
+            </defs>
+            {/* Outer ripples symbolizing community convergence */}
+            <circle cx="256" cy="256" r="240" fill="url(#huddleTeal)" fillOpacity="0.15" />
+            <circle cx="256" cy="256" r="180" fill="url(#huddleTeal)" fillOpacity="0.3" />
+
+            {/* Map Pin base */}
             <path
-                d="M 25 50 A 25 25 0 0 1 75 50"
-                strokeWidth="8"
-                strokeLinecap="round"
+                d="M256 80C167.634 80 96 151.634 96 240C96 360 256 480 256 480C256 480 416 360 416 240C416 151.634 344.366 80 256 80Z"
+                fill="url(#huddleTeal)"
+                className="shadow-[0_0_20px_rgba(13,148,136,0.5)]"
             />
-            {/* Outer arc */}
+
+            {/* Inner H */}
             <path
-                d="M 12 50 A 38 38 0 0 1 88 50"
-                strokeWidth="8"
+                d="M190 170V300M322 170V300M190 235H322"
+                stroke="white"
+                strokeWidth="42"
                 strokeLinecap="round"
-                opacity="0.5"
+                strokeLinejoin="round"
             />
         </svg>
     );

@@ -38,19 +38,30 @@ export default function LivePin({ category, icon, name, size = 44 }: LivePinProp
 
       {/* Main pin */}
       <div
-        className="rounded-full flex items-center justify-center text-white font-bold transition-transform duration-200 group-hover:scale-110 border border-white/30 relative z-10"
+        className="rounded-full flex items-center justify-center text-white font-bold transition-transform duration-200 group-hover:scale-110 border-2 border-white/30 relative z-10"
         style={{
           width: size,
           height: size,
-          background: `radial-gradient(circle at center, ${color}dd, ${color}99)`,
-          boxShadow: `0 0 20px ${color}60, 0 4px 12px rgba(0,0,0,0.5)`,
-          fontSize: size * 0.45,
+          background: `linear-gradient(135deg, ${color}, ${color}dd)`,
+          boxShadow: `0 0 20px ${color}60, 0 4px 12px rgba(0,0,0,0.3)`,
+          fontSize: size * 0.4,
         }}
       >
         {emoji}
       </div>
-      
-      {/* Event name label removed to prevent canvas clutter - rely on click/hover panels */}
+
+      {/* Event name label */}
+      {name && (
+        <div
+          className="mt-1 px-2 py-0.5 rounded-md text-[9px] font-black text-white whitespace-nowrap max-w-[120px] truncate relative z-10"
+          style={{
+            backgroundColor: `${color}cc`,
+            boxShadow: `0 2px 6px ${color}40`,
+          }}
+        >
+          {name}
+        </div>
+      )}
     </div>
   )
 }

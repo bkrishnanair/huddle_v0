@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Chip } from "@/components/ui/chip"
-import { Plus, MapPin, LocateFixed, AlertCircle, Loader2, Star, Calendar, Clock, Map as MapIcon, List, Search, User } from "lucide-react"
+import { Plus, MapPin, LocateFixed, AlertCircle, Loader2, Star, Calendar, Clock, Map as MapIcon, List, Search } from "lucide-react"
 import { useTheme } from "next-themes"
 import EventDetailsDrawer from "./event-details-drawer"
 import CreateEventModal from "./create-event-modal"
@@ -20,7 +20,6 @@ import DotPin from "./map-pins/dot-pin"
 import MediumPin from "./map-pins/medium-pin"
 import LivePin from "./map-pins/live-pin"
 import { MapListPanel } from "@/components/map-list-panel"
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
 import { trackFunnelEvent } from "@/lib/analytics"
 
 interface MapViewProps {
@@ -30,23 +29,16 @@ interface MapViewProps {
   intent?: string
 }
 
-
-
-
 const MapRenderer = ({ onMapLoad, children, isDarkMode }: { onMapLoad: (map: google.maps.Map) => void, children: React.ReactNode, isDarkMode: boolean }) => {
   const map = useMap();
   useEffect(() => {
     if (map) {
       map.setOptions({
-        backgroundColor: '#0f172a',
-        // @ts-ignore
-        colorScheme: 'DARK',
-        minZoom: 13,
-        mapTypeControl: false,
-        streetViewControl: false,
-        fullscreenControl: false
-      });
 
+        backgroundColor: isDarkMode ? '#010b13' : '#ffffff',
+        // @ts-ignore - for newer Maps API features
+        colorScheme: isDarkMode ? 'DARK' : 'LIGHT'
+      });
       onMapLoad(map);
     }
   }, [map, onMapLoad, isDarkMode]);
@@ -100,7 +92,6 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const profileFetchAttempted = useRef(false)
   const [events, setEvents] = useState<GameEvent[]>([])
   const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null)
-  const [selectedCluster, setSelectedCluster] = useState<GameEvent[] | null>(null)
   const [hoveredEvent, setHoveredEvent] = useState<GameEvent | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
@@ -263,11 +254,11 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           map.setZoom(Number(savedZoomStr));
         } catch (e) {
           map.setCenter({ lat: 38.9897, lng: -76.9378 });
-          map.setZoom(13);
+          map.setZoom(15);
         }
       } else {
         map.setCenter({ lat: 38.9897, lng: -76.9378 });
-        map.setZoom(13);
+        map.setZoom(15);
       }
       setHasCenteredDefault(true);
     }
@@ -654,7 +645,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             mapId={mapId}
 
             // @ts-ignore
-            colorScheme="LIGHT"
+            colorScheme="DARK"
             gestureHandling={'greedy'}
           >
             <MapRenderer onMapLoad={setMap} isDarkMode={true}>
@@ -736,22 +727,39 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                             key={`cluster-${clusterIdx}`}
                             position={{ lat: cluster.lat, lng: cluster.lng }}
                             onClick={() => {
-                              if (currentZoom < 15 && map) {
+                              // Zoom in to expand cluster, or show first event if already zoomed
+                              if (currentZoom < 16 && map) {
                                 map.panTo({ lat: cluster.lat, lng: cluster.lng });
-                                map.setZoom(16);
+                                map.setZoom(17);
                               } else {
-                                setSelectedCluster(cluster.events);
+                                setSelectedEvent(topEvent);
+                                trackEventView(topEvent.id);
                               }
                             }}
                             style={{ zIndex: liveCount > 0 ? 40 : 25 }}
                           >
-                            <div className="flex flex-col items-center cursor-pointer group transition-transform hover:scale-110">
+                            <div className="flex flex-col items-center cursor-pointer group">
                               <div className={`
-                                  w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold shadow-[0_0_20px_rgba(0,0,0,0.5)]
-                                  ${liveCount > 0 ? 'border-live bg-live/20 text-live-ink backdrop-blur-md' : 'border-white/30 bg-slate-900/80 text-white backdrop-blur-md'}
+                                  relative flex items-center justify-center
+                                  ${currentZoom <= 14 ? 'w-10 h-10' : 'w-12 h-12'}
+                                  rounded-full border-2 shadow-xl
+                                  ${liveCount > 0 ? 'border-emerald-400 bg-emerald-500/90' : 'border-white/60 bg-slate-800/90'}
+                                  backdrop-blur-sm transition-transform group-hover:scale-110
                                 `}>
-                                {cluster.events.length}
+                                {liveCount > 0 && (
+                                  <div className="absolute inset-0 rounded-full bg-emerald-400/30 animate-ping" />
+                                )}
+                                <span className="relative text-white font-black text-sm">
+                                  {cluster.events.length}
+                                </span>
                               </div>
+                              {currentZoom >= 14 && (
+                                <div className="mt-1 px-2 py-0.5 bg-slate-950/80 backdrop-blur-sm border border-white/10 rounded-full">
+                                  <span className="text-[9px] text-white font-bold whitespace-nowrap">
+                                    {cluster.events.length} events{liveCount > 0 ? ` · ${liveCount} live` : ''}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </AdvancedMarker>
                         );
@@ -766,13 +774,14 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                       const isPrimaryPin = index < rankLimit || !event.isScraped;
                       const showDetails = isHovered || (currentZoom >= 16 && isPrimaryPin);
                       // Zoom-based pin sizing — smaller pins at low zoom reduce overlap
-                      const pinSize = currentZoom <= 13 ? 'w-7 h-7' : currentZoom <= 15 ? 'w-8 h-8' : 'w-10 h-10';
-                      const emojiSize = currentZoom <= 13 ? 'text-sm' : currentZoom <= 15 ? 'text-base' : 'text-xl';
-                      const shadowSize = currentZoom <= 13 ? 'w-3 h-0.5' : 'w-4 h-1';
+                      const pinSize = currentZoom <= 14 ? 'w-7 h-7' : currentZoom <= 15 ? 'w-8 h-8' : 'w-10 h-10';
+                      const emojiSize = currentZoom <= 14 ? 'text-sm' : currentZoom <= 15 ? 'text-base' : 'text-xl';
+                      const shadowSize = currentZoom <= 14 ? 'w-3 h-0.5' : 'w-4 h-1';
                       const categoryColor = getCategoryColor(event.category);
 
                       let isFutureEvent = false;
                       let pinTier: 'live' | 'imminent' | 'future' = 'future';
+                      let pinOpacity = 1;
                       if (!event.date || event.date.includes('/')) {
                         isFutureEvent = false;
                       } else {
@@ -781,18 +790,50 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                           const now = new Date();
                           if (isEventOngoing(event)) {
                             pinTier = 'live';
-                          } else if (isBefore(eventDateTime, addHours(now, 6)) && isFuture(eventDateTime)) {
-                            pinTier = 'imminent';
+                          } else if (isToday(eventDateTime)) {
+                            pinTier = 'imminent'; // Imminent is used for today's events (full pin)
                           } else {
                             pinTier = 'future';
-                            isFutureEvent = !isToday(eventDateTime) && eventDateTime > now;
+                            isFutureEvent = true;
+                            // Farthest events = less vibrant
+                            const diffTime = eventDateTime.getTime() - now.getTime();
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            if (diffDays > 0) {
+                                pinOpacity = Math.max(0.4, 1 - (diffDays * 0.15));
+                            }
                           }
                         } catch (e) {
                           isFutureEvent = false;
                         }
                       }
 
-                      // Single Event Marker (No floating text bubbles on canvas)
+                      // Today's events are shown as full pins. Future events are dots unless hovered.
+                      const forceFullPin = pinTier === 'live' || pinTier === 'imminent';
+                      
+                      if (!isHovered && !forceFullPin) {
+                        return (
+                          <AdvancedMarker
+                            key={event.id}
+                            position={{ lat: event.geopoint.latitude, lng: event.geopoint.longitude }}
+                            onClick={() => {
+                              setSelectedEvent(event);
+                              trackEventView(event.id);
+                            }}
+                            onMouseEnter={() => setHoveredEvent(event)}
+                            onMouseLeave={() => setHoveredEvent(null)}
+                            style={{ zIndex: pinTier === 'live' ? 30 : pinTier === 'imminent' ? 20 : 0, opacity: pinOpacity }}
+                          >
+                            {pinTier === 'live' ? (
+                              <LivePin category={event.category} icon={event.icon} size={30} />
+                            ) : pinTier === 'imminent' ? (
+                              <MediumPin category={event.category} icon={event.icon} size={20} />
+                            ) : (
+                              <DotPin category={event.category} size={8} />
+                            )}
+                          </AdvancedMarker>
+                        );
+                      }
+
                       return (
                         <AdvancedMarker
                           key={event.id}
@@ -803,18 +844,114 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                           }}
                           onMouseEnter={() => setHoveredEvent(event)}
                           onMouseLeave={() => setHoveredEvent(null)}
-                          style={{ zIndex: isHovered ? 50 : (pinTier === 'live' ? 30 : 20) }}
+                          style={{ zIndex: isHovered ? 50 : (showDetails ? 10 : 0) }}
                         >
-                          <div className={`flex flex-col items-center transition-transform duration-300 transform origin-bottom ${isHovered ? 'scale-110 -translate-y-1' : 'scale-100'}`}>
-                            {pinTier === 'live' ? (
-                              <LivePin category={event.category} icon={event.icon} size={currentZoom <= 13 ? 30 : 44} />
-                            ) : pinTier === 'imminent' ? (
-                              <MediumPin category={event.category} icon={event.icon} size={currentZoom <= 13 ? 24 : 32} />
-                            ) : (
-                              <DotPin category={event.category} size={currentZoom <= 13 ? 8 : 12} />
-                            )}
-                          </div>
-                        </AdvancedMarker>
+                          <div className={`flex flex-col items-center transition-all duration-500 transform origin-bottom ${isHovered ? 'scale-110 -translate-y-1' : 'scale-100'}`}>
+                            {/* Floating Info Bubble */}
+                            <div className={`
+                              mb-2 px-3 py-1.5 rounded-2xl bg-slate-900/95 backdrop-blur-md border border-slate-700 shadow-[0_4px_20px_rgba(0,0,0,0.5)]
+                              transition-all duration-300 ease-out flex flex-col items-center
+                              ${showDetails ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
+                            `}>
+                              <span className="text-[11px] font-black text-white whitespace-nowrap leading-none mb-1">{event.name}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[9px] text-slate-300 font-bold leading-none">
+                                  {getDisplayDate(event.date)}{event.endDate && event.endDate !== event.date ? ` - ${getDisplayDate(event.endDate)}` : ''} • {formatTime(event.time)}{event.endTime ? ` - ${formatTime(event.endTime)}` : ''}
+                                </span>
+                                {isEventOngoing(event) && (
+                                  <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 rounded font-black flex items-center gap-1 animate-pulse border border-emerald-500/30">
+                                    <span className="w-1 h-1 rounded-full bg-emerald-400" /> LIVE
+                                  </span>
+                                )}
+                                {event.eventType === 'hybrid' && (
+                                  <span className="text-[8px] bg-violet-500/20 text-violet-400 px-1 rounded font-black border border-violet-500/30">
+                                    📡
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Teardrop Pin */}
+                            <div className="relative group">
+                              {/* Pulse effect for hovered OR ongoing pins */}
+                              {(isHovered || isEventOngoing(event)) && (
+                                <div
+                                  className={`absolute ${isEventOngoing(event) && !isHovered ? '-inset-1 live-glow-ring opacity-60' : 'inset-0 animate-ping opacity-40'} rounded-full`}
+                                  style={{ backgroundColor: isEventOngoing(event) && !isHovered ? '#10b981' : categoryColor }}
+                                />
+                              )}
+
+                              {(() => {
+                                // Determine animation class
+                                let animClass = "";
+                                if (!isHovered) {
+                                  if (isEventOngoing(event)) {
+                                    animClass = "live-glow-ring border-emerald-400";
+                                  } else {
+                                    let isWithin6h = false;
+                                    if (event.date && event.time) {
+                                      try {
+                                        const d = new Date(`${event.date}T${event.time}`);
+                                        isWithin6h = isBefore(d, addHours(new Date(), 6)) && isFuture(d);
+                                      } catch (e) { }
+                                    }
+                                    if (isWithin6h) {
+                                      const isSoonest = filteredEvents.find(e => {
+                                        if (!e.date || !e.time) return false;
+                                        try {
+                                          const ed = new Date(`${e.date}T${e.time}`);
+                                          return isBefore(ed, addHours(new Date(), 6)) && isFuture(ed);
+                                        } catch (e) { }
+                                        return false;
+                                      })?.id === event.id; // true since filteredEvents is sorted
+                                      if (isSoonest) {
+                                        animClass = "soonest-bounce animate-yellow-pulse border-yellow-400";
+                                      } else {
+                                        animClass = "animate-yellow-pulse border-yellow-400";
+                                      }
+                                    } else {
+                                      animClass = "border-white";
+                                    }
+                                  }
+                                } else {
+                                  animClass = isEventOngoing(event) ? "border-emerald-400" : "border-white";
+                                }
+                                return (
+                                  <div
+                                    className={`
+                                      relative ${pinSize} flex items-center justify-center
+                                      rounded-full rounded-br-none rotate-45
+                                      border-2 ${animClass} transition-all duration-300
+                                      ${isFutureEvent ? 'opacity-70 saturate-50' : 'opacity-100'}
+                                    `}
+                                    style={{
+                                      background: `linear-gradient(135deg, ${categoryColor}, ${categoryColor}dd)`,
+                                      boxShadow: isHovered ? `0 0 25px ${categoryColor}aa` : (isEventOngoing(event) ? `0 4px 10px rgba(0,0,0,0.4)` : `0 4px 10px rgba(0,0,0,0.4)`)
+                                    }}
+                                  >
+                                    <div className={`-rotate-45 ${emojiSize} filter drop-shadow-sm brightness-110`}>
+                                      {event.icon || getCategoryIcon(event.category)}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                              {/* Hybrid badge on the marker */}
+                              {
+                                event.eventType === 'hybrid' && (
+                                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-violet-500 rounded-full border border-white flex items-center justify-center text-[8px] shadow-lg">
+                                    📡
+                                  </div>
+                                )
+                              }
+                            </div >
+
+                            {/* Mini shadow at base */}
+                            < div className={`
+                              ${shadowSize} bg-black/40 rounded-full blur-[2px] mt-1 transition-all duration-300
+                              ${isHovered ? 'scale-150 opacity-60' : 'scale-100 opacity-30'}
+                            `} />
+                          </div >
+                        </AdvancedMarker >
                       );
                     });
                   })()}
@@ -828,7 +965,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           {/* Filter Chips & View Toggle Container */}
           <div className="pointer-events-auto flex justify-between gap-2 h-auto w-full">
             {/* Filters Pill */}
-            <div className="w-fit max-w-full bg-slate-900/80 backdrop-blur-md rounded-[24px] p-2 flex flex-col gap-1.5 shadow-2xl border border-white/10 overflow-hidden">
+            <div className="w-fit max-w-full glass-surface rounded-[24px] p-2 flex flex-col gap-1.5 shadow-2xl border border-white/15 overflow-hidden backdrop-blur-xl">
               {/* Category Row */}
               <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar w-full pb-0.5">
                 <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter mr-1 pl-1">What</span>
@@ -1058,35 +1195,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
       </div >
 
-      
-      {/* Cluster Drawer */}
-      <Drawer open={!!selectedCluster} onOpenChange={(open) => !open && setSelectedCluster(null)}>
-        <DrawerContent className="bg-slate-950 border-white/10 text-white max-h-[85vh]">
-          <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-slate-800 my-4" />
-          <DrawerHeader className="text-left px-6 py-2">
-            <DrawerTitle className="font-display font-bold text-xl">
-              {selectedCluster?.length} events here
-            </DrawerTitle>
-          </DrawerHeader>
-          <div className="p-4 overflow-y-auto overflow-x-hidden flex flex-col gap-3 pb-8">
-            {selectedCluster?.map((evt) => (
-              <div key={evt.id} className="w-full h-full max-w-full">
-                <EventCard 
-                  event={evt} 
-                  onSelectEvent={(e) => {
-                    setSelectedCluster(null);
-                    setSelectedEvent(e);
-                    trackEventView(e.id);
-                  }} 
-                />
-              </div>
-            ))}
-          </div>
-        </DrawerContent>
-      </Drawer>
-      
       {selectedEvent && <EventDetailsDrawer event={selectedEvent} isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} onEventUpdated={() => { }} />
-
       }
       {showCreateModal && <CreateEventModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onEventCreated={() => { }} userLocation={userLocation || mapCenter} />}
 
