@@ -99,7 +99,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeTime, setActiveTime] = useState("All");
-  const [currentZoom, setCurrentZoom] = useState(initialCenter ? 18 : 18);
+  const [currentZoom, setCurrentZoom] = useState(initialCenter ? 15 : 15);
   const [showListPanel, setShowListPanel] = useState(false);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [hasCenteredDefault, setHasCenteredDefault] = useState(!!initialCenter);
@@ -291,7 +291,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             if (event.geopoint && typeof event.geopoint.latitude === 'number' && isFinite(event.geopoint.latitude) && typeof event.geopoint.longitude === 'number' && isFinite(event.geopoint.longitude)) {
               // Override map centering for deep links to ensure it pans correctly
               map.panTo({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
-              map.setZoom(18);
+              map.setZoom(16);
               // Store the deep link center so handleRecenter knows not to override it initially
               sessionStorage.setItem('huddleMapCenter', JSON.stringify({ lat: event.geopoint.latitude, lng: event.geopoint.longitude }));
               // Only open drawer if not coming from a 'locate' intent (e.g. map button on event cards)
@@ -346,7 +346,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
       clearTimeout(timeout);
       timeout = setTimeout(() => {
         if (map) {
-          const z = map.getZoom() || 18;
+          const z = map.getZoom() || 15;
           setCurrentZoom(z);
 
           if (z > 18) {
@@ -373,7 +373,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           lat: place.geometry.location.lat(),
           lng: place.geometry.location.lng(),
         });
-        map.setZoom(18);
+        map.setZoom(16);
       }
     },
     [map]
@@ -639,7 +639,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           <Map
             onIdle={debouncedFetchEventsInView}
             defaultCenter={mapCenter}
-            defaultZoom={18}
+            defaultZoom={15}
             className="w-full h-full"
             disableDefaultUI={true}
             mapId={mapId}
@@ -790,16 +790,24 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                           const now = new Date();
                           if (isEventOngoing(event)) {
                             pinTier = 'live';
-                          } else if (isToday(eventDateTime)) {
-                            pinTier = 'imminent'; // Imminent is used for today's events (full pin)
                           } else {
-                            pinTier = 'future';
-                            isFutureEvent = true;
-                            // Farthest events = less vibrant
+                            // Check global rank for "Anytime / All" default view
+                            const globalIndex = filteredEvents.findIndex(e => e.id === event.id);
+                            const hasActiveFilters = activeCategory !== 'All' || activeTime !== 'Any time' || eventSearchQuery.trim() !== '';
+                            
+                            // If filtered OR in top 15 of default view -> show as full pin (imminent)
+                            if (hasActiveFilters || globalIndex < 15) {
+                                pinTier = 'imminent';
+                            } else {
+                                pinTier = 'future';
+                                isFutureEvent = true;
+                            }
+                            
+                            // Farthest events = less vibrant (opacity fading)
                             const diffTime = eventDateTime.getTime() - now.getTime();
                             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                             if (diffDays > 0) {
-                                pinOpacity = Math.max(0.4, 1 - (diffDays * 0.15));
+                                pinOpacity = Math.max(0.3, 1 - (diffDays * 0.1));
                             }
                           }
                         } catch (e) {
@@ -807,7 +815,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                         }
                       }
 
-                      // Today's events are shown as full pins. Future events are dots unless hovered.
+                      // We use 'live' or 'imminent' as the signal to render the full teardrop pin
                       const forceFullPin = pinTier === 'live' || pinTier === 'imminent';
                       
                       if (!isHovered && !forceFullPin) {
@@ -828,7 +836,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                             ) : pinTier === 'imminent' ? (
                               <MediumPin category={event.category} icon={event.icon} size={20} />
                             ) : (
-                              <DotPin category={event.category} size={8} />
+                              <DotPin category={event.category} size={12} />
                             )}
                           </AdvancedMarker>
                         );
@@ -1141,7 +1149,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             setSelectedEvent(event);
             if (event.geopoint) {
               map?.panTo({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
-              setCurrentZoom(18);
+              setCurrentZoom(16);
             }
           }}
           isVisible={showListPanel}
