@@ -205,3 +205,40 @@ export function pickPublicFields<T extends Record<string, unknown>>(
   }
   return out;
 }
+
+/**
+ * The only fields of a user document that may be shown to somebody else.
+ *
+ * The user document is not world-readable, but several routes hydrate it and
+ * return the result — rosters, follower lists, attendee lists. Every one of
+ * those previously spread the whole document, which carries `email`,
+ * `lastKnownLocation` (a GeoPoint), `geohash`, `fcmTokens` and `blockedUsers`.
+ *
+ * Same discipline as PUBLIC_EVENT_FIELDS: an allowlist, so a field added to the
+ * user document is private until it is deliberately named here.
+ */
+export const PUBLIC_USER_FIELDS = [
+  "uid",
+  "displayName",
+  "name",
+  "photoURL",
+  "isOrganizerVerified",
+] as const;
+
+export type PublicUserField = (typeof PUBLIC_USER_FIELDS)[number];
+
+/**
+ * Copies only allowlisted fields off a user document. Use this anywhere a user
+ * record is returned to somebody who is not that user.
+ */
+export function pickPublicUserFields<T extends Record<string, unknown>>(
+  user: T,
+): Partial<Record<PublicUserField, unknown>> {
+  const out: Partial<Record<PublicUserField, unknown>> = {};
+  for (const field of PUBLIC_USER_FIELDS) {
+    if (user[field] !== undefined) {
+      out[field] = user[field];
+    }
+  }
+  return out;
+}

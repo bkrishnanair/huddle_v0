@@ -3,20 +3,14 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { runCleanup } from '@/lib/cron/cleanup';
 
+import { authorizeCronRequest } from '@/lib/cron/auth';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  let isAuthorized = authHeader === `Bearer ${process.env.CRON_SECRET}`;
-
-  if (!isAuthorized && process.env.NODE_ENV === 'development') {
-    const { searchParams } = new URL(req.url);
-    const querySecret = searchParams.get('secret');
-    isAuthorized = !!(process.env.CRON_SECRET && querySecret === process.env.CRON_SECRET);
-  }
-
-  if (!isAuthorized) {
-    return new NextResponse('Unauthorized', { status: 401 });
+  const auth = authorizeCronRequest(req);
+  if (!auth.ok) {
+    return new NextResponse(auth.message, { status: auth.status });
   }
 
   const result = await runCleanup();

@@ -20,6 +20,7 @@ import { db } from "./firebase"
 import * as geofire from "geofire-common"
 export { db };
 import { getUser } from "./db-client";
+import { pickPublicUserFields } from "./types";
 
 
 
@@ -245,8 +246,13 @@ export const getChatMessages = async (eventId: string) => {
     if (!adminDb) throw new Error("Firebase Admin not initialized");
 
     const chatRef = adminDb.collection("events").doc(eventId).collection("chat");
-    const snapshot = await chatRef.orderBy("timestamp", "asc").get();
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    // Bounded. This read the whole subcollection with no limit, so a long-lived
+    // event chat grew into an unbounded response and an unbounded read bill.
+    // Newest 200, then reversed so callers still receive oldest-first.
+    const snapshot = await chatRef.orderBy("timestamp", "desc").limit(200).get();
+    return snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .reverse();
   } catch (error) {
     console.error("Error fetching chat messages:", error)
     throw new Error("Failed to retrieve chat messages.")
@@ -363,7 +369,10 @@ export const getEventWithPlayerDetails = async (eventId: string) => {
     const playerDetails = await Promise.all(
       playerIds.map(async (uid: string) => {
         const userSnap = await adminDb.collection("users").doc(uid).get();
-        return { uid, ...(userSnap.exists ? userSnap.data() : {}) };
+        // Projected, never spread. This used to return the entire user
+        // document — email, lastKnownLocation, geohash, fcmTokens — through an
+        // unauthenticated route. The caller decides who may see even this much.
+        return pickPublicUserFields({ uid, ...(userSnap.exists ? userSnap.data() : {}) });
       })
     );
 
@@ -650,7 +659,9 @@ export const getFollowers = async (userId: string) => {
       const chunk = followerIds.slice(i, i + 30);
       const userSnaps = await adminDb.collection("users").where("__name__", "in", chunk).get();
       userSnaps.forEach(doc => {
-        hydratedUsers.push({ uid: doc.id, ...doc.data() });
+        // Projected: a follower list is shown to another person, so it must not
+        // carry email, lastKnownLocation or fcmTokens off the user document.
+        hydratedUsers.push(pickPublicUserFields({ uid: doc.id, ...doc.data() }));
       });
     }
 
@@ -680,7 +691,8 @@ export const getFollowing = async (userId: string) => {
       const chunk = followingIds.slice(i, i + 30);
       const userSnaps = await adminDb.collection("users").where("__name__", "in", chunk).get();
       userSnaps.forEach(doc => {
-        hydratedUsers.push({ uid: doc.id, ...doc.data() });
+        // Projected for the same reason as getFollowers above.
+        hydratedUsers.push(pickPublicUserFields({ uid: doc.id, ...doc.data() }));
       });
     }
 

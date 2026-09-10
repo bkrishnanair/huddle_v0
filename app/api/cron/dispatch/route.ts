@@ -60,6 +60,7 @@ import {
   type CronHandlerName,
 } from '@/lib/cron/schedule';
 import type { CronResult } from '@/lib/cron/types';
+import { authorizeCronRequest } from '@/lib/cron/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -109,18 +110,11 @@ if (CRON_PLAN === 'hobby' && (process.env.CRON_MODE || 'hourly').toLowerCase() !
 export async function GET(req: NextRequest) {
   const start = Date.now();
 
-  // 1. Authenticate Request
-  const authHeader = req.headers.get('authorization');
-  let isAuthorized = authHeader === `Bearer ${process.env.CRON_SECRET}`;
-
-  if (!isAuthorized && process.env.NODE_ENV === 'development') {
-    const { searchParams } = new URL(req.url);
-    const querySecret = searchParams.get('secret');
-    isAuthorized = !!(process.env.CRON_SECRET && querySecret === process.env.CRON_SECRET);
-  }
-
-  if (!isAuthorized) {
-    return new NextResponse('Unauthorized', { status: 401 });
+  // 1. Authenticate Request. Fails closed when CRON_SECRET is unset — see
+  // lib/cron/auth.ts for why that case used to be an open door.
+  const auth = authorizeCronRequest(req);
+  if (!auth.ok) {
+    return new NextResponse(auth.message, { status: auth.status });
   }
 
   // 2. Determine Mode & Handlers for Current Invocation

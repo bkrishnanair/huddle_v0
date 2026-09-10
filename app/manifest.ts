@@ -2,13 +2,17 @@ import { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Huddle — Live Campus Event Map',
+    name: 'Huddle — The Live Campus Event Map',
     short_name: 'Huddle',
     description: 'Find and join live campus events, pickup games, and study groups.',
-    start_url: '/map',
+    start_url: '/map?source=pwa',
+    scope: '/',
+    id: '/?source=pwa',
     display: 'standalone',
-    background_color: '#020617', // tailwind slate-950
-    theme_color: '#0D9488', // tailwind teal-600
+    display_override: ['standalone', 'window-controls-overlay'],
+    orientation: 'portrait',
+    background_color: '#FCFBF9', // Instrument --ins-paper
+    theme_color: '#FCFBF9', // Instrument --ins-paper
     icons: [
       {
         src: '/icons/icon-192x192.png',

@@ -3,6 +3,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerCurrentUser } from '@/lib/auth-server';
 import { getFirebaseAdminDb } from '@/lib/firebase-admin';
+import { isAdminUid } from '@/lib/admin-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,8 +20,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const adminUid = process.env.ADMIN_UID;
-  if (adminUid && user.uid !== adminUid) {
+  // Fails closed. This previously read `if (adminUid && user.uid !== adminUid)`,
+  // so an unset ADMIN_UID skipped the guard entirely and served these logs —
+  // which name individual students and quote the notifications sent to them —
+  // to any signed-in caller.
+  if (!isAdminUid(user.uid)) {
     return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
   }
 

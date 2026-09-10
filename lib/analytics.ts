@@ -4,6 +4,7 @@
 
 export type FunnelEvent =
   | { name: 'landing_view' }
+  | { name: 'landing_cta_click'; properties: { placement: 'hero' | 'nav' | 'organizer' | 'footer' | 'install_hero' | 'install_nav' } }
   | { name: 'map_view' }
   | { name: 'event_open'; properties: { eventId: string; category?: string; isVirtual?: boolean } }
   | { name: 'rsvp_click'; properties: { eventId: string; category?: string; isFull?: boolean } }

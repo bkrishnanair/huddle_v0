@@ -42,6 +42,7 @@ import EventGallery from "./events/event-gallery"
 import { FollowButton } from "@/components/follow-button"
 import { getEventStartUTC, formatEventTimeRange } from "@/lib/datetime"
 import { trackFunnelEvent } from "@/lib/analytics"
+import { isEventLive } from "@/lib/utils"
 
 function EventCountdown({ date, time, timezone }: { date: string; time: string; timezone?: string }) {
   const [label, setLabel] = useState("");
@@ -589,709 +590,282 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
 
   return (
     <Drawer open={isOpen} onOpenChange={onClose}>
-      <DrawerContent className="glass-surface border-white/15 text-foreground max-w-2xl mx-auto rounded-t-[2rem] max-h-[80vh] flex flex-col focus:outline-none">
-        <div className="mx-auto mt-4 h-1.5 w-12 rounded-full bg-white/20 shrink-0" />
-        <DrawerHeader className="pb-2 pt-2 shrink-0">
+      <DrawerContent className="bg-paper border-line text-ink mx-auto max-w-2xl rounded-t-sheet max-h-[85vh] flex flex-col focus:outline-none shadow-overlay">
+        <div className="mx-auto mt-4 h-1.5 w-12 rounded-full bg-line-strong shrink-0" />
+        
+        {/* Title/Status */}
+        <DrawerHeader className="pb-4 pt-3 shrink-0 text-left">
           <div className="flex justify-between items-start gap-4">
             <div className="flex-1">
-              <DrawerTitle className="text-2xl font-black text-white tracking-tight leading-tight flex items-center gap-2">
-                <span>{event.icon || getCategoryIcon(event.sport || event.category)}</span>
-                {event.title}
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-[10px] font-mono tracking-mono text-ink-2 uppercase">{event.category}</span>
                 {event.maxPlayers - event.currentPlayers > 0 && event.maxPlayers - event.currentPlayers <= 3 && (
-                  <span className="bg-red-500 text-white px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(239,68,68,0.5)]">
-                    <AlertTriangle className="w-3 h-3" />
-                    Limited Seating!
+                  <span className="bg-surface-sunk text-ink px-2 py-0.5 rounded-chip border border-line text-[10px] font-mono tracking-mono uppercase">
+                    Limited Seating
                   </span>
                 )}
+                {isEventLive(event) && (
+                  <span className="bg-live-tint text-live-ink border border-live/20 px-2 py-0.5 rounded-chip text-[10px] font-mono tracking-mono uppercase flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-live animate-pulse" /> Live Now
+                  </span>
+                )}
+              </div>
+              <DrawerTitle className="text-2xl font-bold font-body text-ink tracking-tight leading-tight">
+                {event.title}
               </DrawerTitle>
-              <DrawerDescription className="flex items-center gap-2 mt-1">
-                <span className="bg-primary/20 text-primary px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider">{event.sport}</span>
-                {(event.eventType === 'virtual' || event.eventType === 'hybrid') && (
-                  <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border ${event.eventType === 'virtual'
-                    ? 'bg-blue-500/20 text-blue-400 border-blue-500/20'
-                    : 'bg-violet-500/20 text-violet-400 border-violet-500/20'
-                    }`}>
-                    {event.eventType === 'virtual' ? '🖥️ Virtual' : '📡 Hybrid'}
-                  </span>
-                )}
-                <span className="text-slate-500 text-xs font-medium flex items-center gap-1">by {event.organizerName}{event.isOrganizerVerified && <BadgeCheck className="w-3.5 h-3.5 text-blue-400 shrink-0" />}</span>
-              </DrawerDescription>
             </div>
           </div>
         </DrawerHeader>
 
         <Tabs defaultValue="details" className="flex-1 w-full h-full flex flex-col min-h-0 overflow-hidden">
-          <div className="px-5 mb-3">
-            <TabsList className="grid w-full grid-cols-3 bg-slate-900/50 border border-white/5 rounded-xl p-1 h-10">
-              <TabsTrigger value="details" className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white text-xs font-bold transition-all rounded-lg">Details</TabsTrigger>
-              <TabsTrigger
-                value="chat"
-                disabled={!user || (!hasJoined && !isOrganizer)}
-                className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white text-xs font-bold transition-all rounded-lg flex items-center gap-2"
-              >
-                <MessageCircle className="w-3.5 h-3.5" />
-                Chat
-              </TabsTrigger>
-              <TabsTrigger
-                value="gallery"
-                className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white text-xs font-bold transition-all rounded-lg flex items-center gap-2"
-              >
-                <ImageIcon className="w-3.5 h-3.5" />
-                Gallery
-              </TabsTrigger>
-            </TabsList>
-          </div>
+          {/* We only show tabs if user is organizer, else we just render the details */}
+          {isOrganizer && (
+            <div className="px-5 mb-3">
+              <TabsList className="grid w-full grid-cols-2 bg-surface-sunk border border-line rounded-control p-1 h-10">
+                <TabsTrigger value="details" className="text-ink-2 data-[state=active]:bg-paper data-[state=active]:text-ink data-[state=active]:shadow-raised text-xs font-bold transition-all rounded-chip">Details</TabsTrigger>
+                <TabsTrigger value="roster" className="text-ink-2 data-[state=active]:bg-paper data-[state=active]:text-ink data-[state=active]:shadow-raised text-xs font-bold transition-all rounded-chip flex items-center gap-2">
+                  <Users className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  Organizer Tools
+                </TabsTrigger>
+              </TabsList>
+            </div>
+          )}
 
           <TabsContent value="details" className="flex-1 h-full overflow-y-auto outline-none pb-4 mt-0 data-[state=inactive]:hidden">
-            <div className="px-5 space-y-4">
-              {/* Info Grid - Modern Compact */}
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { icon: Users, label: "Capacity", value: `${event.currentPlayers} / ${event.maxPlayers}` },
-                  { icon: Calendar, label: "Date", value: (() => {
+            <div className="px-5 space-y-6">
+              
+              {/* Mono Logistics Block */}
+              <div className="bg-surface border border-line rounded-control p-4 flex flex-col gap-4">
+                <div className="flex items-center gap-3">
+                  <Calendar className="w-4 h-4 text-ink-3 shrink-0" strokeWidth={1.5} />
+                  <span className="font-mono text-sm text-ink font-medium">{(() => {
                     if (!event.date) return 'TBD';
                     if (typeof event.date !== 'string') return String(event.date);
                     if (event.date.includes('/')) return event.date;
                     try { return format(parseISO(event.date), 'MMM d, yyyy'); } catch(e) { return event.date; }
-                  })() },
-                  { icon: Clock, label: "Time", value: formatEventTimeRange(event) },
-                  ...(event.eventType === 'virtual'
-                    ? [{ icon: Monitor, label: "Location", value: event.location || '🖥️ Virtual Event' }]
-                    : [{ icon: MapPin, label: "Location", value: typeof event.location === 'string' ? event.location : 'Unavailable' }]
-                  )
-                ].map((item, i) => (
-                  <div key={i} className="bg-white/5 border border-white/5 p-3 rounded-xl flex items-center gap-3">
-                    <item.icon className="w-4 h-4 text-primary shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest leading-none mb-1">{item.label}</p>
-                      {item.label === "Location" && event.eventType !== 'virtual' ? (
-                        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.value)}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-emerald-400 hover:text-emerald-300 truncate block hover:underline">
-                          {item.value} ↗
-                        </a>
-                      ) : (
-                        <p className="text-xs font-bold text-slate-200 truncate">{item.value}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  })()}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Clock className="w-4 h-4 text-ink-3 shrink-0" strokeWidth={1.5} />
+                  <span className="font-mono text-sm text-ink font-medium">{formatEventTimeRange(event)}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <MapPin className="w-4 h-4 text-ink-3 shrink-0" strokeWidth={1.5} />
+                  <span className="font-mono text-sm text-ink font-medium truncate block">{typeof event.location === 'string' ? event.location : 'Unavailable'}</span>
+                </div>
               </div>
 
-              {/* Claim This Event CTA for scraped events */}
-              {(event.source === 'terplink' || event.isScraped) && user && !isOrganizer && (
-                <div className="bg-gradient-to-r from-violet-500/10 to-primary/10 border border-violet-500/20 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Crown className="w-5 h-5 text-violet-400" />
-                    <h4 className="text-sm font-black text-white">Are you the organizer?</h4>
+              {/* Host Trust Block */}
+              <div className="flex items-center justify-between border-b border-line pb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-surface-deep border border-line flex items-center justify-center shrink-0">
+                    <Crown className="w-4 h-4 text-ink-3" strokeWidth={1.5} />
                   </div>
-                  <p className="text-xs text-slate-400 mb-3">
-                    Claim this event to enable RSVPs, manage attendance, and send announcements to your attendees.
-                    {(event.currentPlayers > 0 || (event.players && event.players.length > 0)) && (
-                      <span className="block mt-1 text-violet-400 font-bold">
-                        ⚡ {event.currentPlayers || event.players?.length || 0} existing attendee{(event.currentPlayers || event.players?.length || 0) !== 1 ? 's' : ''} will be preserved and notified.
-                      </span>
-                    )}
-                  </p>
-                  <Button
-                    onClick={async () => {
-                      setIsClaiming(true);
-                      try {
-                        const idToken = await user.getIdToken();
-                        const res = await fetch('/api/events/claim', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-                          body: JSON.stringify({ scrapedEventId: event.id }),
-                        });
-                        if (res.ok) {
-                          const data = await res.json();
-                          toast.success('🎉 Event claimed! All existing RSVPs are preserved.');
-                          onEventUpdated(data.event);
-                          // Don't close — let the user see their newly-claimed event with updated ownership
-                          if (data.isNewOrganizer) {
-                            router.push('/dashboard?onboarding=true');
-                          }
-                        } else {
-                          const errData = await res.json().catch(() => ({ error: 'Failed to claim event' }));
-                          toast.error(errData.error || 'Failed to claim event');
-                        }
-                      } catch {
-                        toast.error('Something went wrong');
-                      } finally {
-                        setIsClaiming(false);
-                      }
-                    }}
-                    disabled={isClaiming}
-                    className="w-full h-10 bg-violet-500 hover:bg-violet-600 text-white font-bold text-sm gap-2"
-                  >
-                    {isClaiming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Crown className="w-4 h-4" />}
-                    {isClaiming ? 'Claiming...' : 'Claim This Event'}
-                  </Button>
-                </div>
-              )}
-
-              {/* Join Meeting Button — Virtual/Hybrid events, RSVP'd users only */}
-              {(event.eventType === 'virtual' || event.eventType === 'hybrid') && event.virtualLink && (hasJoined || isOrganizer) && (
-                <a
-                  href={event.virtualLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`flex items-center justify-center gap-2 h-12 rounded-xl text-sm font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 ${event.virtualLink.includes('zoom') ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/30'
-                    : event.virtualLink.includes('meet.google') ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
-                      : 'bg-violet-600 hover:bg-violet-500 text-white shadow-violet-600/30'
-                    }`}
-                >
-                  <Video className="w-4 h-4" />
-                  Join Meeting
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              )}
-              {(event.eventType === 'virtual' || event.eventType === 'hybrid') && event.virtualLink && !hasJoined && !isOrganizer && (
-                <div className="flex items-center justify-center bg-slate-800/50 text-slate-400 py-3 rounded-xl border border-white/5">
-                  <Video className="w-4 h-4 mr-2" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">RSVP to access meeting link</span>
-                </div>
-              )}
-
-              {/* Hybrid: show both meeting and map link info */}
-              {event.eventType === 'hybrid' && event.virtualLink && (
-                <div className="bg-violet-900/20 p-3 rounded-xl border border-violet-500/20 flex items-center gap-3">
-                  <Monitor className="w-4 h-4 text-violet-400 shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[9px] text-violet-400 uppercase font-black tracking-widest leading-none mb-1">Virtual Link Available</p>
-                    <p className="text-xs font-medium text-violet-200 truncate">This event has both in-person and virtual options</p>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-ink-3 font-mono tracking-mono uppercase mb-0.5">Organized by</span>
+                    <span className="font-bold text-sm text-ink flex items-center gap-1">
+                      {event.organizerName} {event.isOrganizerVerified && <BadgeCheck className="w-3.5 h-3.5 text-action" strokeWidth={1.5} />}
+                    </span>
                   </div>
                 </div>
-              )}
+              </div>
 
-              {/* Add to Calendar Sync */}
-              {(hasJoined || isOrganizer) && (
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 text-[10px] font-bold text-slate-300"
-                    onClick={() => window.open(generateGoogleCalendarUrl(event), '_blank')}
-                  >
-                    <CalendarPlus className="w-3.5 h-3.5 mr-2 text-blue-400" />
-                    Google Calendar
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 text-[10px] font-bold text-slate-300"
-                    onClick={() => downloadIcsFile(event)}
-                  >
-                    Apple / Outlook (.ics)
-                  </Button>
-                </div>
-              )}
-
-              {/* Countdown — only shown for events starting within 6 hours */}
-              {(() => {
-                if (!event.date || !event.time) return null;
-                try {
-                  const start = new Date(`${event.date}T${event.time}`);
-                  const now = new Date();
-                  const msUntil = start.getTime() - now.getTime();
-                  const sixHours = 6 * 60 * 60 * 1000;
-                  if (msUntil <= 0 || msUntil > sixHours) return null;
-                } catch { return null; }
-                return <EventCountdown date={event.date} time={event.time} timezone={event.timezone} />;
-              })()}
-
-              {/* Capacity Meter */}
-              <div className="bg-slate-900/40 p-4 rounded-xl border border-white/5 space-y-2">
-                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                  <span className="text-slate-400">Spots Filled</span>
-                  <span className={isFull ? "text-amber-500" : "text-primary"}>
-                    {isFull ? "Event Full (Waitlist Open)" : `${event.maxPlayers - event.currentPlayers} Spots Left`}
+              {/* Attendance */}
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className="font-mono text-2xl font-bold text-ink">
+                    {event.currentPlayers}<span className="text-ink-3">/{event.maxPlayers}</span>
                   </span>
+                  <span className="text-[10px] font-mono tracking-mono text-ink-3 uppercase">Going</span>
                 </div>
-                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${isFull ? 'bg-amber-500' : 'bg-primary'}`}
-                    style={{ width: `${Math.min((event.currentPlayers / event.maxPlayers) * 100, 100)}%` }}
-                  />
+                <div className="flex -space-x-2">
+                  {/* Avatar stack visual */}
+                  {[...Array(Math.min(event.currentPlayers, 3))].map((_, i) => (
+                    <div key={i} className="w-8 h-8 rounded-full bg-surface-deep border-2 border-paper flex items-center justify-center">
+                      <Users className="w-3 h-3 text-ink-3" strokeWidth={1.5} />
+                    </div>
+                  ))}
+                  {event.currentPlayers > 3 && (
+                     <div className="w-8 h-8 rounded-full bg-surface border-2 border-paper flex items-center justify-center">
+                       <span className="font-mono text-[10px] text-ink-2">+{event.currentPlayers - 3}</span>
+                     </div>
+                  )}
                 </div>
               </div>
 
-              {/* Event Logistics block */}
-              {(event.stayUntil || event.transitTips) && (
-                <div className="bg-indigo-900/30 p-4 rounded-xl border border-indigo-500/20 space-y-3">
-                  {event.stayUntil && (
-                    <div>
-                      <p className="text-[9px] text-indigo-400 uppercase font-black tracking-widest mb-1 flex items-center gap-1"><Clock className="w-3 h-3" /> Stay Until</p>
-                      <p className="text-sm font-medium text-indigo-100">{event.stayUntil}</p>
-                    </div>
-                  )}
-                  {event.transitTips && (
-                    <div>
-                      <p className="text-[9px] text-indigo-400 uppercase font-black tracking-widest mb-1 flex items-center gap-1"><Info className="w-3 h-3" /> Transit Tips</p>
-                      <p className="text-sm font-medium text-indigo-100">{event.transitTips}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
+              {/* Description */}
               {event.description && (
-                <div className="bg-slate-900/40 p-4 rounded-xl border border-white/5 relative overflow-hidden group">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover:bg-primary/40 transition-colors" />
-                  <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest mb-2 px-1">About this event</p>
-                  <span className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed block px-1">{event.description}</span>
-                </div>
-              )}
-
-              {isWaitlisted && (
-                <div className="flex items-center justify-center bg-amber-500/10 text-amber-500 py-3 rounded-xl border border-amber-500/20">
-                  <span className="text-[10px] font-black uppercase tracking-widest">🕒 On Waitlist</span>
-                </div>
-              )}
-
-              {isOrganizer && (
-                <div className="space-y-3 pt-4 border-t border-white/5 mt-4">
-                  {/* Logistics Summary */}
-                  {(!!event.questions?.length || !!event.pickupPoints?.length) && attendees.length > 0 && (
-                    <div className="bg-white/5 rounded-xl border border-white/5 p-3 mb-4 space-y-3">
-                      <h3 className="font-black text-[10px] uppercase tracking-widest text-emerald-400">Logistics Summary</h3>
-
-                      {event.questions?.map(q => {
-                        const yesCount = attendees.filter(a => a.answers?.[q] === "Yes").length;
-                        return (
-                          <div key={q} className="flex justify-between items-center text-xs">
-                            <span className="text-slate-400">{q} (Yes)</span>
-                            <span className="font-bold text-slate-200">{yesCount}</span>
-                          </div>
-                        )
-                      })}
-
-                      {event.pickupPoints && event.pickupPoints.length > 0 && (
-                        <div className="pt-2 border-t border-white/5 space-y-2">
-                          <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Pickup Headcounts</p>
-                          {event.pickupPoints.map(pt => {
-                            const count = attendees.filter(a => a.pickup === pt.id).length;
-                            return (
-                              <div key={pt.id} className="flex justify-between items-center text-xs">
-                                <span className="text-slate-400">{pt.location} @ {pt.time}</span>
-                                <span className="font-bold text-slate-200">{count}</span>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between px-1">
-                    <h3 className="font-black text-[10px] uppercase tracking-widest text-primary/80 flex items-center gap-2">
-                      Organizer Roster
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant={event.checkInOpen ? "destructive" : "default"}
-                        size="sm"
-                        onClick={handleToggleCheckInOpen}
-                        disabled={isLoading}
-                        className="h-6 text-[9px] font-black uppercase tracking-wider px-2"
-                      >
-                        {event.checkInOpen ? "Close Check-In" : "Open Check-In"}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={downloadCSV}
-                        disabled={isFetchingAttendees || attendees.length === 0}
-                        className="h-6 text-[9px] font-black uppercase tracking-wider text-slate-500 hover:text-primary transition-all p-0"
-                      >
-                        <Download className="w-3 h-3 mr-1" />
-                        Export
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-900/30 rounded-xl border border-white/5 overflow-hidden">
-                    <div className="max-h-40 overflow-y-auto no-scrollbar divide-y divide-white/5">
-                      {isFetchingAttendees ? (
-                        <div className="flex justify-center p-6"><Loader2 className="w-5 h-5 animate-spin text-primary/50" /></div>
-                      ) : attendees.length > 0 ? (
-                        attendees.map(a => (
-                          <div key={a.id} className="flex flex-col px-4 py-2.5 hover:bg-white/5 transition-colors group">
-                            <div className="flex justify-between items-center">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-slate-300">{a.name}</span>
-                                {user?.uid !== a.id && (
-                                  <FollowButton targetUserId={a.id} targetUserName={a.name} size="icon" variant="ghost" className="h-5 w-auto px-1.5 bg-transparent p-0 text-slate-500 hover:bg-slate-800 hover:text-white ml-0.5 shadow-none text-[9px] uppercase tracking-wider" />
-                                )}
-                                {(a.loyaltyCount || 0) >= 2 && (
-                                  <span className="text-[8px] bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded-md border border-amber-500/20 font-black uppercase tracking-tighter shadow-sm">
-                                    🔥 Tier {a.loyaltyCount}
-                                  </span>
-                                )}
-                                {event?.checkIns?.[a.id] && (
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 ml-1" />
-                                )}
-                              </div>
-                              {a.reliabilityScore !== undefined && a.reliabilityScore !== null && (
-                                <div className="mt-1 flex items-center">
-                                  <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border ${a.reliabilityScore < 50 ? 'bg-red-500/20 text-red-500 border-red-500/20' : a.reliabilityScore === 100 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20' : 'bg-slate-800 text-slate-400 border-white/5'}`}>
-                                    {a.reliabilityScore}% Show
-                                  </span>
-                                </div>
-                              )}
-                              <div className="flex bg-slate-900/50 rounded-lg p-0.5 border border-white/5 opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleCheckIn(a.id, !!event?.checkIns?.[a.id])}
-                                  disabled={isLoading}
-                                  className={`h-6 w-6 transition-colors ${event?.checkIns?.[a.id] ? 'text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20 hover:text-emerald-300' : 'text-slate-500 hover:text-emerald-400 hover:bg-emerald-400/10'}`}
-                                  title={event?.checkIns?.[a.id] ? "Checked In" : "Check In Attendee"}
-                                >
-                                  <CheckCircle2 className="w-3.5 h-3.5" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleRemoveAttendee(a.id)}
-                                  disabled={isLoading}
-                                  className="h-6 w-6 text-slate-500 hover:text-red-400 hover:bg-red-400/10"
-                                  title="Remove Attendee"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => {
-                                    setReportTarget(a.id);
-                                    setReportType("user");
-                                    setReportName(a.name);
-                                  }}
-                                  disabled={isLoading}
-                                  className="h-6 w-6 text-slate-500 hover:text-amber-400 hover:bg-amber-400/10"
-                                  title="Report Attendee"
-                                >
-                                  <ShieldAlert className="w-3.5 h-3.5" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleBlockAttendee(a.id, a.name)}
-                                  disabled={isLoading}
-                                  className="h-6 w-6 text-slate-500 hover:text-red-500 hover:bg-red-500/10"
-                                  title="Block User from Future Events"
-                                >
-                                  <Ban className="w-3.5 h-3.5" />
-                                </Button>
-                              </div>
-                            </div>
-                            {a.note && (
-                              <p className="text-[10px] text-slate-500 italic mt-1 pl-1 border-l-2 border-primary/20">
-                                "{a.note}"
-                              </p>
-                            )}
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-xs font-bold text-slate-600 text-center py-6 italic">Waiting for attendees...</p>
-                      )}
-                    </div>
-                  </div>
+                <div className="space-y-3 pt-2">
+                  <h3 className="text-[10px] font-mono tracking-mono uppercase text-ink-3">About</h3>
+                  <p className="text-sm text-ink whitespace-pre-wrap leading-relaxed">{event.description}</p>
                 </div>
               )}
             </div>
           </TabsContent>
 
-          <TabsContent value="chat" className="flex-1 min-h-0 flex flex-col overflow-hidden outline-none mt-0 pb-2 data-[state=inactive]:hidden">
-            <div className="flex-1 overflow-hidden px-5">
-              <div className="h-full rounded-2xl overflow-hidden border border-white/5 shadow-2xl">
-                <EventChat
-                  eventId={event.id as string}
-                  organizerId={event.createdBy}
-                  pinnedMessage={event.pinnedMessage}
-                />
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="gallery" className="flex-1 min-h-[40vh] flex flex-col overflow-y-auto no-scrollbar outline-none mt-0 pb-4 data-[state=inactive]:hidden">
-            <div className="px-5">
-              <EventGallery
-                eventId={event.id as string}
-                isOrganizer={isOrganizer || false}
-                hasJoined={hasJoined || false}
-                eventDate={event.date}
-              />
-            </div>
-          </TabsContent>
-        </Tabs>
-        <DrawerFooter className="flex flex-col gap-2 p-5 pt-3 pb-6 bg-slate-950/20 border-t border-white/5 shrink-0">
-          {/* Main Action Button */}
-          {!isOrganizer && (
-            <div className="flex flex-col gap-2">
-              {event.checkInOpen && hasJoined && !event.checkIns?.[user?.uid || ''] && (
-                <Button
-                  size="lg"
-                  onClick={handleSelfCheckIn}
-                  disabled={isLoading}
-                  className="h-12 rounded-xl text-sm font-black uppercase tracking-widest shadow-[0_0_15px_rgba(52,211,153,0.3)] bg-emerald-500 hover:bg-emerald-400 text-slate-900 transition-all active:scale-95 animate-pulse-subtle"
-                >
-                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "I'm Here (Check-In)"}
-                </Button>
-              )}
-              {event.checkIns?.[user?.uid || ''] && hasJoined && (
-                <div className="h-12 rounded-xl text-sm font-black flex items-center justify-center gap-2 uppercase tracking-widest border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
-                  <CheckCircle2 className="w-4 h-4" /> Checked In
-                </div>
-              )}
-              <Button
-                size="lg"
-                onClick={handleRSVPClick}
-                disabled={isLoading || loading}
-                variant={getButtonVariant()}
-                className="h-12 rounded-xl text-sm font-black uppercase tracking-widest shadow-lg transition-all active:scale-95"
-              >
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {getButtonText()}
-              </Button>
-            </div>
-          )}
-
-          {/* Organizer Secondary Actions */}
+          {/* Organizer Tools Tab */}
           {isOrganizer && (
-            <div className="flex flex-col gap-2">
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsEditing(true)}
-                  className="h-10 bg-white/5 hover:bg-white/10 text-white border-white/10 rounded-xl text-xs font-bold"
-                >
-                  Edit Event
-                </Button>
-                <Button
-                  onClick={handleEndEvent}
-                  disabled={isLoading || event.status === 'past'}
-                  className="h-10 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-xl text-xs font-bold"
-                >
-                  {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : (event.status === 'past' ? "Event Ended" : "End Event")}
-                </Button>
-              </div>
-              <Button
-                variant="destructive"
-                onClick={handleDelete}
-                disabled={isLoading}
-                className="h-10 text-xs font-bold rounded-xl w-full"
-              >
-                {isLoading && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
-                <Trash2 className="mr-2 h-3.5 w-3.5" />
-                Delete
-              </Button>
-            </div>
+            <TabsContent value="roster" className="flex-1 min-h-0 flex flex-col overflow-y-auto px-5 outline-none mt-0 pb-4 data-[state=inactive]:hidden">
+               <div className="space-y-4">
+                  <div className="bg-surface rounded-control border border-line p-3">
+                    <h3 className="font-mono text-[10px] uppercase tracking-mono text-ink-2 mb-2">Organizer Actions</h3>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} className="flex-1 h-9 bg-paper border-line text-ink font-bold text-xs rounded-chip">Edit Event</Button>
+                      <Button variant="outline" size="sm" onClick={downloadCSV} className="flex-1 h-9 bg-paper border-line text-ink font-bold text-xs rounded-chip">Export RSVPs</Button>
+                    </div>
+                  </div>
+               </div>
+            </TabsContent>
           )}
 
-          {/* Nav & Share Utility */}
-          <div className="grid grid-cols-6 gap-2 mt-2">
+        </Tabs>
+
+        {/* Sticky Action Bar */}
+        {!isOrganizer && (
+          <div className="p-5 pt-4 pb-6 bg-paper border-t border-line shrink-0">
             <Button
-              variant="outline"
-              onClick={() => setIsCloning(true)}
-              className="col-span-2 h-10 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold"
-            >
-              <Copy className="mr-2 h-3.5 w-3.5" />
-              Clone
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleShare}
-              className="col-span-2 h-10 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold"
-              title="Share Event"
-            >
-              <Share className="w-3.5 h-3.5 mr-2" />
-              Share
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setReportTarget(event.id);
-                setReportType("event");
-                setReportName(event.title || "");
-              }}
-              className="col-span-1 h-10 rounded-xl border-white/10 bg-white/5 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 text-slate-500"
-              title="Report Event"
-            >
-              <ShieldAlert className="w-4 h-4" />
-            </Button>
-            <DrawerClose asChild className="col-span-1">
-              <Button variant="outline" className="h-10 rounded-xl border-white/10 bg-white/10 hover:bg-white/20 text-white font-bold text-xs tracking-tight">
-                Close
-              </Button>
-            </DrawerClose>
-          </div>
-        </DrawerFooter>
-      </DrawerContent>
-      {(isCloning || isEditing) && event && (
-        <CreateEventModal
-          isOpen={isCloning || isEditing}
-          onClose={() => {
-            setIsCloning(false);
-            setIsEditing(false);
-          }}
-          onEventCreated={(newEvent) => {
-            setIsCloning(false);
-            setIsEditing(false);
-            onEventUpdated(newEvent);
-            onClose(); // Close the drawer as well so they see the new pin
-          }}
-          userLocation={null}
-          initialData={event}
-          isEditMode={isEditing}
-        />
-      )}
-
-      {/* RSVP PROMPT MODAL (For Name & Notes) */}
-      <Dialog open={showRsvpPrompt} onOpenChange={setShowRsvpPrompt}>
-        <DialogContent className="glass-surface border-white/10 sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-black uppercase tracking-widest text-white">Join Event</DialogTitle>
-            <DialogDescription className="text-slate-400">
-              {isWaitlisted || isFull
-                ? "This event is currently full. Join the waitlist and we will automatically add you if a spot opens up."
-                : "You are about to secure your spot for this event."}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto no-scrollbar px-1">
-            {/* ONLY show Name input if they are not logged in */}
-            {!user && (
-              <div className="grid gap-2">
-                <Label htmlFor="guestName" className="text-xs font-bold uppercase tracking-widest text-slate-300">
-                  Your Name <span className="text-primary">*</span>
-                </Label>
-                <Input
-                  id="guestName"
-                  value={guestName}
-                  onChange={(e) => setGuestName(e.target.value)}
-                  placeholder="e.g., John Doe"
-                  className="bg-slate-900/50 border-white/10 text-white placeholder:text-slate-500"
-                />
-                <p className="text-[10px] text-slate-500">We need a name so the organizer knows who is coming.</p>
-              </div>
-            )}
-
-            {/* Questions from Organizer */}
-            {event.questions?.map((q) => (
-              <div key={q} className="grid gap-2">
-                <Label className="text-xs font-bold uppercase tracking-widest text-slate-300">
-                  {q} <span className="text-primary">*</span>
-                </Label>
-                <Select
-                  value={rsvpAnswers[q] || ""}
-                  onValueChange={(val) => setRsvpAnswers(prev => ({ ...prev, [q]: val }))}
-                >
-                  <SelectTrigger className="bg-slate-900/50 border-white/10 text-white">
-                    <SelectValue placeholder="Select an option" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Yes">Yes</SelectItem>
-                    <SelectItem value="No">No</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            ))}
-
-            {/* Pickup Points from Organizer */}
-            {event.pickupPoints && event.pickupPoints.length > 0 && (
-              <div className="grid gap-2">
-                <Label className="text-xs font-bold uppercase tracking-widest text-slate-300">
-                  Select Pickup Point <span className="text-primary">*</span>
-                </Label>
-                <Select
-                  value={rsvpPickupId}
-                  onValueChange={setRsvpPickupId}
-                >
-                  <SelectTrigger className="bg-slate-900/50 border-white/10 text-white">
-                    <SelectValue placeholder="Where do you need a ride from?" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">I don't need a ride</SelectItem>
-                    {event.pickupPoints.map(pt => (
-                      <SelectItem key={pt.id} value={pt.id}>{pt.location} @ {pt.time}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* Show notes for everyone */}
-            <div className="grid gap-2">
-              <Label htmlFor="rsvpNote" className="text-xs font-bold uppercase tracking-widest text-slate-300">
-                Message to Organizer <span className="text-slate-500 font-normal capitalize tracking-normal">(Optional)</span>
-              </Label>
-              <Textarea
-                id="rsvpNote"
-                value={rsvpNote}
-                onChange={(e) => setRsvpNote(e.target.value)}
-                placeholder="e.g., I will be 10 mins late! or I'm bringing an extra ball."
-                className="bg-slate-900/50 border-white/10 text-white placeholder:text-slate-500 min-h-[80px]"
-              />
-            </div>
-
-            {/* Guest contact sharing toggle */}
-            {!user && (
-              <div className="grid gap-2 bg-white/5 border border-white/5 rounded-xl p-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                    <Mail className="w-3.5 h-3.5 text-slate-400" />
-                    Share my email with the organizer?
-                  </Label>
-                  <button
-                    type="button"
-                    onClick={() => setShareContact(!shareContact)}
-                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${shareContact ? 'bg-primary' : 'bg-slate-700'}`}
-                  >
-                    <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform ${shareContact ? 'translate-x-4' : 'translate-x-0'}`} />
-                  </button>
-                </div>
-                {shareContact && (
-                  <Input
-                    type="email"
-                    value={guestEmail}
-                    onChange={(e) => setGuestEmail(e.target.value)}
-                    placeholder="your@email.com"
-                    className="bg-slate-900/50 border-white/10 text-white placeholder:text-slate-500 h-9 text-sm"
-                  />
-                )}
-                <p className="text-[10px] text-slate-600">Off by default. The organizer can reach out if you opt in.</p>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRsvpPrompt(false)} className="border-white/10 bg-white/5 text-white">
-              Cancel
-            </Button>
-            <Button
-              onClick={() => executeRSVP("join", rsvpNote, guestName)}
-              disabled={
-                isLoading ||
-                (!user && !guestName.trim()) ||
-                (!!event.questions?.length && Object.keys(rsvpAnswers).length !== event.questions.length) ||
-                (!!event.pickupPoints?.length && !rsvpPickupId)
-              }
-              className="bg-primary text-primary-foreground font-bold"
+              size="lg"
+              onClick={handleRSVPClick}
+              disabled={isLoading || loading}
+              className={`w-full h-12 rounded-control text-sm font-bold tracking-tight transition-all active:scale-95 shadow-raised
+                ${getButtonVariant() === "destructive" ? "bg-warn text-paper" : "bg-action hover:bg-action-hover text-paper"}
+                ${(isFull && !user) || (isFull && !hasJoined && !isWaitlisted) ? "bg-ink-3 text-white" : ""}
+              `}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isFull ? "Join Waitlist" : "Confirm RSVP"}
+              {getButtonText()}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        )}
+        
+        {/* RSVP PROMPT MODAL */}
+        <Dialog open={showRsvpPrompt} onOpenChange={setShowRsvpPrompt}>
+          <DialogContent className="bg-paper border-line sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-ink">Join Event</DialogTitle>
+              <DialogDescription className="text-ink-2 font-body text-sm">
+                {isWaitlisted || isFull
+                  ? "This event is currently full. Join the waitlist and we will automatically add you if a spot opens up."
+                  : "You are about to secure your spot for this event."}
+              </DialogDescription>
+            </DialogHeader>
 
-      {/* REPORT MODAL */}
-      <ReportModal
-        isOpen={!!reportTarget}
-        onClose={() => setReportTarget(null)}
-        targetId={reportTarget || ""}
-        itemType={reportType}
-        targetName={reportName}
-      />
+            <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto no-scrollbar px-1">
+              {!user && (
+                <div className="grid gap-2">
+                  <Label htmlFor="guestName" className="text-xs font-bold text-ink">
+                    Your Name <span className="text-warn">*</span>
+                  </Label>
+                  <Input
+                    id="guestName"
+                    value={guestName}
+                    onChange={(e) => setGuestName(e.target.value)}
+                    placeholder="e.g., John Doe"
+                    className="bg-surface border-line text-ink placeholder:text-ink-3"
+                  />
+                  <p className="text-[10px] text-ink-3">We need a name so the organizer knows who is coming.</p>
+                </div>
+              )}
+
+              {event.questions?.map((q) => (
+                <div key={q} className="grid gap-2">
+                  <Label className="text-xs font-bold text-ink">
+                    {q} <span className="text-warn">*</span>
+                  </Label>
+                  <Select
+                    value={rsvpAnswers[q] || ""}
+                    onValueChange={(val) => setRsvpAnswers(prev => ({ ...prev, [q]: val }))}
+                  >
+                    <SelectTrigger className="bg-surface border-line text-ink">
+                      <SelectValue placeholder="Select an option" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Yes">Yes</SelectItem>
+                      <SelectItem value="No">No</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+
+              {event.pickupPoints && event.pickupPoints.length > 0 && (
+                <div className="grid gap-2">
+                  <Label className="text-xs font-bold text-ink">
+                    Select Pickup Point <span className="text-warn">*</span>
+                  </Label>
+                  <Select
+                    value={rsvpPickupId}
+                    onValueChange={setRsvpPickupId}
+                  >
+                    <SelectTrigger className="bg-surface border-line text-ink">
+                      <SelectValue placeholder="Where do you need a ride from?" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">I don't need a ride</SelectItem>
+                      {event.pickupPoints.map(pt => (
+                        <SelectItem key={pt.id} value={pt.id}>{pt.location} @ {pt.time}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="grid gap-2">
+                <Label htmlFor="rsvpNote" className="text-xs font-bold text-ink">
+                  Message to Organizer <span className="text-ink-3 font-normal">(Optional)</span>
+                </Label>
+                <Textarea
+                  id="rsvpNote"
+                  value={rsvpNote}
+                  onChange={(e) => setRsvpNote(e.target.value)}
+                  placeholder="e.g., I'll be 10 mins late!"
+                  className="bg-surface border-line text-ink placeholder:text-ink-3 min-h-[80px]"
+                />
+              </div>
+
+              {!user && (
+                <div className="grid gap-2 bg-surface p-3 rounded-xl border border-line">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="shareContact" className="text-xs font-bold text-ink cursor-pointer">
+                      Share Contact Info with Organizer
+                    </Label>
+                    <input 
+                      type="checkbox" 
+                      id="shareContact"
+                      checked={shareContact} 
+                      onChange={(e) => setShareContact(e.target.checked)}
+                      className="accent-action w-4 h-4 rounded cursor-pointer"
+                    />
+                  </div>
+                  {shareContact && (
+                    <Input
+                      type="email"
+                      value={guestEmail}
+                      onChange={(e) => setGuestEmail(e.target.value)}
+                      placeholder="Email or Phone Number"
+                      className="bg-paper border-line text-ink placeholder:text-ink-3 mt-2"
+                    />
+                  )}
+                  <p className="text-[10px] text-ink-3 mt-1">If enabled, the organizer can contact you about last-minute changes.</p>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowRsvpPrompt(false)} className="border-line bg-paper text-ink rounded-control">
+                Cancel
+              </Button>
+              <Button
+                onClick={() => executeRSVP("join", rsvpNote, guestName)}
+                disabled={isLoading || (!user && !guestName.trim())}
+                className="bg-action text-paper font-bold rounded-control"
+              >
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isFull ? "Join Waitlist" : "Confirm RSVP"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </DrawerContent>
     </Drawer>
   )
 }

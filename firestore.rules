@@ -4,8 +4,20 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Users collection
     match /users/{userId} {
-      // Users can read their own profile, and other users can read public profiles
-      allow read: if request.auth != null;
+      // Users can only read their own profile. Public profile data is projected
+      // through the Admin SDK route GET /api/users/[id]/public-profile.
+      //
+      // Why this had to change: the document carries email, lastKnownLocation
+      // and fcmTokens, and anonymous sign-in is one click (lib/auth.ts:71), so
+      // `if request.auth != null` let any visitor enumerate the whole
+      // collection straight from the browser SDK.
+      //
+      // Verified safe before narrowing: no client-side read of users/{uid}
+      // exists anywhere in components/ or hooks/. The only client references
+      // are the two follow writes, which target subcollections that have no
+      // rule and therefore already deny; every social read (organizer names,
+      // follower lists) goes through the Admin SDK, which bypasses these rules.
+      allow read: if request.auth != null && request.auth.uid == userId;
       // Users can only write to their own profile
       allow write: if request.auth != null && request.auth.uid == userId;
 

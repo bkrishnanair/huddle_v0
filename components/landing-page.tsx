@@ -2,7 +2,11 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Download } from "lucide-react";
 import { trackFunnelEvent } from "@/lib/analytics";
+import { usePwaInstall } from "@/hooks/use-pwa-install";
+import { InstallDialog } from "@/components/install-dialog";
 
 /**
  * Marketing landing page — the "Instrument" surface (design block 7).
@@ -45,17 +49,17 @@ function Wordmark({ className = "" }: { className?: string }) {
  */
 function CampusMapVisual() {
   const venues = [
-    { x: 30, y: 44, label: "Flower Power Hour", live: true },
-    { x: 62, y: 66, label: "Mario Kart Tournament", live: true },
-    { x: 24, y: 28, label: "Softball v. Rutgers", live: false },
-    { x: 71, y: 30, label: "EnTERPreneur Conf.", live: false },
-    { x: 44, y: 78, label: "Open Mic Night", live: false },
-    { x: 82, y: 56, label: "Arboretum Walk", live: false },
+    { x: 30, y: 44, label: "Flower Power Hour", live: true, delay: 0.2 },
+    { x: 62, y: 66, label: "Mario Kart Tournament", live: true, delay: 0.6 },
+    { x: 24, y: 28, label: "Softball v. Rutgers", live: false, delay: 0.1 },
+    { x: 71, y: 30, label: "EnTERPreneur Conf.", live: false, delay: 0.8 },
+    { x: 44, y: 78, label: "Open Mic Night", live: false, delay: 0.4 },
+    { x: 82, y: 56, label: "Arboretum Walk", live: false, delay: 0.9 },
   ];
 
   return (
     <div
-      className="relative w-full overflow-hidden rounded-sheet border border-line bg-surface shadow-raised"
+      className="relative w-full overflow-hidden rounded-sheet border border-line bg-paper shadow-raised"
       style={{ aspectRatio: "5 / 4" }}
     >
       <svg
@@ -65,18 +69,25 @@ function CampusMapVisual() {
         aria-label="Stylised map of the University of Maryland campus showing live and upcoming events"
         className="absolute inset-0 h-full w-full"
       >
-        <rect width="500" height="400" fill="var(--ins-surface)" />
-        {/* green space */}
-        <ellipse cx="250" cy="196" rx="140" ry="42" fill="var(--ins-live-tint)" opacity="0.5" />
-        <ellipse cx="432" cy="300" rx="72" ry="86" fill="var(--ins-live-tint)" opacity="0.55" />
-        {/* blocks */}
+        <rect width="500" height="400" fill="var(--ins-paper)" />
+        {/* Subtle grid to look like paper/radar */}
+        <g stroke="var(--ins-ink-4)" strokeWidth="0.5" strokeDasharray="4 4" opacity="0.5">
+            <line x1="0" y1="100" x2="500" y2="100" />
+            <line x1="0" y1="200" x2="500" y2="200" />
+            <line x1="0" y1="300" x2="500" y2="300" />
+            <line x1="125" y1="0" x2="125" y2="400" />
+            <line x1="250" y1="0" x2="250" y2="400" />
+            <line x1="375" y1="0" x2="375" y2="400" />
+        </g>
+        
+        {/* blocks / buildings */}
         {[
           [160, 150, 170, 46], [96, 88, 92, 50], [316, 92, 96, 52],
           [120, 262, 96, 54], [300, 258, 84, 48], [156, 330, 100, 44],
         ].map(([x, y, w, h], i) => (
-          <rect key={i} x={x} y={y} width={w} height={h} rx="4" fill="var(--ins-surface-sunk)" />
+          <rect key={i} x={x} y={y} width={w} height={h} rx="4" fill="var(--ins-surface-sunk)" stroke="var(--ins-line)" />
         ))}
-        {/* roads: sunk casing under a white centre reads as paper cartography */}
+        {/* roads */}
         {[
           "M0,150 C150,142 330,148 500,140",
           "M0,246 C170,238 330,242 500,234",
@@ -84,44 +95,29 @@ function CampusMapVisual() {
           "M78,60 C68,180 78,290 116,380",
         ].map((d, i) => (
           <g key={i}>
-            <path d={d} stroke="var(--ins-surface-sunk)" strokeWidth="11" fill="none" />
-            <path d={d} stroke="#FFFFFF" strokeWidth="6" fill="none" />
+            <path d={d} fill="none" stroke="var(--ins-line)" strokeWidth="8" />
+            <path d={d} fill="none" stroke="var(--ins-paper)" strokeWidth="6" />
           </g>
         ))}
-        <text x="250" y="182" textAnchor="middle" fontSize="11" fill="var(--ins-ink-3)">
-          McKeldin Mall
-        </text>
-        <text x="432" y="292" textAnchor="middle" fontSize="10" fill="var(--ins-live-ink)">
-          Arboretum
-        </text>
+
+        {venues.map((v, i) => (
+          <g key={i} style={{ transform: `translate(${v.x}%, ${v.y}%)` }}>
+            {v.live ? (
+              <>
+                <circle r="4" fill="var(--ins-live)" className="animate-ping" style={{ animationDuration: '2s' }} />
+                <circle r="4" fill="var(--ins-live)" />
+                <rect x="8" y="-7" rx="3" width="70" height="14" fill="var(--ins-live-tint)" stroke="var(--ins-live)" strokeOpacity="0.2" />
+                <text x="14" y="2" className="ins-mono text-[6px] font-bold fill-live-ink uppercase">{v.label}</text>
+              </>
+            ) : (
+              <>
+                <circle r="3" fill="var(--ins-ink-3)" />
+                <text x="8" y="2" className="ins-mono text-[6px] fill-ink-3 uppercase">{v.label}</text>
+              </>
+            )}
+          </g>
+        ))}
       </svg>
-
-      {/* pins */}
-      {venues.map((v) => (
-        <div
-          key={v.label}
-          className="absolute flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center"
-          style={{ left: `${v.x}%`, top: `${v.y}%` }}
-        >
-          {v.live && (
-            <span
-              aria-hidden="true"
-              className="ins-radarping absolute h-[26px] w-[26px] rounded-full border-[1.5px] border-live"
-            />
-          )}
-          <span
-            aria-hidden="true"
-            className={`relative flex items-center justify-center rounded-full border-2 border-white shadow-raised ${v.live ? "h-[26px] w-[26px] bg-live" : "h-[18px] w-[18px] bg-ink"
-              }`}
-          />
-        </div>
-      ))}
-
-      {/* live chip — a fact, so green, and never clickable */}
-      <div className="absolute left-3 top-3 flex items-center gap-2 rounded-chip border border-line bg-sheet px-2.5 py-1.5 shadow-raised">
-        <span aria-hidden="true" className="h-[7px] w-[7px] rounded-full bg-live" />
-        <span className="ins-mono text-[10px] leading-none text-ink">2 live now · College Park</span>
-      </div>
     </div>
   );
 }
@@ -133,6 +129,15 @@ export default function LandingPage({
   isAuthenticated = false,
 }: LandingPageProps) {
   const router = useRouter();
+  const { isMounted, isInstalled, isDialogOpen, setIsDialogOpen, promptInstall } = usePwaInstall();
+
+  const handleInstallClick = async (placement: 'hero' | 'nav') => {
+    trackFunnelEvent({
+      name: "landing_cta_click",
+      properties: { placement: placement === 'hero' ? 'install_hero' : 'install_nav' },
+    });
+    await promptInstall();
+  };
 
   // The app is still dark-themed: `body` inherits --background (a dark navy) from
   // the legacy token set. This page is the first Instrument surface, so while it
@@ -149,11 +154,18 @@ export default function LandingPage({
     };
   }, []);
 
-  const handleOpenMap = () => router.push("/map");
-  const handleHostEvent = () => router.push("/map?intent=create");
+  const handleOpenMap = (placement: 'hero' | 'nav' | 'footer' = 'hero') => {
+    trackFunnelEvent({ name: "landing_cta_click", properties: { placement } });
+    router.push("/map");
+  };
+
+  const handleHostEvent = () => {
+    trackFunnelEvent({ name: "landing_cta_click", properties: { placement: "organizer" } });
+    router.push("/map?intent=create");
+  };
 
   const steps = [
-    { n: "01", title: "Open the map", body: "Events near you appear as pins. No account, no download." },
+    { n: "01", title: "Open the map", body: "Events near you appear as pins. Instant in your browser or installed as an app." },
     { n: "02", title: "Tap a pin", body: "Time, place, how many people are going." },
     { n: "03", title: "Show up", body: "Get a reminder before it starts." },
   ];
@@ -197,9 +209,19 @@ export default function LandingPage({
                 Sign in
               </button>
             )}
+            {!isInstalled && isMounted && (
+              <button
+                type="button"
+                onClick={() => handleInstallClick('nav')}
+                className="hidden sm:inline-flex h-9 items-center gap-1.5 rounded-chip border border-line bg-sheet px-3.5 text-sm font-medium text-ink transition-colors duration-micro ease-ins hover:bg-surface"
+              >
+                <Download className="h-3.5 w-3.5 text-ink-2" />
+                Install app
+              </button>
+            )}
             <button
               type="button"
-              onClick={handleOpenMap}
+              onClick={() => handleOpenMap('nav')}
               className="inline-flex h-9 items-center rounded-chip bg-action px-4 text-sm font-semibold text-white transition-colors duration-micro ease-ins hover:bg-action-hover"
             >
               Open the map
@@ -223,15 +245,27 @@ export default function LandingPage({
               </p>
 
               <div className="mt-8 flex flex-col items-start gap-4">
-                <button
-                  type="button"
-                  onClick={handleOpenMap}
-                  className="inline-flex h-11 items-center rounded-control bg-action px-7 text-[15px] font-semibold text-white transition-[background-color,transform] duration-micro ease-ins hover:bg-action-hover active:scale-[0.98]"
-                >
-                  Open the map
-                </button>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenMap('hero')}
+                    className="inline-flex h-11 items-center rounded-control bg-action px-7 text-[15px] font-semibold text-white transition-[background-color,transform] duration-micro ease-ins hover:bg-action-hover active:scale-[0.98]"
+                  >
+                    Open the map
+                  </button>
+                  {!isInstalled && isMounted && (
+                    <button
+                      type="button"
+                      onClick={() => handleInstallClick('hero')}
+                      className="inline-flex h-11 items-center gap-2 rounded-control border border-line bg-sheet px-5 text-[15px] font-medium text-ink transition-[background-color,transform] duration-micro ease-ins hover:bg-surface-sunk active:scale-[0.98]"
+                    >
+                      <Download className="h-4 w-4 text-ink-2" />
+                      Install app
+                    </button>
+                  )}
+                </div>
                 <p className="ins-mono text-xs leading-4 text-ink-3">
-                  Free · no signup · works in your browser
+                  Free · no signup · works in your browser or home screen
                 </p>
               </div>
             </div>
@@ -332,17 +366,19 @@ export default function LandingPage({
               { href: "/terms", label: "Terms" },
               { href: "/contact", label: "Contact" },
             ].map((l) => (
-              <a
+              <Link
                 key={l.href}
                 href={l.href}
                 className="-my-2 rounded-chip py-2 text-[13px] leading-5 text-ink-2 transition-colors duration-micro ease-ins hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action"
               >
                 {l.label}
-              </a>
+              </Link>
             ))}
           </nav>
         </div>
       </footer>
+
+      <InstallDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
     </div>
   );
 }
