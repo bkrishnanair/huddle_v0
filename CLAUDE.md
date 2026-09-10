@@ -15,19 +15,19 @@ Repo: huddle_v0. Production: huddlemap.live.
 7. All timezone math goes through lib/datetime.ts. Never write a naive
    new Date(`${date}T${time}`).
 
-## Design system — "Instrument"
-Light-first, paper-and-ink. Tokens live in globals.css, semantic names in
-tailwind.config.ts. Bricolage Grotesque = headlines only. Inter = body.
-IBM Plex Mono = ALL numerals: times, distances, counts, show rates.
+## Design system — "Dark / Vibrant V2"
+Dark-first, energetic, category-colored. 
+Bricolage Grotesque = headlines. Inter = body. IBM Plex Mono = numerals.
 
-BANNED: emoji in chrome or copy · gradients · glassmorphism or
-backdrop-blur · dark backgrounds on new surfaces · arbitrary Tailwind
-values (p-[13px], z-[60], unlisted hex) · any looping animation other than
-RadarPing · the words "premium", "cinematic", "AI-powered",
-"revolutionary", "seamless" · exclamation marks · title case in buttons.
+REQUIRED:
+- Dark frosted glass (`bg-slate-900/70`, `backdrop-blur-md`, `border-white/10`) for major surfaces (cards, bottom nav, sheets).
+- Use `getCategoryColor()` from `lib/utils.ts` for glowing accents, badges, and map pins.
+- Keep category emojis (⚽, 🍕, 🎵) for instant recognition.
+- Map clusters should use Bottom Sheets (Vaul / Radix Drawer) to keep geographical context on mobile.
 
-Never display a zero. Hide a count rather than render "0 events".
-Never fake a live state. If nothing is live, show "next up today".
+BANNED: Stark white brutalist cards, removing emojis, heavy overlapping map labels ("Stamp Union Pile-up"), the words "premium", "cinematic", "AI-powered", "revolutionary", "seamless" · exclamation marks · title case in buttons.
+
+Never fake a live state. Real `isEventLive()` gating only.
 
 ## Facts agents keep getting wrong
 Verify against the repo before relying on any of these; they have each caused

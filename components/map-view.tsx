@@ -20,6 +20,7 @@ import DotPin from "./map-pins/dot-pin"
 import MediumPin from "./map-pins/medium-pin"
 import LivePin from "./map-pins/live-pin"
 import { MapListPanel } from "@/components/map-list-panel"
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
 import { trackFunnelEvent } from "@/lib/analytics"
 
 interface MapViewProps {
@@ -30,28 +31,16 @@ interface MapViewProps {
 }
 
 
-const PAPER_MAP_STYLES = [
-  { elementType: "geometry", stylers: [{ color: "#f8f9fa" }] },
-  { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#475569" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#f8f9fa" }] },
-  { featureType: "administrative.land_parcel", stylers: [{ visibility: "off" }] },
-  { featureType: "poi", elementType: "geometry", stylers: [{ color: "#f1f5f9" }] },
-  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#94a3b8" }] },
-  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#e2e8f0" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
-  { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
-  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#cbd5e1" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#e2e8f0" }] }
-];
+
 
 const MapRenderer = ({ onMapLoad, children, isDarkMode }: { onMapLoad: (map: google.maps.Map) => void, children: React.ReactNode, isDarkMode: boolean }) => {
   const map = useMap();
   useEffect(() => {
     if (map) {
       map.setOptions({
-        backgroundColor: '#f8f9fa',
-        styles: PAPER_MAP_STYLES,
+        backgroundColor: '#0f172a',
+        // @ts-ignore
+        colorScheme: 'DARK',
         minZoom: 13,
         mapTypeControl: false,
         streetViewControl: false,
@@ -111,6 +100,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const profileFetchAttempted = useRef(false)
   const [events, setEvents] = useState<GameEvent[]>([])
   const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null)
+  const [selectedCluster, setSelectedCluster] = useState<GameEvent[] | null>(null)
   const [hoveredEvent, setHoveredEvent] = useState<GameEvent | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
@@ -667,7 +657,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             colorScheme="LIGHT"
             gestureHandling={'greedy'}
           >
-            <MapRenderer onMapLoad={setMap} isDarkMode={false}>
+            <MapRenderer onMapLoad={setMap} isDarkMode={true}>
               {map && (
                 <>
                   {userLocation && (
@@ -746,20 +736,19 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                             key={`cluster-${clusterIdx}`}
                             position={{ lat: cluster.lat, lng: cluster.lng }}
                             onClick={() => {
-                              if (currentZoom < 16 && map) {
+                              if (currentZoom < 15 && map) {
                                 map.panTo({ lat: cluster.lat, lng: cluster.lng });
-                                map.setZoom(17);
+                                map.setZoom(16);
                               } else {
-                                setSelectedEvent(topEvent);
-                                trackEventView(topEvent.id);
+                                setSelectedCluster(cluster.events);
                               }
                             }}
                             style={{ zIndex: liveCount > 0 ? 40 : 25 }}
                           >
-                            <div className="flex flex-col items-center cursor-pointer group">
+                            <div className="flex flex-col items-center cursor-pointer group transition-transform hover:scale-110">
                               <div className={`
-                                  w-9 h-9 rounded-chip border-2 flex items-center justify-center font-mono text-sm font-bold shadow-raised transition-transform hover:scale-110
-                                  ${liveCount > 0 ? 'border-live bg-live-tint text-live-ink' : 'border-line bg-paper text-ink'}
+                                  w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold shadow-[0_0_20px_rgba(0,0,0,0.5)]
+                                  ${liveCount > 0 ? 'border-live bg-live/20 text-live-ink backdrop-blur-md' : 'border-white/30 bg-slate-900/80 text-white backdrop-blur-md'}
                                 `}>
                                 {cluster.events.length}
                               </div>
@@ -803,31 +792,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                         }
                       }
 
-                      // "Map Dots" requirement
-                      if (!isHovered && (!showDetails || currentZoom <= 13)) {
-                        return (
-                          <AdvancedMarker
-                            key={event.id}
-                            position={{ lat: event.geopoint.latitude, lng: event.geopoint.longitude }}
-                            onClick={() => {
-                              setSelectedEvent(event);
-                              trackEventView(event.id);
-                            }}
-                            onMouseEnter={() => setHoveredEvent(event)}
-                            onMouseLeave={() => setHoveredEvent(null)}
-                            style={{ zIndex: pinTier === 'live' ? 30 : pinTier === 'imminent' ? 20 : 0 }}
-                          >
-                            {pinTier === 'live' ? (
-                              <LivePin size={40} />
-                            ) : pinTier === 'imminent' ? (
-                              <MediumPin size={24} />
-                            ) : (
-                              <DotPin size={12} />
-                            )}
-                          </AdvancedMarker>
-                        );
-                      }
-
+                      // Single Event Marker (No floating text bubbles on canvas)
                       return (
                         <AdvancedMarker
                           key={event.id}
@@ -838,37 +803,15 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                           }}
                           onMouseEnter={() => setHoveredEvent(event)}
                           onMouseLeave={() => setHoveredEvent(null)}
-                          style={{ zIndex: isHovered ? 50 : (showDetails ? 10 : 0) }}
+                          style={{ zIndex: isHovered ? 50 : (pinTier === 'live' ? 30 : 20) }}
                         >
-                          <div className={`flex flex-col items-center transition-all duration-300 transform origin-bottom ${isHovered ? 'scale-110 -translate-y-1' : 'scale-100'}`}>
-                            {/* Floating Tooltip Bubble */}
-                            <div className={`
-                              mb-2 px-3 py-1.5 rounded-chip bg-paper border border-line shadow-overlay
-                              transition-all duration-200 ease-out flex flex-col items-center
-                              ${showDetails ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
-                            `}>
-                              <span className="text-xs font-bold text-ink whitespace-nowrap leading-none mb-1">{event.name}</span>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-ink-3 font-mono tracking-mono uppercase leading-none">
-                                  {isFutureEvent ? formatTime(event.time) : (pinTier === 'live' ? 'Live Now' : 'Starts Soon')}
-                                </span>
-                                {event.currentPlayers > 0 && (
-                                  <>
-                                    <span className="text-ink-4 text-[8px]">•</span>
-                                    <span className="text-[10px] text-ink-3 font-mono tracking-mono uppercase leading-none flex items-center">
-                                      <User className="w-2.5 h-2.5 inline mr-0.5" />
-                                      {event.currentPlayers}
-                                    </span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Base Pin */}
+                          <div className={`flex flex-col items-center transition-transform duration-300 transform origin-bottom ${isHovered ? 'scale-110 -translate-y-1' : 'scale-100'}`}>
                             {pinTier === 'live' ? (
-                              <LivePin size={40} />
+                              <LivePin category={event.category} icon={event.icon} size={currentZoom <= 13 ? 30 : 44} />
+                            ) : pinTier === 'imminent' ? (
+                              <MediumPin category={event.category} icon={event.icon} size={currentZoom <= 13 ? 24 : 32} />
                             ) : (
-                              <MediumPin size={24} />
+                              <DotPin category={event.category} size={currentZoom <= 13 ? 8 : 12} />
                             )}
                           </div>
                         </AdvancedMarker>
@@ -885,7 +828,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           {/* Filter Chips & View Toggle Container */}
           <div className="pointer-events-auto flex justify-between gap-2 h-auto w-full">
             {/* Filters Pill */}
-            <div className="w-fit max-w-full bg-paper rounded-control p-2 flex flex-col gap-1.5 shadow-raised border border-line overflow-hidden">
+            <div className="w-fit max-w-full bg-slate-900/80 backdrop-blur-md rounded-[24px] p-2 flex flex-col gap-1.5 shadow-2xl border border-white/10 overflow-hidden">
               {/* Category Row */}
               <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar w-full pb-0.5">
                 <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter mr-1 pl-1">What</span>
@@ -1115,7 +1058,35 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
       </div >
 
+      
+      {/* Cluster Drawer */}
+      <Drawer open={!!selectedCluster} onOpenChange={(open) => !open && setSelectedCluster(null)}>
+        <DrawerContent className="bg-slate-950 border-white/10 text-white max-h-[85vh]">
+          <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-slate-800 my-4" />
+          <DrawerHeader className="text-left px-6 py-2">
+            <DrawerTitle className="font-display font-bold text-xl">
+              {selectedCluster?.length} events here
+            </DrawerTitle>
+          </DrawerHeader>
+          <div className="p-4 overflow-y-auto overflow-x-hidden flex flex-col gap-3 pb-8">
+            {selectedCluster?.map((evt) => (
+              <div key={evt.id} className="w-full h-full max-w-full">
+                <EventCard 
+                  event={evt} 
+                  onSelectEvent={(e) => {
+                    setSelectedCluster(null);
+                    setSelectedEvent(e);
+                    trackEventView(e.id);
+                  }} 
+                />
+              </div>
+            ))}
+          </div>
+        </DrawerContent>
+      </Drawer>
+      
       {selectedEvent && <EventDetailsDrawer event={selectedEvent} isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} onEventUpdated={() => { }} />
+
       }
       {showCreateModal && <CreateEventModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onEventCreated={() => { }} userLocation={userLocation || mapCenter} />}
 

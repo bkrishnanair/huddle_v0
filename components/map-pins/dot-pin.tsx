@@ -1,12 +1,17 @@
 "use client"
+import { getCategoryColor } from "@/lib/utils"
 
 interface DotPinProps {
+  category: string;
   size?: number;
 }
 
-export default function DotPin({ size = 12 }: DotPinProps) {
-  // Tiny static ink dot
+export default function DotPin({ category, size = 12 }: DotPinProps) {
+  const color = getCategoryColor(category)
   return (
-    <div className="w-2 h-2 bg-ink-3 rounded-full border border-paper shadow-sm opacity-60" />
+    <div 
+      className="rounded-full border border-white/10 opacity-70" 
+      style={{ width: size, height: size, backgroundColor: color }} 
+    />
   )
 }
