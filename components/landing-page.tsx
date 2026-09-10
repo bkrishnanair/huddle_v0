@@ -3,7 +3,10 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Download } from "lucide-react";
 import { trackFunnelEvent } from "@/lib/analytics";
+import { usePwaInstall } from "@/hooks/use-pwa-install";
+import { InstallDialog } from "@/components/install-dialog";
 
 /**
  * Marketing landing page — the "Instrument" surface (design block 7).
@@ -126,6 +129,15 @@ export default function LandingPage({
   isAuthenticated = false,
 }: LandingPageProps) {
   const router = useRouter();
+  const { isMounted, isInstalled, isDialogOpen, setIsDialogOpen, promptInstall } = usePwaInstall();
+
+  const handleInstallClick = async (placement: 'hero' | 'nav') => {
+    trackFunnelEvent({
+      name: "landing_cta_click",
+      properties: { placement: placement === 'hero' ? 'install_hero' : 'install_nav' },
+    });
+    await promptInstall();
+  };
 
   // The app is still dark-themed: `body` inherits --background (a dark navy) from
   // the legacy token set. This page is the first Instrument surface, so while it
@@ -153,7 +165,7 @@ export default function LandingPage({
   };
 
   const steps = [
-    { n: "01", title: "Open the map", body: "Events near you appear as pins. No account, no download." },
+    { n: "01", title: "Open the map", body: "Events near you appear as pins. Instant in your browser or installed as an app." },
     { n: "02", title: "Tap a pin", body: "Time, place, how many people are going." },
     { n: "03", title: "Show up", body: "Get a reminder before it starts." },
   ];
@@ -197,6 +209,16 @@ export default function LandingPage({
                 Sign in
               </button>
             )}
+            {!isInstalled && isMounted && (
+              <button
+                type="button"
+                onClick={() => handleInstallClick('nav')}
+                className="hidden sm:inline-flex h-9 items-center gap-1.5 rounded-chip border border-line bg-sheet px-3.5 text-sm font-medium text-ink transition-colors duration-micro ease-ins hover:bg-surface"
+              >
+                <Download className="h-3.5 w-3.5 text-ink-2" />
+                Install app
+              </button>
+            )}
             <button
               type="button"
               onClick={() => handleOpenMap('nav')}
@@ -223,15 +245,27 @@ export default function LandingPage({
               </p>
 
               <div className="mt-8 flex flex-col items-start gap-4">
-                <button
-                  type="button"
-                  onClick={() => handleOpenMap('hero')}
-                  className="inline-flex h-11 items-center rounded-control bg-action px-7 text-[15px] font-semibold text-white transition-[background-color,transform] duration-micro ease-ins hover:bg-action-hover active:scale-[0.98]"
-                >
-                  Open the map
-                </button>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenMap('hero')}
+                    className="inline-flex h-11 items-center rounded-control bg-action px-7 text-[15px] font-semibold text-white transition-[background-color,transform] duration-micro ease-ins hover:bg-action-hover active:scale-[0.98]"
+                  >
+                    Open the map
+                  </button>
+                  {!isInstalled && isMounted && (
+                    <button
+                      type="button"
+                      onClick={() => handleInstallClick('hero')}
+                      className="inline-flex h-11 items-center gap-2 rounded-control border border-line bg-sheet px-5 text-[15px] font-medium text-ink transition-[background-color,transform] duration-micro ease-ins hover:bg-surface-sunk active:scale-[0.98]"
+                    >
+                      <Download className="h-4 w-4 text-ink-2" />
+                      Install app
+                    </button>
+                  )}
+                </div>
                 <p className="ins-mono text-xs leading-4 text-ink-3">
-                  Free · no signup · works in your browser
+                  Free · no signup · works in your browser or home screen
                 </p>
               </div>
             </div>
@@ -343,6 +377,8 @@ export default function LandingPage({
           </nav>
         </div>
       </footer>
+
+      <InstallDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
     </div>
   );
 }

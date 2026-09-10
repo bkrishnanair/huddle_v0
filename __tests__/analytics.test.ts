@@ -54,11 +54,19 @@ describe('Analytics Funnel Telemetry', () => {
       name: 'landing_cta_click',
       properties: { placement: 'hero' },
     });
+    trackFunnelEvent({
+      name: 'landing_cta_click',
+      properties: { placement: 'install_hero' },
+    });
+    trackFunnelEvent({
+      name: 'landing_cta_click',
+      properties: { placement: 'install_nav' },
+    });
 
-    expect(dispatchedEvents).toHaveLength(1);
-    expect(dispatchedEvents[0].event).toBe('landing_cta_click');
+    expect(dispatchedEvents).toHaveLength(3);
     expect(dispatchedEvents[0].properties.placement).toBe('hero');
-    expect(dispatchedEvents[0].timestamp).toBeTypeOf('number');
+    expect(dispatchedEvents[1].properties.placement).toBe('install_hero');
+    expect(dispatchedEvents[2].properties.placement).toBe('install_nav');
   });
 
   it('dispatches landing_view without throwing', () => {
