@@ -44,21 +44,21 @@ export function InstallPrompt() {
   if (!showPrompt || isInstalled) return null
 
   return (
-    <div className="fixed bottom-20 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-sheet border border-line rounded-sheet p-5 shadow-overlay z-50 flex items-start gap-4">
+    <div className="fixed bottom-20 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-3xl p-5 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-50 flex items-start gap-4">
       <div className="flex-1">
-        <h3 className="font-display font-bold text-ink text-base mb-1">Install Huddle</h3>
-        <p className="text-xs text-ink-2 mb-3.5 leading-relaxed">
+        <h3 className="font-display font-bold text-slate-50 text-base mb-1">Install Huddle</h3>
+        <p className="text-xs text-slate-400 mb-3.5 leading-relaxed">
           Get push notifications for your events and instant loading by adding Huddle to your home screen.
         </p>
 
         {isIos ? (
-          <div className="text-xs text-ink bg-surface border border-line p-3 rounded-control flex items-center gap-2">
-            <span>Tap</span> <Share className="w-4 h-4 text-action" /> <span>then</span> <PlusSquare className="w-4 h-4 text-action" /> <span>"Add to Home Screen"</span>
+          <div className="text-xs text-slate-50 bg-slate-800/50 border border-white/10 p-3 rounded-xl flex items-center gap-2">
+            <span>Tap</span> <Share className="w-4 h-4 text-primary" /> <span>then</span> <PlusSquare className="w-4 h-4 text-primary" /> <span>"Add to Home Screen"</span>
           </div>
         ) : (
           <button
             onClick={handleInstall}
-            className="inline-flex items-center gap-1.5 bg-action hover:bg-action-hover text-white text-xs font-semibold py-2.5 px-4 rounded-control transition-all shadow-sm active:scale-[0.99]"
+            className="inline-flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white text-xs font-semibold py-2.5 px-4 rounded-xl transition-all shadow-sm active:scale-[0.99]"
           >
             <Download className="w-3.5 h-3.5" />
             Install app
@@ -68,7 +68,7 @@ export function InstallPrompt() {
 
       <button
         onClick={handleDismiss}
-        className="text-ink-3 hover:text-ink transition-colors p-1"
+        className="text-slate-500 hover:text-slate-50 transition-colors p-1"
         aria-label="Dismiss"
       >
         <X className="w-4 h-4" />

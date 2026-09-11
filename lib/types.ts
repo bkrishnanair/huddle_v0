@@ -23,6 +23,7 @@ export interface UserProfile {
 export interface GameEvent {
   id: string;
   name: string;
+  imageUrl?: string;
   title?: string; // Alias for name
   category: string;
   sport?: string; // Alias for category

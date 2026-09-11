@@ -11,6 +11,8 @@ export interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
 }
 
+export type PwaPlatform = "ios" | "mac-safari" | "chromium" | "android" | "other"
+
 // Module-level cache so the captured event persists across component remounts
 let cachedDeferredPrompt: BeforeInstallPromptEvent | null = null
 const stateListeners = new Set<() => void>()
@@ -36,8 +38,8 @@ export function usePwaInstall() {
   const [isMounted, setIsMounted] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isInstalled, setIsInstalled] = useState(false)
-  const [isIos, setIsIos] = useState(false)
   const [hasPrompt, setHasPrompt] = useState(false)
+  const [platform, setPlatform] = useState<PwaPlatform>("other")
 
   const updateState = useCallback(() => {
     if (typeof window === "undefined") return
@@ -48,10 +50,25 @@ export function usePwaInstall() {
       (window.navigator as unknown as { standalone?: boolean }).standalone === true
     setIsInstalled(Boolean(standaloneMode))
 
-    // 2. Check if iOS Safari (non-standalone)
+    // 2. Platform identification
     const ua = window.navigator.userAgent
-    const iosDevice = /iPad|iPhone|iPod/.test(ua) && !(window as unknown as { MSStream?: unknown }).MSStream
-    setIsIos(Boolean(iosDevice && !standaloneMode))
+    const isIosDevice = /iPad|iPhone|iPod/.test(ua) && !(window as unknown as { MSStream?: unknown }).MSStream
+    const isMacSafariDevice =
+      /Macintosh/.test(ua) && /Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR|Firefox/.test(ua)
+    const isAndroidDevice = /Android/.test(ua)
+    const isChromiumDevice = /Chrome|Chromium|Edg|OPR/.test(ua) && !isIosDevice
+
+    if (isIosDevice) {
+      setPlatform("ios")
+    } else if (isMacSafariDevice) {
+      setPlatform("mac-safari")
+    } else if (isAndroidDevice) {
+      setPlatform("android")
+    } else if (isChromiumDevice) {
+      setPlatform("chromium")
+    } else {
+      setPlatform("other")
+    }
 
     // 3. Check if deferred prompt exists for Chromium / Edge
     setHasPrompt(Boolean(cachedDeferredPrompt))
@@ -61,21 +78,27 @@ export function usePwaInstall() {
     setIsMounted(true)
     updateState()
 
-    // Listen to module-level prompt capture changes
+    const handlePromptEvent = (e: Event) => {
+      e.preventDefault()
+      cachedDeferredPrompt = e as BeforeInstallPromptEvent
+      updateState()
+    }
+
+    window.addEventListener("beforeinstallprompt", handlePromptEvent)
     stateListeners.add(updateState)
 
-    // Listen to media query changes if display mode transitions
     const mediaQuery = window.matchMedia("(display-mode: standalone)")
     const handleMediaChange = () => updateState()
     mediaQuery.addEventListener("change", handleMediaChange)
 
     return () => {
+      window.removeEventListener("beforeinstallprompt", handlePromptEvent)
       stateListeners.delete(updateState)
       mediaQuery.removeEventListener("change", handleMediaChange)
     }
   }, [updateState])
 
-  const promptInstall = useCallback(async (): Promise<"accepted" | "dismissed" | "ios" | "unavailable"> => {
+  const promptInstall = useCallback(async (): Promise<"accepted" | "dismissed" | "dialog" | "unavailable"> => {
     if (isInstalled) {
       return "unavailable"
     }
@@ -94,27 +117,63 @@ export function usePwaInstall() {
         return "dismissed"
       } catch (err) {
         console.debug("PWA prompt error:", err)
-        return "unavailable"
+        setIsDialogOpen(true)
+        return "dialog"
       }
     }
 
-    if (isIos) {
-      setIsDialogOpen(true)
-      return "ios"
+    // If native prompt is not available (iOS, macOS Safari, or Chromium before prompt triggers),
+    // open the tailored platform guide dialog
+    setIsDialogOpen(true)
+    return "dialog"
+  }, [isInstalled])
+
+  const downloadShortcut = useCallback(() => {
+    if (typeof window === "undefined") return
+
+    const isMac = /Macintosh/.test(window.navigator.userAgent)
+    let content: string
+    let filename: string
+    let mimeType: string
+
+    if (isMac) {
+      content = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>URL</key>
+  <string>https://huddlemap.live</string>
+</dict>
+</plist>`
+      filename = "Huddle.webloc"
+      mimeType = "application/xml"
+    } else {
+      content = `[InternetShortcut]\r\nURL=https://huddlemap.live\r\nIconIndex=0\r\n`
+      filename = "Huddle.url"
+      mimeType = "application/x-mswinurl"
     }
 
-    // Fallback if neither native prompt nor iOS (e.g. desktop non-Chromium or unsupported browser)
-    setIsDialogOpen(true)
-    return "unavailable"
-  }, [isInstalled, isIos])
+    const blob = new Blob([content], { type: mimeType })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }, [])
 
   return {
     isMounted,
     isInstalled,
-    isIos,
-    isInstallable: hasPrompt || isIos,
+    isIos: platform === "ios",
+    platform,
+    hasPrompt,
+    isInstallable: hasPrompt || platform !== "other",
     isDialogOpen,
     setIsDialogOpen,
     promptInstall,
+    downloadShortcut,
   }
 }

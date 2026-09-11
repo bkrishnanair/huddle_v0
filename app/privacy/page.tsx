@@ -9,69 +9,69 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-paper text-ink selection:bg-action-tint selection:text-action">
-      <header className="sticky top-0 z-30 border-b border-line bg-paper/90 backdrop-blur-md px-6 py-4">
+    <div className="min-h-screen bg-[#0B101B] text-slate-50 selection:bg-primary/20 selection:text-primary">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0B101B]/90 backdrop-blur-md px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-xs font-semibold text-ink-3 hover:text-ink transition-colors"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-50 transition-colors"
           >
-            <ArrowLeft className="w-4 h-4 text-action" />
+            <ArrowLeft className="w-4 h-4 text-primary" />
             Back to Huddle
           </Link>
-          <span className="ins-mono text-xs text-ink-3">Privacy & Trust</span>
+          <span className="ins-mono text-xs text-slate-500">Privacy & Trust</span>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-12">
-        <div className="border-b border-line pb-8 mb-8">
-          <span className="ins-mono text-xs text-action font-semibold">Policy Statement</span>
-          <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-ink mt-2">
+        <div className="border-b border-white/10 pb-8 mb-8">
+          <span className="ins-mono text-xs text-primary font-semibold">Policy Statement</span>
+          <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-slate-50 mt-2">
             Privacy Policy
           </h1>
-          <p className="mt-3 text-sm text-ink-3">
+          <p className="mt-3 text-sm text-slate-500">
             Last updated: August 2026 · College Park, MD
           </p>
         </div>
 
-        <div className="prose prose-slate max-w-none space-y-8 text-sm leading-relaxed text-ink-2">
-          <section className="p-6 rounded-sheet bg-sheet border border-line space-y-3">
-            <h2 className="font-display text-xl font-bold text-ink">1. Zero-Trust Student Privacy</h2>
+        <div className="prose prose-slate max-w-none space-y-8 text-sm leading-relaxed text-slate-400">
+          <section className="p-6 rounded-3xl bg-slate-900/50 backdrop-blur-md border border-white/10 space-y-3">
+            <h2 className="font-display text-xl font-bold text-slate-50">1. Zero-Trust Student Privacy</h2>
             <p>
               Huddle is designed specifically for college campuses. We do not sell your personal data, and we do not monetize student location histories. You can browse all campus events anonymously without creating an account or downloading an app.
             </p>
           </section>
 
-          <section className="p-6 rounded-sheet bg-sheet border border-line space-y-3">
-            <h2 className="font-display text-xl font-bold text-ink">2. Information We Collect</h2>
+          <section className="p-6 rounded-3xl bg-slate-900/50 backdrop-blur-md border border-white/10 space-y-3">
+            <h2 className="font-display text-xl font-bold text-slate-50">2. Information We Collect</h2>
             <ul className="list-disc pl-5 space-y-2">
               <li>
-                <strong className="text-ink">Account Information:</strong> When you sign up via Google or email, we receive your name and email address.
+                <strong className="text-slate-50">Account Information:</strong> When you sign up via Google or email, we receive your name and email address.
               </li>
               <li>
-                <strong className="text-ink">RSVPs & Roster Privacy:</strong> When you RSVP to an event, your sensitive answers and private notes are stored in an encrypted, isolated roster subcollection accessible solely by the authorized event organizer.
+                <strong className="text-slate-50">RSVPs & Roster Privacy:</strong> When you RSVP to an event, your sensitive answers and private notes are stored in an encrypted, isolated roster subcollection accessible solely by the authorized event organizer.
               </li>
               <li>
-                <strong className="text-ink">Location Data:</strong> Location queries are used ephemerally in your browser to center the map and display nearby events. We do not maintain a permanent location tracking log.
+                <strong className="text-slate-50">Location Data:</strong> Location queries are used ephemerally in your browser to center the map and display nearby events. We do not maintain a permanent location tracking log.
               </li>
               <li>
-                <strong className="text-ink">Push Notification Tokens:</strong> Web push tokens (FCM) are stored securely and used exclusively for event reminders and attendee updates.
+                <strong className="text-slate-50">Push Notification Tokens:</strong> Web push tokens (FCM) are stored securely and used exclusively for event reminders and attendee updates.
               </li>
             </ul>
           </section>
 
-          <section className="p-6 rounded-sheet bg-sheet border border-line space-y-3">
-            <h2 className="font-display text-xl font-bold text-ink">3. Analytics & Telemetry</h2>
+          <section className="p-6 rounded-3xl bg-slate-900/50 backdrop-blur-md border border-white/10 space-y-3">
+            <h2 className="font-display text-xl font-bold text-slate-50">3. Analytics & Telemetry</h2>
             <p>
               We collect aggregate, non-personally identifiable conversion metrics (such as map views and category interactions) to measure platform health and improve event discovery. We do not log student PII in telemetry pipelines.
             </p>
           </section>
 
-          <section className="p-6 rounded-sheet bg-sheet border border-line space-y-3">
-            <h2 className="font-display text-xl font-bold text-ink">4. Data Deletion & Inquiries</h2>
+          <section className="p-6 rounded-3xl bg-slate-900/50 backdrop-blur-md border border-white/10 space-y-3">
+            <h2 className="font-display text-xl font-bold text-slate-50">4. Data Deletion & Inquiries</h2>
             <p>
               You may request complete deletion of your account, event history, and associated roster entries at any time by contacting{" "}
-              <a href="mailto:support@huddlemap.live" className="text-action underline font-medium">
+              <a href="mailto:support@huddlemap.live" className="text-primary underline font-medium">
                 support@huddlemap.live
               </a>.
             </p>

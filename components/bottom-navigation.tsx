@@ -44,8 +44,8 @@ export default function BottomNavigation() {
 
   return (
     <div className="fixed bottom-4 inset-x-0 z-50 flex justify-center px-4 pointer-events-none">
-      <div className="flex items-center justify-around gap-1.5 rounded-full p-1.5 bg-paper border border-line w-full max-w-md pointer-events-auto shadow-raised">
-        <Link href={user ? "/home" : "/"} className="w-9 h-9 bg-surface rounded-full flex items-center justify-center hover:bg-surface-sunk border border-line transition-colors">
+      <div className="flex items-center justify-around gap-1.5 rounded-full p-1.5 bg-slate-900/80 backdrop-blur-md border border-white/10 w-full max-w-md pointer-events-auto shadow-2xl">
+        <Link href={user ? "/home" : "/"} className="w-9 h-9 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
           <HuddleLogo />
         </Link>
         {tabs.map((tab) => {
@@ -69,23 +69,23 @@ export default function BottomNavigation() {
               className={`
                 flex flex-col items-center justify-center w-14 h-14 rounded-2xl
                 transition-colors duration-200
-                ${isActive ? "bg-surface" : "text-ink-3 hover:bg-surface-sunk"}
+                ${isActive ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5"}
               `}
             >
               {/* Map tab gets the live badge */}
               {tab.id === "map" ? (
                 <div className="relative">
-                  <Icon className={`w-5 h-5 mb-0.5 ${isActive ? "text-ink" : "text-ink-3"}`} />
+                  <Icon className="w-5 h-5 mb-0.5" />
                   {liveCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 bg-live text-live-ink text-[10px] font-mono font-bold tracking-mono uppercase rounded-full min-w-[16px] h-4 flex items-center justify-center px-0.5 leading-none shadow-raised border border-live-ink/10">
+                    <span className="absolute -top-1.5 -right-1.5 bg-live text-live-ink text-[10px] font-mono font-bold tracking-mono uppercase rounded-full min-w-[16px] h-4 flex items-center justify-center px-0.5 leading-none shadow-2xl border border-live-ink/10">
                       {liveCount > 9 ? "9+" : liveCount}
                     </span>
                   )}
                 </div>
               ) : (
-                <Icon className={`w-5 h-5 mb-0.5 ${isActive ? "text-ink" : "text-ink-3"}`} />
+                <Icon className="w-5 h-5 mb-0.5" />
               )}
-              <span className={`text-[10px] font-light ${isActive ? "text-ink" : "text-ink-3"}`}>{tab.label}</span>
+              <span className="text-[10px] font-light">{tab.label}</span>
             </Link>
           )
         })}

@@ -9,57 +9,57 @@ export const metadata: Metadata = {
 
 export default function ContactPage() {
   return (
-    <div className="min-h-screen bg-paper text-ink selection:bg-action-tint selection:text-action">
-      <header className="sticky top-0 z-30 border-b border-line bg-paper/90 backdrop-blur-md px-6 py-4">
+    <div className="min-h-screen bg-[#0B101B] text-slate-50 selection:bg-primary/20 selection:text-primary">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0B101B]/90 backdrop-blur-md px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-xs font-semibold text-ink-3 hover:text-ink transition-colors"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-50 transition-colors"
           >
-            <ArrowLeft className="w-4 h-4 text-action" />
+            <ArrowLeft className="w-4 h-4 text-primary" />
             Back to Huddle
           </Link>
-          <span className="ins-mono text-xs text-ink-3">Help & Support</span>
+          <span className="ins-mono text-xs text-slate-500">Help & Support</span>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-12">
-        <div className="border-b border-line pb-8 mb-8">
-          <span className="ins-mono text-xs text-action font-semibold">Get In Touch</span>
-          <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-ink mt-2">
+        <div className="border-b border-white/10 pb-8 mb-8">
+          <span className="ins-mono text-xs text-primary font-semibold">Get In Touch</span>
+          <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-slate-50 mt-2">
             Contact Support
           </h1>
-          <p className="mt-3 text-sm text-ink-3">
+          <p className="mt-3 text-sm text-slate-500">
             Have questions, feedback, or need help claiming an event? We're here for you.
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div className="p-6 rounded-sheet bg-sheet border border-line flex flex-col justify-between">
+          <div className="p-6 rounded-3xl bg-slate-900/50 backdrop-blur-md border border-white/10 flex flex-col justify-between">
             <div className="space-y-3">
-              <div className="w-10 h-10 rounded-control bg-action-tint text-action flex items-center justify-center border border-line">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center border border-white/10">
                 <Mail className="w-5 h-5" />
               </div>
-              <h2 className="font-display text-xl font-bold text-ink">Email Support</h2>
-              <p className="text-xs text-ink-2 leading-relaxed">
+              <h2 className="font-display text-xl font-bold text-slate-50">Email Support</h2>
+              <p className="text-xs text-slate-400 leading-relaxed">
                 For general support inquiries, bug reports, and account questions:
               </p>
             </div>
             <a
               href="mailto:support@huddlemap.live"
-              className="mt-6 inline-flex items-center text-sm font-semibold text-action hover:underline"
+              className="mt-6 inline-flex items-center text-sm font-semibold text-primary hover:underline"
             >
               support@huddlemap.live →
             </a>
           </div>
 
-          <div className="p-6 rounded-sheet bg-sheet border border-line flex flex-col justify-between">
+          <div className="p-6 rounded-3xl bg-slate-900/50 backdrop-blur-md border border-white/10 flex flex-col justify-between">
             <div className="space-y-3">
-              <div className="w-10 h-10 rounded-control bg-live-tint text-live flex items-center justify-center border border-line">
+              <div className="w-10 h-10 rounded-xl bg-live-tint text-live flex items-center justify-center border border-white/10">
                 <MessageSquare className="w-5 h-5" />
               </div>
-              <h2 className="font-display text-xl font-bold text-ink">Campus Clubs & Orgs</h2>
-              <p className="text-xs text-ink-2 leading-relaxed">
+              <h2 className="font-display text-xl font-bold text-slate-50">Campus Clubs & Orgs</h2>
+              <p className="text-xs text-slate-400 leading-relaxed">
                 Want to partner with Huddle or verify your student organization account?
               </p>
             </div>
@@ -72,9 +72,9 @@ export default function ContactPage() {
           </div>
         </div>
 
-        <div className="mt-8 p-6 rounded-sheet bg-surface border border-line flex items-center gap-4">
-          <MapPin className="w-5 h-5 text-ink-3 shrink-0" />
-          <p className="text-xs text-ink-2">
+        <div className="mt-8 p-6 rounded-3xl bg-slate-800/50 border border-white/10 flex items-center gap-4">
+          <MapPin className="w-5 h-5 text-slate-500 shrink-0" />
+          <p className="text-xs text-slate-400">
             Huddle Map, LLC · University of Maryland, College Park, MD 20742
           </p>
         </div>

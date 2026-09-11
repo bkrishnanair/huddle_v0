@@ -59,20 +59,20 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
 
   if (user) {
     return (
-      <div className="p-8 text-center bg-sheet rounded-sheet border border-line">
-        <Loader2 className="w-6 h-6 animate-spin text-action mx-auto mb-3" />
-        <p className="text-sm font-medium text-ink">You are already signed in. Redirecting...</p>
+      <div className="p-8 text-center bg-slate-900 rounded-3xl border border-white/10">
+        <Loader2 className="w-6 h-6 animate-spin text-teal-400 mx-auto mb-3" />
+        <p className="text-sm font-medium text-white">You are already signed in. Redirecting...</p>
       </div>
     )
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full p-8">
       {/* Back button if landing callback provided */}
       {onBackToLanding && (
         <button
           onClick={onBackToLanding}
-          className="inline-flex items-center gap-1.5 text-xs text-ink-3 hover:text-ink transition-colors mb-6 font-medium"
+          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors mb-6 font-medium"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           Back to map
@@ -81,39 +81,39 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
 
       {/* Header */}
       <div className="text-center mb-6">
-        <div className="inline-flex items-center justify-center w-10 h-10 rounded-control bg-action-tint text-action font-black text-lg mb-3">
+        <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-teal-500/20 text-teal-400 font-black text-lg mb-3">
           H
         </div>
-        <h2 className="font-display text-2xl font-bold text-ink tracking-tight">
+        <h2 className="font-display text-2xl font-bold text-white tracking-tight">
           Welcome to Huddle
         </h2>
-        <p className="text-xs text-ink-2 mt-1">
+        <p className="text-xs text-slate-300 mt-1">
           The live map for campus events and pickup games
         </p>
       </div>
 
       {showVerifyBanner && (
-        <div className="mb-5 bg-live-tint border border-live/25 rounded-chip p-3.5 text-center">
-          <div className="flex items-center justify-center gap-1.5 text-live-ink font-semibold text-xs mb-1">
+        <div className="mb-5 bg-emerald-500/20 border border-emerald-500/25 rounded-full p-3.5 text-center">
+          <div className="flex items-center justify-center gap-1.5 text-emerald-400 font-semibold text-xs mb-1">
             <Mail className="w-3.5 h-3.5" /> Check your email
           </div>
-          <p className="text-xs text-ink-2">
-            We sent a verification link to <span className="font-semibold text-ink">{email}</span>.
+          <p className="text-xs text-slate-300">
+            We sent a verification link to <span className="font-semibold text-white">{email}</span>.
           </p>
         </div>
       )}
 
       <Tabs defaultValue="login" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-surface border border-line rounded-control p-1 h-auto mb-5">
+        <TabsList className="grid w-full grid-cols-2 bg-slate-800 border border-white/10 rounded-xl p-1 h-auto mb-5">
           <TabsTrigger
             value="login"
-            className="data-[state=active]:bg-sheet data-[state=active]:text-ink data-[state=active]:shadow-sm text-ink-3 text-xs font-medium rounded-chip py-2 transition-all"
+            className="data-[state=active]:bg-slate-900 data-[state=active]:text-white data-[state=active]:shadow-sm text-slate-400 text-xs font-medium rounded-full py-2 transition-all"
           >
             Sign In
           </TabsTrigger>
           <TabsTrigger
             value="signup"
-            className="data-[state=active]:bg-sheet data-[state=active]:text-ink data-[state=active]:shadow-sm text-ink-3 text-xs font-medium rounded-chip py-2 transition-all"
+            className="data-[state=active]:bg-slate-900 data-[state=active]:text-white data-[state=active]:shadow-sm text-slate-400 text-xs font-medium rounded-full py-2 transition-all"
           >
             Create Account
           </TabsTrigger>
@@ -126,7 +126,7 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
             onClick={handleGoogleSignIn}
             disabled={isLoading}
             variant="outline"
-            className="w-full h-11 border-line bg-sheet hover:bg-surface text-ink font-medium text-sm rounded-control shadow-sm transition-all flex items-center justify-center gap-2.5"
+            className="w-full h-11 border-white/10 bg-slate-900 hover:bg-slate-800 text-white font-medium text-sm rounded-xl shadow-sm transition-all flex items-center justify-center gap-2.5"
           >
             <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
               <path
@@ -152,17 +152,17 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
           {/* Divider */}
           <div className="relative py-1">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-line" />
+              <span className="w-full border-t border-white/10" />
             </div>
             <div className="relative flex justify-center text-[11px] font-mono uppercase tracking-wider">
-              <span className="px-3 bg-sheet text-ink-3">or continue with email</span>
+              <span className="px-3 bg-slate-900 text-slate-400">or continue with email</span>
             </div>
           </div>
 
           {/* Login Tab Form */}
           <TabsContent value="login" className="space-y-3.5 mt-0">
             <div className="space-y-1.5">
-              <Label htmlFor="email-login" className="text-xs font-medium text-ink-2">
+              <Label htmlFor="email-login" className="text-xs font-medium text-slate-300">
                 Email address
               </Label>
               <Input
@@ -171,12 +171,12 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
                 placeholder="student@umd.edu"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-10 bg-paper border-line text-ink placeholder:text-ink-4 text-sm rounded-chip focus:border-action focus:ring-1 focus:ring-action/20"
+                className="h-10 bg-slate-900/50 border-white/10 text-white placeholder:text-white-4 text-sm rounded-full focus:border-action focus:ring-1 focus:ring-action/20"
               />
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password-login" className="text-xs font-medium text-ink-2">
+                <Label htmlFor="password-login" className="text-xs font-medium text-slate-300">
                   Password
                 </Label>
               </div>
@@ -186,14 +186,14 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-10 bg-paper border-line text-ink placeholder:text-ink-4 text-sm rounded-chip focus:border-action focus:ring-1 focus:ring-action/20"
+                className="h-10 bg-slate-900/50 border-white/10 text-white placeholder:text-white-4 text-sm rounded-full focus:border-action focus:ring-1 focus:ring-action/20"
               />
             </div>
             <Button
               type="button"
               onClick={() => handleAuthAction("login")}
               disabled={isLoading || !email || !password}
-              className="w-full h-11 rounded-control bg-action hover:bg-action-hover text-white font-medium text-sm shadow-sm transition-all active:scale-[0.99]"
+              className="w-full h-11 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-white font-medium text-sm shadow-sm transition-all active:scale-[0.99]"
             >
               {isLoading ? (
                 <>
@@ -209,7 +209,7 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
           {/* Sign Up Tab Form */}
           <TabsContent value="signup" className="space-y-3.5 mt-0">
             <div className="space-y-1.5">
-              <Label htmlFor="name-signup" className="text-xs font-medium text-ink-2">
+              <Label htmlFor="name-signup" className="text-xs font-medium text-slate-300">
                 Your Name
               </Label>
               <Input
@@ -217,11 +217,11 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
                 placeholder="Alex Morgan"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="h-10 bg-paper border-line text-ink placeholder:text-ink-4 text-sm rounded-chip focus:border-action focus:ring-1 focus:ring-action/20"
+                className="h-10 bg-slate-900/50 border-white/10 text-white placeholder:text-white-4 text-sm rounded-full focus:border-action focus:ring-1 focus:ring-action/20"
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="email-signup" className="text-xs font-medium text-ink-2">
+              <Label htmlFor="email-signup" className="text-xs font-medium text-slate-300">
                 Email address
               </Label>
               <Input
@@ -230,11 +230,11 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
                 placeholder="student@umd.edu"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-10 bg-paper border-line text-ink placeholder:text-ink-4 text-sm rounded-chip focus:border-action focus:ring-1 focus:ring-action/20"
+                className="h-10 bg-slate-900/50 border-white/10 text-white placeholder:text-white-4 text-sm rounded-full focus:border-action focus:ring-1 focus:ring-action/20"
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="password-signup" className="text-xs font-medium text-ink-2">
+              <Label htmlFor="password-signup" className="text-xs font-medium text-slate-300">
                 Password
               </Label>
               <Input
@@ -243,14 +243,14 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
                 placeholder="At least 6 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-10 bg-paper border-line text-ink placeholder:text-ink-4 text-sm rounded-chip focus:border-action focus:ring-1 focus:ring-action/20"
+                className="h-10 bg-slate-900/50 border-white/10 text-white placeholder:text-white-4 text-sm rounded-full focus:border-action focus:ring-1 focus:ring-action/20"
               />
             </div>
             <Button
               type="button"
               onClick={() => handleAuthAction("signup")}
               disabled={isLoading || !email || !password}
-              className="w-full h-11 rounded-control bg-action hover:bg-action-hover text-white font-medium text-sm shadow-sm transition-all active:scale-[0.99]"
+              className="w-full h-11 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-white font-medium text-sm shadow-sm transition-all active:scale-[0.99]"
             >
               {isLoading ? (
                 <>
@@ -272,13 +272,13 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
               router.push('/map');
             }}
             disabled={isLoading}
-            className="w-full h-10 text-ink-3 hover:text-ink hover:bg-surface text-xs font-medium rounded-control"
+            className="w-full h-10 text-slate-400 hover:text-white hover:bg-slate-800 text-xs font-medium rounded-xl"
           >
             Continue as Guest without signing in
           </Button>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-xs rounded-chip p-3 text-center">
+            <div className="bg-red-500/20 border border-red-500/30 text-red-400 text-xs rounded-full p-3 text-center">
               {error}
             </div>
           )}

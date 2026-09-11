@@ -16,7 +16,7 @@ export function AuthGateModal({ isOpen, onClose, triggerContext }: AuthGateModal
 
   const headlines = {
     events: "Sign in to manage your events",
-    profile: "Create an account to build your profile",
+    profile: "Create an account for your profile",
     general: "Join Huddle to unlock full access"
   }
 
@@ -24,58 +24,61 @@ export function AuthGateModal({ isOpen, onClose, triggerContext }: AuthGateModal
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md p-6 sm:p-8 bg-sheet border border-line rounded-sheet shadow-overlay overflow-hidden">
+      <DialogContent className="sm:max-w-md p-6 sm:p-8 bg-[#0B101B]/95 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl overflow-hidden">
+        {/* Glow effect */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-32 bg-primary/20 blur-[80px] pointer-events-none -z-10" />
+        
         <div className="text-center mb-6">
-          <div className="w-12 h-12 rounded-control bg-action-tint text-action flex items-center justify-center mx-auto mb-3.5 border border-line">
-            <Sparkles className="w-6 h-6" />
+          <div className="w-16 h-16 rounded-full bg-primary/20 text-primary flex items-center justify-center mx-auto mb-5 border border-primary/30 shadow-[0_0_25px_rgba(249,115,22,0.3)]">
+            <Sparkles className="w-8 h-8" />
           </div>
-          <DialogTitle className="font-display text-2xl font-bold text-ink tracking-tight leading-tight">
+          <DialogTitle className="text-2xl font-black text-white tracking-tight leading-tight uppercase">
             {headline}
           </DialogTitle>
-          <p className="text-xs text-ink-3 mt-1.5">
+          <p className="text-xs text-slate-400 mt-2 font-medium tracking-wide uppercase">
             Free forever · Takes 10 seconds with Google
           </p>
         </div>
 
-        <div className="space-y-3.5 mb-7">
-          <div className="flex items-start gap-3 p-2.5 rounded-control bg-surface/60 border border-line/60">
-            <div className="w-7 h-7 rounded-chip bg-live-tint text-live flex items-center justify-center shrink-0 mt-0.5">
-              <CalendarRange className="w-4 h-4" />
+        <div className="space-y-3 mb-8">
+          <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+            <div className="w-10 h-10 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center shrink-0 border border-teal-500/30">
+              <CalendarRange className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-ink">Save your RSVPs</p>
-              <p className="text-xs text-ink-2 mt-0.5">Never lose track of upcoming games and campus meetups.</p>
+              <p className="text-sm font-bold text-slate-100 uppercase tracking-widest">Save your RSVPs</p>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">Never lose track of upcoming games and campus meetups.</p>
             </div>
           </div>
 
-          <div className="flex items-start gap-3 p-2.5 rounded-control bg-surface/60 border border-line/60">
-            <div className="w-7 h-7 rounded-chip bg-action-tint text-action flex items-center justify-center shrink-0 mt-0.5">
-              <Users className="w-4 h-4" />
+          <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+            <div className="w-10 h-10 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/30">
+              <Users className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-ink">Follow organizers & friends</p>
-              <p className="text-xs text-ink-2 mt-0.5">Get automatic alerts when your crew joins an event.</p>
+              <p className="text-sm font-bold text-slate-100 uppercase tracking-widest">Follow organizers & friends</p>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">Get automatic alerts when your crew joins an event.</p>
             </div>
           </div>
 
-          <div className="flex items-start gap-3 p-2.5 rounded-control bg-surface/60 border border-line/60">
-            <div className="w-7 h-7 rounded-chip bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
-              <Trophy className="w-4 h-4" />
+          <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+            <div className="w-10 h-10 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0 border border-amber-500/30">
+              <Trophy className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-ink">Build attendance reliability</p>
-              <p className="text-xs text-ink-2 mt-0.5">Unlock organizer badges and priority waitlist spots.</p>
+              <p className="text-sm font-bold text-slate-100 uppercase tracking-widest">Build attendance reliability</p>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">Unlock organizer badges and priority waitlist spots.</p>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-3">
           <Button
             onClick={() => {
               onClose()
               router.push("/login")
             }}
-            className="w-full h-11 bg-action hover:bg-action-hover text-white font-medium text-sm rounded-control shadow-sm transition-all active:scale-[0.99]"
+            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-widest text-sm rounded-xl shadow-[0_0_20px_rgba(249,115,22,0.4)] transition-all active:scale-[0.98]"
           >
             Continue to Sign In
           </Button>
@@ -87,7 +90,7 @@ export function AuthGateModal({ isOpen, onClose, triggerContext }: AuthGateModal
               }
             }}
             variant="ghost"
-            className="w-full h-10 text-ink-3 hover:text-ink hover:bg-surface text-xs font-medium rounded-control"
+            className="w-full h-10 text-slate-500 hover:text-white hover:bg-white/5 text-xs font-bold uppercase tracking-widest rounded-xl transition-colors"
           >
             Continue browsing without account
           </Button>

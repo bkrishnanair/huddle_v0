@@ -561,7 +561,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="bg-paper border-line shadow-raised text-ink p-0 gap-0 sm:max-w-md max-h-[calc(100vh-var(--safe-bottom))] sm:max-h-[90vh] flex flex-col"
+        className="bg-[#0B101B] border-white/10 shadow-2xl text-slate-50 p-0 gap-0 sm:max-w-md max-h-[calc(100vh-var(--safe-bottom))] sm:max-h-[90vh] flex flex-col"
         onInteractOutside={(e) => {
           const target = e.target as HTMLElement;
           // Prevent Radix from closing the modal or blocking the click 
@@ -574,11 +574,11 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         {postCreateState.show ? (
           <div className="p-6 flex flex-col items-center justify-center min-h-[300px] text-center animate-in zoom-in-95 duration-300">
             <div className="text-5xl mb-4">🎉</div>
-            <h3 className="text-xl font-black text-ink mb-1">Event is Live!</h3>
-            <p className="text-ink-3 text-sm mb-5">Share this link to start getting RSVPs</p>
+            <h3 className="text-xl font-black text-slate-50 mb-1">Event is Live!</h3>
+            <p className="text-slate-500 text-sm mb-5">Share this link to start getting RSVPs</p>
 
-            <div className="bg-surface-sunk w-full rounded-control p-3 flex items-center gap-2 mb-4 border border-line">
-              <span className="text-sm text-action truncate flex-1 text-left">{postCreateState.deepLink}</span>
+            <div className="bg-white/10 w-full rounded-xl p-3 flex items-center gap-2 mb-4 border border-white/10">
+              <span className="text-sm text-primary truncate flex-1 text-left">{postCreateState.deepLink}</span>
               <button
                 type="button"
                 onClick={async () => {
@@ -590,7 +590,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                     toast.error("Failed to copy link");
                   }
                 }}
-                className="bg-action hover:bg-action-hover text-paper text-ink px-3 py-1.5 rounded-chip text-sm font-bold shrink-0 transition-colors flex items-center gap-1.5 cursor-pointer pointer-events-auto"
+                className="bg-primary hover:bg-primary/90 text-paper text-slate-50 px-3 py-1.5 rounded-full text-sm font-bold shrink-0 transition-colors flex items-center gap-1.5 cursor-pointer pointer-events-auto"
               >
                 {copied ? <CheckCheck className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                 {copied ? "Copied!" : "Copy"}
@@ -601,7 +601,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
               <button
                 type="button"
                 onClick={() => navigator.share({ title: 'Join my event on Huddle!', url: postCreateState.deepLink }).catch(() => {})}
-                className="w-full bg-surface hover:bg-surface-sunk text-ink py-2.5 rounded-control text-sm font-bold mb-3 transition-colors border border-line cursor-pointer pointer-events-auto"
+                className="w-full bg-slate-800/50 hover:bg-white/10 text-slate-50 py-2.5 rounded-xl text-sm font-bold mb-3 transition-colors border border-white/10 cursor-pointer pointer-events-auto"
               >
                 📤 Share via...
               </button>
@@ -610,7 +610,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
             <button
               type="button"
               onClick={() => { setPostCreateState({ show: false, eventId: '', deepLink: '' }); onClose(); }}
-              className="text-ink-4 text-sm hover:text-ink transition-colors cursor-pointer pointer-events-auto"
+              className="text-slate-600 text-sm hover:text-slate-50 transition-colors cursor-pointer pointer-events-auto"
             >
               Done
             </button>
@@ -626,18 +626,18 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
           <form id="event-form" onSubmit={handleSubmit} className="space-y-4">
             {/* Event Type Segmented Toggle */}
             <div>
-              <Label className="text-xs text-ink-3 font-bold uppercase tracking-wider mb-2 block">Event Type</Label>
-              <div className="flex items-center gap-1.5 p-1 bg-surface border border-line rounded-full w-fit">
+              <Label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2 block">Event Type</Label>
+              <div className="flex items-center gap-1.5 p-1 bg-slate-800/50 border border-white/10 rounded-full w-fit">
                 {(["in-person", "virtual", "hybrid"] as const).map(type => (
                   <button
                     key={type}
                     type="button"
                     onClick={() => setEventType(type)}
                     className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${eventType === type
-                      ? type === "virtual" ? "bg-blue-500 text-ink shadow-lg shadow-blue-500/30"
-                        : type === "hybrid" ? "bg-violet-500 text-ink shadow-lg shadow-violet-500/30"
+                      ? type === "virtual" ? "bg-blue-500 text-slate-50 shadow-lg shadow-blue-500/30"
+                        : type === "hybrid" ? "bg-violet-500 text-slate-50 shadow-lg shadow-violet-500/30"
                           : "bg-primary text-action-foreground shadow-lg"
-                      : "text-ink-3 hover:text-ink hover:bg-white/10"
+                      : "text-slate-500 hover:text-slate-50 hover:bg-white/10"
                       }`}
                   >
                     {type === "in-person" && <MapPin className="w-3 h-3" />}
@@ -661,7 +661,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                   type="button"
                   onClick={handleEnhanceDescription}
                   disabled={isAiLoading || !formData.description}
-                  className="text-[10px] font-black uppercase tracking-wider text-action hover:text-action-tint transition-colors flex items-center gap-1 disabled:opacity-50"
+                  className="text-[10px] font-black uppercase tracking-wider text-primary hover:text-action-tint transition-colors flex items-center gap-1 disabled:opacity-50"
                   title="Enhance with AI"
                 >
                   {isAiLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
@@ -673,24 +673,24 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                 placeholder="A short and friendly description..."
                 value={formData.description}
                 onChange={(e) => handleInputChange("description", e.target.value)}
-                className="resize-none h-20 bg-surface border-line text-ink"
+                className="resize-none h-20 bg-slate-800/50 border-white/10 text-slate-50"
                 maxLength={500}
               />
               {suggestions && (
-                <div className="mt-2 p-3 rounded-chip bg-action text-paper/10 border border-action-tint space-y-2">
+                <div className="mt-2 p-3 rounded-full bg-primary text-paper/10 border border-action-tint space-y-2">
                   <div className="flex items-center gap-2 mb-1">
-                    <Sparkles className="w-3 h-3 text-action" />
-                    <span className="text-xs font-bold text-action">AI Suggestions</span>
+                    <Sparkles className="w-3 h-3 text-primary" />
+                    <span className="text-xs font-bold text-primary">AI Suggestions</span>
                   </div>
                   {suggestions.transitTip && (
-                    <div className="text-xs text-ink-2 flex flex-col gap-1">
+                    <div className="text-xs text-slate-400 flex flex-col gap-1">
                       <span className="font-semibold text-slate-200">Transit Tip:</span>
                       <div className="flex items-start gap-2">
                         <span className="flex-1">{suggestions.transitTip}</span>
                         <Button 
                           size="sm" 
                           variant="ghost" 
-                          className="h-6 text-[10px] px-2 bg-action text-paper/20 hover:bg-action text-paper/30 text-action-tint"
+                          className="h-6 text-[10px] px-2 bg-primary text-paper/20 hover:bg-primary text-paper/30 text-action-tint"
                           onClick={(e) => {
                             e.preventDefault();
                             setFormData(prev => ({ ...prev, transitTips: suggestions.transitTip || "" }));
@@ -703,7 +703,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                     </div>
                   )}
                   {suggestions.suggestedQuestions && suggestions.suggestedQuestions.length > 0 && (
-                    <div className="text-xs text-ink-2 flex flex-col gap-1">
+                    <div className="text-xs text-slate-400 flex flex-col gap-1">
                       <span className="font-semibold text-slate-200">RSVP Questions:</span>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {suggestions.suggestedQuestions.map((q, i) => (
@@ -716,7 +716,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                                 toast.success("Added question!");
                               }
                             }}
-                            className="text-[10px] bg-surface hover:bg-surface-sunk cursor-pointer" 
+                            className="text-[10px] bg-slate-800/50 hover:bg-white/10 cursor-pointer" 
                           >
                             {q}
                           </Chip>
@@ -751,7 +751,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
             {/* Additional Tags Multi-Select */}
             {formData.category && (
               <div className="space-y-2">
-                <Label className="text-xs text-ink-3">Additional Tags <span className="text-slate-600 font-normal">(Optional — helps cross-category discovery)</span></Label>
+                <Label className="text-xs text-slate-500">Additional Tags <span className="text-slate-600 font-normal">(Optional — helps cross-category discovery)</span></Label>
                 <div className="flex flex-wrap gap-2">
                   {CATEGORIES.filter(c => c !== formData.category).map(tag => {
                     const isSelected = formData.tags.includes(tag);
@@ -766,10 +766,10 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                             handleInputChange("tags", [...formData.tags, tag]);
                           }
                         }}
-                        className={`px-3 py-1.5 rounded-chip text-xs font-bold transition-all border ${
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
                           isSelected
-                            ? 'bg-primary/20 border-primary/40 text-action'
-                            : 'bg-white/5 border-line text-ink-3 hover:bg-white/10'
+                            ? 'bg-primary/20 border-primary/40 text-primary'
+                            : 'bg-white/5 border-white/10 text-slate-500 hover:bg-white/10'
                         }`}
                       >
                         {isSelected ? '✓ ' : ''}{tag}
@@ -785,7 +785,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
               <div className="space-y-2">
                 <Label htmlFor="virtualLink" className="flex items-center gap-2">
                   <Video className="w-4 h-4 text-blue-400" />
-                  Meeting Link <span className="text-action text-xs">*</span>
+                  Meeting Link <span className="text-primary text-xs">*</span>
                 </Label>
                 <Input
                   id="virtualLink"
@@ -793,23 +793,23 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                   placeholder="https://zoom.us/j/... or https://meet.google.com/..."
                   value={virtualLink}
                   onChange={(e) => setVirtualLink(e.target.value)}
-                  className="bg-surface border-line text-ink"
+                  className="bg-slate-800/50 border-white/10 text-slate-50"
                   required
                 />
-                <p className="text-[10px] text-ink-4">Paste a Zoom, Google Meet, Teams, or Discord link.</p>
+                <p className="text-[10px] text-slate-600">Paste a Zoom, Google Meet, Teams, or Discord link.</p>
               </div>
             )}
 
             {/* Virtual-only: optional timezone/general location */}
             {isVirtual && (
               <div>
-                <Label htmlFor="location" className="text-ink-3">General Location / Timezone <span className="text-[10px] font-normal">(Opt)</span></Label>
+                <Label htmlFor="location" className="text-slate-500">General Location / Timezone <span className="text-[10px] font-normal">(Opt)</span></Label>
                 <Input
                   id="location"
                   placeholder="e.g., EST or College Park, MD"
                   value={formData.location}
                   onChange={(e) => handleInputChange("location", e.target.value)}
-                  className="bg-surface border-line text-ink"
+                  className="bg-slate-800/50 border-white/10 text-slate-50"
                 />
               </div>
             )}
@@ -817,7 +817,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
             {/* Location Picker — only for in-person and hybrid */}
             {needsLocation && (
               <div className={isFullscreenMap ? "fixed inset-0 z-[100] bg-slate-950 p-4 pt-10 flex flex-col" : ""}>
-                <Label htmlFor="location-search" className={isFullscreenMap ? "text-ink mb-2" : ""}>Location</Label>
+                <Label htmlFor="location-search" className={isFullscreenMap ? "text-slate-50 mb-2" : ""}>Location</Label>
                 {mapsApiKey ? (
                   <APIProvider apiKey={mapsApiKey}>
                     <div className="flex items-center gap-2">
@@ -828,14 +828,14 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                         type="button"
                         variant="outline"
                         size="icon"
-                        className="h-10 w-10 shrink-0 border-line-strong hover:bg-primary/10 hover:text-action hover:border-primary/30"
+                        className="h-10 w-10 shrink-0 border-line-strong hover:bg-primary/10 hover:text-primary hover:border-primary/30"
                         onClick={handleUseCurrentLocation}
                         title="Use current location"
                       >
                         <Navigation className="w-4 h-4" />
                       </Button>
                     </div>
-                    <div className={`${isFullscreenMap ? "flex-1 mt-4" : "h-48 mt-2"} w-full rounded-chip overflow-hidden relative border border-border`}>
+                    <div className={`${isFullscreenMap ? "flex-1 mt-4" : "h-48 mt-2"} w-full rounded-full overflow-hidden relative border border-border`}>
                       <Map
                         center={mapCenter}
                         defaultZoom={15}
@@ -855,21 +855,21 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                           variant="secondary"
                           size="icon"
                           onClick={(e) => { e.preventDefault(); setIsFullscreenMap(!isFullscreenMap); }}
-                          className="bg-slate-900/80 hover:bg-surface text-ink backdrop-blur-md border border-line-strong shadow-xl h-10 w-10 text-xs"
+                          className="bg-slate-900/80 hover:bg-slate-800/50 text-slate-50 backdrop-blur-md border border-line-strong shadow-xl h-10 w-10 text-xs"
                         >
                           {isFullscreenMap ? "Minimize" : "Expand"}
                         </Button>
                       </div>
                     </div>
                     {isFullscreenMap && (
-                      <Button type="button" onClick={() => setIsFullscreenMap(false)} className="mt-4 w-full h-12 bg-primary hover:bg-orange-600 text-ink font-bold rounded-control shadow-lg border border-orange-500/50">
+                      <Button type="button" onClick={() => setIsFullscreenMap(false)} className="mt-4 w-full h-12 bg-primary hover:bg-orange-600 text-slate-50 font-bold rounded-xl shadow-lg border border-orange-500/50">
                         Confirm Location Pin
                       </Button>
                     )}
 
                   </APIProvider>
                 ) : (
-                  <div className="h-48 w-full rounded-chip mt-2 border border-border flex items-center justify-center text-center bg-surface/50">
+                  <div className="h-48 w-full rounded-full mt-2 border border-border flex items-center justify-center text-center bg-slate-800/50/50">
                     <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading Map...
                   </div>
                 )}
@@ -880,22 +880,22 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
               {/* Row 1: Start Date + End Date */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="date">Start Date <span className="text-action text-xs">*</span></Label>
+                  <Label htmlFor="date">Start Date <span className="text-primary text-xs">*</span></Label>
                   <Input id="date" type="date" value={formData.date} onChange={(e) => handleInputChange("date", e.target.value)} style={{ colorScheme: "white" }} className="w-full pr-3 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:brightness-150 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-90" required />
                 </div>
                 <div>
-                  <Label htmlFor="endDate" className="text-ink-3">End Date <span className="text-[10px] font-normal">(Opt)</span></Label>
+                  <Label htmlFor="endDate" className="text-slate-500">End Date <span className="text-[10px] font-normal">(Opt)</span></Label>
                   <Input id="endDate" type="date" value={formData.endDate} onChange={(e) => handleInputChange("endDate", e.target.value)} style={{ colorScheme: "white" }} className="w-full pr-3 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:brightness-150 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-90" />
                 </div>
               </div>
               {/* Row 2: Start Time + End Time */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="time">Start Time <span className="text-action text-xs">*</span></Label>
+                  <Label htmlFor="time">Start Time <span className="text-primary text-xs">*</span></Label>
                   <Input id="time" type="time" value={formData.time} onChange={(e) => handleInputChange("time", e.target.value)} style={{ colorScheme: "white" }} className="w-full pr-3 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:brightness-150 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-90" required />
                 </div>
                 <div>
-                  <Label htmlFor="endTime" className="text-ink-3">End Time <span className="text-[10px] font-normal">(Opt)</span></Label>
+                  <Label htmlFor="endTime" className="text-slate-500">End Time <span className="text-[10px] font-normal">(Opt)</span></Label>
                   <Input id="endTime" type="time" value={formData.endTime} onChange={(e) => handleInputChange("endTime", e.target.value)} style={{ colorScheme: "white" }} className="w-full pr-3 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:brightness-150 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-90" />
                 </div>
               </div>
@@ -903,16 +903,16 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
               {/* Repeat Toggle (Only on creation) */}
               {!isEditMode && (
                 <div className="space-y-3 pt-2">
-                  <div className="flex items-center justify-between p-3 rounded-chip bg-white/5 border border-line">
+                  <div className="flex items-center justify-between p-3 rounded-full bg-white/5 border border-white/10">
                     <span className="text-sm font-medium text-slate-200">Repeat Event</span>
                     <Switch checked={isRecurring} onCheckedChange={setIsRecurring} />
                   </div>
                   {isRecurring && (
-                    <div className="grid grid-cols-2 gap-4 p-3 rounded-chip bg-black/20 border border-primary/20">
+                    <div className="grid grid-cols-2 gap-4 p-3 rounded-full bg-black/20 border border-primary/20">
                       <div>
                         <Label htmlFor="recurrenceType">Frequency</Label>
                         <Select value={recurrenceType} onValueChange={(v: any) => setRecurrenceType(v)}>
-                          <SelectTrigger className="mt-1 bg-surface border-none"><SelectValue /></SelectTrigger>
+                          <SelectTrigger className="mt-1 bg-slate-800/50 border-none"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="weekly">Weekly</SelectItem>
                             <SelectItem value="biweekly">Every 2 Weeks</SelectItem>
@@ -929,7 +929,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                           onChange={(e) => setRecurrenceEndDate(e.target.value)}
                           min={formData.date}
                           style={{ colorScheme: "white" }}
-                          className="mt-1 w-full bg-surface border-none pr-3 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:brightness-150 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-90"
+                          className="mt-1 w-full bg-slate-800/50 border-none pr-3 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:brightness-150 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-90"
                           required={isRecurring}
                         />
                       </div>
@@ -941,7 +941,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
 
             {
               conflictWarning && (
-                <div className="bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-bold p-3 rounded-chip flex items-center gap-2">
+                <div className="bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-bold p-3 rounded-full flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   {conflictWarning}
                 </div>
@@ -961,28 +961,28 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
               />
             </div>
 
-            <div className="space-y-4 pt-6 border-t border-line">
-              <h3 className="font-black text-sm uppercase tracking-widest text-action/80 mb-2">Advanced Logistics (Optional)</h3>
+            <div className="space-y-4 pt-6 border-t border-white/10">
+              <h3 className="font-black text-sm uppercase tracking-widest text-primary/80 mb-2">Advanced Logistics (Optional)</h3>
 
               <div className="space-y-2 pb-2">
-                <Label className="text-xs text-ink-3 font-bold uppercase tracking-wider">Requested Attendee Info</Label>
-                <div className="flex items-center justify-between p-3 rounded-chip bg-white/5 border border-line">
+                <Label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Requested Attendee Info</Label>
+                <div className="flex items-center justify-between p-3 rounded-full bg-white/5 border border-white/10">
                   <span className="text-sm font-medium text-slate-200">"Do you need a ride?"</span>
                   <Switch checked={askRide} onCheckedChange={setAskRide} />
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-chip bg-white/5 border border-line">
+                <div className="flex items-center justify-between p-3 rounded-full bg-white/5 border border-white/10">
                   <span className="text-sm font-medium text-slate-200">"Any dietary restrictions?"</span>
                   <Switch checked={askDiet} onCheckedChange={setAskDiet} />
                 </div>
                 {savedQuestions.map(q => (
-                  <div key={q} className="flex items-center justify-between p-3 rounded-chip bg-white/5 border border-primary/20">
-                    <span className="text-sm font-medium text-slate-200 flex items-center gap-2"><Bookmark className="w-3 h-3 text-action" /> {q}</span>
+                  <div key={q} className="flex items-center justify-between p-3 rounded-full bg-white/5 border border-primary/20">
+                    <span className="text-sm font-medium text-slate-200 flex items-center gap-2"><Bookmark className="w-3 h-3 text-primary" /> {q}</span>
                     <div className="flex items-center gap-2">
                       <Switch checked={selectedQuestions.includes(q)} onCheckedChange={(checked) => {
                         if (checked) setSelectedQuestions(prev => [...prev, q]);
                         else setSelectedQuestions(prev => prev.filter(x => x !== q));
                       }} />
-                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-ink-4 hover:text-red-400" onClick={() => handleDeletePreset('questions', q)}>
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-slate-600 hover:text-red-400" onClick={() => handleDeletePreset('questions', q)}>
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
@@ -993,7 +993,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                     placeholder="Ask a custom question..."
                     value={newQuestion}
                     onChange={e => setNewQuestion(e.target.value)}
-                    className="h-9 bg-surface border-line text-ink"
+                    className="h-9 bg-slate-800/50 border-white/10 text-slate-50"
                   />
                   <Button type="button" variant="secondary" size="sm" className="h-9 whitespace-nowrap" onClick={() => handleSavePreset('questions', newQuestion)} disabled={!newQuestion.trim()}>
                     <Save className="w-3.5 h-3.5 mr-1" /> Save
@@ -1001,10 +1001,10 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                 </div>
               </div>
 
-              <div className="space-y-3 pb-2 pt-2 border-t border-line">
-                <Label className="text-xs text-ink-3 font-bold uppercase tracking-wider">Pickup Points</Label>
+              <div className="space-y-3 pb-2 pt-2 border-t border-white/10">
+                <Label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Pickup Points</Label>
                 {pickupPoints.map((pt, i) => (
-                  <div key={pt.id} className="flex items-center gap-2 bg-slate-900/50 p-2 rounded-chip border border-line">
+                  <div key={pt.id} className="flex items-center gap-2 bg-slate-900/50 p-2 rounded-full border border-white/10">
                     <Input
                       placeholder="Location (e.g. GH Lobby)"
                       value={pt.location}
@@ -1018,7 +1018,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                       className="h-8 w-24 bg-transparent border-none text-xs"
                       style={{ colorScheme: "dark" }}
                     />
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-ink-4 hover:text-red-400 shrink-0" onClick={() => setPickupPoints(prev => prev.filter(p => p.id !== pt.id))}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 hover:text-red-400 shrink-0" onClick={() => setPickupPoints(prev => prev.filter(p => p.id !== pt.id))}>
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
@@ -1027,17 +1027,17 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="w-full h-8 text-xs border-dashed border-line-strong text-ink-3 hover:text-ink"
+                  className="w-full h-8 text-xs border-dashed border-line-strong text-slate-500 hover:text-slate-50"
                   onClick={() => setPickupPoints(prev => [...prev, { id: Math.random().toString(36).substr(2, 9), location: "", time: "" }])}
                 >
                   <Plus className="w-3 h-3 mr-2" /> Add Pickup Point
                 </Button>
               </div>
 
-              <div className="space-y-3 pb-2 pt-2 border-t border-line">
-                <Label className="text-xs text-ink-3 font-bold uppercase tracking-wider">Organization HQ (Optional)</Label>
-                <div className="p-3 bg-black/20 rounded-chip border border-primary/20">
-                  <p className="text-[10px] text-ink-4 mb-2 mt-1">If your club is travelling, add your campus HQ here so local members can discover this trip.</p>
+              <div className="space-y-3 pb-2 pt-2 border-t border-white/10">
+                <Label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Organization HQ (Optional)</Label>
+                <div className="p-3 bg-black/20 rounded-full border border-primary/20">
+                  <p className="text-[10px] text-slate-600 mb-2 mt-1">If your club is travelling, add your campus HQ here so local members can discover this trip.</p>
                   {mapsApiKey && (
                     <APIProvider apiKey={mapsApiKey}>
                       <LocationSearchInput onPlaceSelect={handleOrgPlaceSelect} insideModal={true} />
@@ -1047,14 +1047,14 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                 </div>
               </div>
 
-              <div className="space-y-3 pb-2 pt-2 border-t border-line">
-                <Label className="text-xs text-ink-3 font-bold uppercase tracking-wider">Schedule & Transit</Label>
+              <div className="space-y-3 pb-2 pt-2 border-t border-white/10">
+                <Label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Schedule & Transit</Label>
                 <div className="space-y-1">
-                  <Label htmlFor="stayUntil" className="text-xs text-ink-4">Stay Until (Optional Note)</Label>
+                  <Label htmlFor="stayUntil" className="text-xs text-slate-600">Stay Until (Optional Note)</Label>
                   <Input id="stayUntil" placeholder="e.g. Please stay until 9pm" value={stayUntil} onChange={(e) => setStayUntil(e.target.value)} className="h-9" />
                 </div>
                 <div className="space-y-1 mt-2">
-                  <Label htmlFor="transitTips" className="text-xs text-ink-4">Transit Tips</Label>
+                  <Label htmlFor="transitTips" className="text-xs text-slate-600">Transit Tips</Label>
                   {savedTransitTips.length > 0 && (
                     <div className="flex flex-col gap-1.5 mb-2">
                       {savedTransitTips.map(tip => (
@@ -1062,7 +1062,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                           <button type="button" onClick={() => setTransitTips(tip)} className="px-2 py-1.5 text-action-foreground hover:bg-primary/30 transition-colors truncate text-left flex-1" title={tip}>
                             {tip}
                           </button>
-                          <button type="button" onClick={() => handleDeletePreset('transitTips', tip)} className="px-2 py-1.5 text-ink-3 hover:bg-red-500/20 hover:text-red-400 transition-colors border-l border-primary/30 opacity-70 group-hover:opacity-100 shrink-0">
+                          <button type="button" onClick={() => handleDeletePreset('transitTips', tip)} className="px-2 py-1.5 text-slate-500 hover:bg-red-500/20 hover:text-red-400 transition-colors border-l border-primary/30 opacity-70 group-hover:opacity-100 shrink-0">
                             <Trash2 className="w-3 h-3" />
                           </button>
                         </div>
@@ -1071,23 +1071,23 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                   )}
                   <div className="flex items-center gap-2">
                     <Input id="transitTips" placeholder="e.g. 116 Purple to stop 16/17" value={transitTips} onChange={(e) => setTransitTips(e.target.value)} className="h-9" />
-                    <Button type="button" variant="outline" size="sm" className="h-9 border-line" onClick={() => handleSavePreset('transitTips', transitTips)} disabled={!transitTips.trim() || savedTransitTips.includes(transitTips.trim())} title="Save to Presets">
+                    <Button type="button" variant="outline" size="sm" className="h-9 border-white/10" onClick={() => handleSavePreset('transitTips', transitTips)} disabled={!transitTips.trim() || savedTransitTips.includes(transitTips.trim())} title="Save to Presets">
                       <Save className="w-3.5 h-3.5" />
                     </Button>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-3 pb-2 pt-2 border-t border-line">
-                <Label className="text-xs text-ink-3 font-bold uppercase tracking-wider">Scheduled Broadcasts</Label>
+              <div className="space-y-3 pb-2 pt-2 border-t border-white/10">
+                <Label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Scheduled Broadcasts</Label>
                 {scheduledBroadcasts.map((b, i) => (
-                  <div key={i} className="flex gap-2 bg-slate-900/50 p-2 rounded-chip border border-line">
+                  <div key={i} className="flex gap-2 bg-slate-900/50 p-2 rounded-full border border-white/10">
                     <Select value={String(b.relativeHours)} onValueChange={(v) => setScheduledBroadcasts(prev => {
                       const newArr = [...prev];
                       newArr[i].relativeHours = Number(v);
                       return newArr;
                     })}>
-                      <SelectTrigger className="w-[110px] text-xs bg-surface/50 border-none shrink-0">
+                      <SelectTrigger className="w-[110px] text-xs bg-slate-800/50/50 border-none shrink-0">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1107,7 +1107,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                       })}
                       className="flex-1 bg-transparent border-none text-xs h-8 px-1"
                     />
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-ink-4 hover:text-red-400 shrink-0" onClick={() => setScheduledBroadcasts(prev => prev.filter((_, idx) => idx !== i))}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 hover:text-red-400 shrink-0" onClick={() => setScheduledBroadcasts(prev => prev.filter((_, idx) => idx !== i))}>
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
@@ -1116,7 +1116,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="w-full h-8 text-xs border-dashed border-line-strong text-ink-3 hover:text-ink"
+                  className="w-full h-8 text-xs border-dashed border-line-strong text-slate-500 hover:text-slate-50"
                   onClick={() => setScheduledBroadcasts(prev => [...prev, { message: "", relativeHours: 24 }])}
                 >
                   <Plus className="w-3 h-3 mr-2" /> Add Scheduled Broadcast
@@ -1125,23 +1125,23 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
             </div>
 
             <div className="space-y-4 pt-6 border-t border-border mt-6">
-              <div className="flex items-center justify-between p-4 rounded-chip bg-white/5">
+              <div className="flex items-center justify-between p-4 rounded-full bg-white/5">
                 <div>
                   <Label htmlFor="private" className="font-bold flex items-center gap-2">
                     Make Private (Link Only)
                   </Label>
-                  <p className="text-sm text-ink-3 mt-1">Hide this event from the global map feed.</p>
+                  <p className="text-sm text-slate-500 mt-1">Hide this event from the global map feed.</p>
                 </div>
                 <Switch id="private" checked={isPrivate} onCheckedChange={setIsPrivate} />
               </div>
 
-              <div className="flex items-center justify-between p-4 rounded-chip bg-white/5">
+              <div className="flex items-center justify-between p-4 rounded-full bg-white/5">
                 <div>
                   <Label htmlFor="boost" className="font-bold flex items-center gap-2">
                     <Rocket className="w-5 h-5 text-yellow-400" />
                     Boost Event
                   </Label>
-                  <p className="text-sm text-ink-3 mt-1">Get your event featured to attract more attendees.</p>
+                  <p className="text-sm text-slate-500 mt-1">Get your event featured to attract more attendees.</p>
                 </div>
                 <Switch id="boost" checked={boostEvent} onCheckedChange={setBoostEvent} />
               </div>

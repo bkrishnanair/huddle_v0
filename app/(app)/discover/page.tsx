@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/firebase-context"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { EventCard, EventCardSkeleton } from "@/components/events/event-card"
+
 import EventDetailsDrawer from "@/components/event-details-drawer"
 import CreateEventModal from "@/components/create-event-modal"
 import { Chip } from "@/components/ui/chip"
@@ -289,10 +290,9 @@ export default function DiscoverPage() {
                             } else if (activeTime === 'Today') {
                                 matchesTime = isToday(eventDateTime);
                             } else if (activeTime === 'This Week') {
-                                const weekEnd = endOfWeek(now, { weekStartsOn: 0 }); // Sunday
-                                matchesTime = eventDateTime >= startOfDay(now) && eventDateTime <= weekEnd;
-                            } else if (activeTime === 'This Weekend') {
-                                matchesTime = isWeekend(eventDateTime) && isFuture(eventDateTime);
+                                matchesTime = eventDateTime >= startOfDay(now) && isBefore(eventDateTime, addDays(startOfDay(now), 8));
+                            } else if (activeTime === 'This Month') { matchesTime = eventDateTime >= startOfDay(now) && isBefore(eventDateTime, addDays(startOfDay(now), 31)); } else if (activeTime === 'This Weekend') {
+                                matchesTime = isWeekend(eventDateTime) && eventDateTime >= startOfDay(now) && isBefore(eventDateTime, addDays(startOfDay(now), 7));
                             }
                         }
                     } catch (e) {
