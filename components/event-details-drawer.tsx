@@ -559,9 +559,9 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
         const errorData = await response.json()
         toast.error(errorData.error || "Failed to update RSVP")
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("RSVP error:", error)
-      toast.error("An unexpected error occurred")
+      toast.error(error?.message || "An unexpected error occurred")
     } finally {
       setIsLoading(false)
     }

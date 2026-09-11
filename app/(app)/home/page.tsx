@@ -10,9 +10,10 @@ import { useRouter } from "next/navigation"
 
 interface FeaturedData {
   happeningNow: GameEvent[];
-  popular: GameEvent[];
-  newEvents: GameEvent[];
-  categories: { name: string; count: number }[];
+  popularThisWeek: GameEvent[];
+  newOnHuddle: GameEvent[];
+  categoryCounts: { name: string; count: number }[];
+  serendipityPicks: GameEvent[];
 }
 
 export default function HomePage() {
@@ -42,14 +43,23 @@ export default function HomePage() {
   const { topMatches, upcomingEvents } = useMemo(() => {
     if (!data) return { topMatches: [], upcomingEvents: [] };
     
-    // Tsenta Layout: "Top Job Matches" -> "Top Event Matches" (happening now + top popular)
-    const matches = [...data.happeningNow, ...data.popular.slice(0, 3)].slice(0, 5).map((e, i) => ({
-      ...e,
-      _matchScore: 98 - (i * 4) // mock match score: 98, 94, 90...
-    }));
+    const safeHappeningNow = data?.happeningNow || [];
+    const safePopular = data?.popularThisWeek || [];
+    const safeNew = data?.newOnHuddle || [];
+    const safeSerendipity = data?.serendipityPicks || [];
 
-    // "All applications" -> "Upcoming Events Grid" (rest of popular + new)
-    const upcoming = [...data.popular.slice(3), ...data.newEvents];
+    // Tsenta Layout: "Top Job Matches" -> "Top Event Matches"
+    // Mix Serendipity Picks + Happening Now + Top Popular
+    const matches = [...safeSerendipity, ...safeHappeningNow, ...safePopular.slice(0, 3)]
+      .filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i) // dedup
+      .slice(0, 5)
+      .map((e, i) => ({
+        ...e,
+        _matchScore: 98 - (i * 4) // mock match score: 98, 94, 90...
+      }));
+
+    // "All applications" -> "Upcoming Events Grid"
+    const upcoming = [...safePopular.slice(3), ...safeNew];
     
     // Deduplicate by ID
     const uniqueUpcoming = upcoming.filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i);
@@ -166,7 +176,7 @@ export default function HomePage() {
           </section>
         )}
 
-        {(!data || (data.happeningNow.length === 0 && data.popular.length === 0 && data.newEvents.length === 0)) && (
+        {(!data || (data.happeningNow.length === 0 && data.popularThisWeek.length === 0 && data.newOnHuddle.length === 0)) && (
           <div className="text-center py-20 border border-white/10 rounded-3xl bg-slate-900/50">
             <div className="text-4xl mb-4">🗺️</div>
             <h2 className="text-xl font-bold text-white mb-2">No events found</h2>

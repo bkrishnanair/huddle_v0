@@ -71,16 +71,24 @@ export const signInWithGoogle = async () => {
 export const signInAsGuest = async (name: string) => {
   if (!auth) throw new Error("Firebase Auth is not initialized on the client.");
 
-  const result = await signInAnonymously(auth);
-  const user = result.user;
+  try {
+    const result = await signInAnonymously(auth);
+    const user = result.user;
 
-  // We save them in our users collection so they can chat and be seen by organizers
-  await createUser(user.uid, {
-    name: name,
-    isGuest: true,
-  });
+    // We save them in our users collection so they can chat and be seen by organizers
+    await createUser(user.uid, {
+      name: name,
+      isGuest: true,
+    });
 
-  return user;
+    return user;
+  } catch (error: any) {
+    console.error("signInAsGuest failed:", error);
+    if (error.message?.includes("referer") || error.code?.includes("referer")) {
+      throw new Error("Guest sign-in blocked by Firebase API restrictions. Please test on localhost:3000 or whitelist your local IP in Google Cloud Console.");
+    }
+    throw error;
+  }
 };
 
 
