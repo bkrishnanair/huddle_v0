@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react"
 import { GameEvent } from "@/lib/types"
 import { EventCard } from "@/components/events/event-card"
+import { EventGridCard } from "@/components/dashboard/event-grid-card"
 import { Loader2, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import { useAuth } from "@/lib/firebase-context"
@@ -255,7 +256,7 @@ export function EventList({ userId, eventType, searchQuery = "", filterStartDate
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {processedEvents.filter(isUpcoming).map((event) => (
-                    <EventCard
+                    <EventGridCard
                       key={event.id}
                       event={event}
                       onSelectEvent={setSelectedEvent}
@@ -273,7 +274,7 @@ export function EventList({ userId, eventType, searchQuery = "", filterStartDate
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {processedEvents.filter(e => !isUpcoming(e)).reverse().map((event) => (
-                    <EventCard
+                    <EventGridCard
                       key={event.id}
                       event={event}
                       onSelectEvent={setSelectedEvent}
@@ -289,7 +290,7 @@ export function EventList({ userId, eventType, searchQuery = "", filterStartDate
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {processedEvents.map((event) => (
-            <EventCard
+            <EventGridCard
               key={event.id}
               event={event}
               onSelectEvent={setSelectedEvent}

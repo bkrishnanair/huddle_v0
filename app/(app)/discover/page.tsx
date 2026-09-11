@@ -5,6 +5,8 @@ import { useAuth } from "@/lib/firebase-context"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { EventCard, EventCardSkeleton } from "@/components/events/event-card"
+import { EventGridCard } from "@/components/dashboard/event-grid-card"
+
 import EventDetailsDrawer from "@/components/event-details-drawer"
 import CreateEventModal from "@/components/create-event-modal"
 import { Chip } from "@/components/ui/chip"
@@ -405,7 +407,7 @@ export default function DiscoverPage() {
                     <section className="mb-8">
                         <h2 className="text-2xl font-bold text-slate-50 mb-4 flex items-center gap-2"><Star className="w-6 h-6 text-yellow-400" /> Recommended For You</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {recommendedEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} showMapButton={true} />)}
+                            {recommendedEvents.map(event => <EventGridCard key={event.id} event={event} onSelectEvent={setSelectedEvent} />)}
                         </div>
                     </section>
                 )}
@@ -414,7 +416,7 @@ export default function DiscoverPage() {
                     <section className="mb-8">
                         <h2 className="text-2xl font-bold text-slate-50 mb-4">Community Events</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {communityEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} showMapButton={true} />)}
+                            {communityEvents.map(event => <EventGridCard key={event.id} event={event} onSelectEvent={setSelectedEvent} />)}
                         </div>
                     </section>
                 )}
@@ -428,7 +430,7 @@ export default function DiscoverPage() {
                             </span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {terplinkEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} showMapButton={true} />)}
+                            {terplinkEvents.map(event => <EventGridCard key={event.id} event={event} onSelectEvent={setSelectedEvent} />)}
                         </div>
                     </section>
                 )}

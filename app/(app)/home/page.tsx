@@ -1,47 +1,26 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { useAuth } from "@/lib/firebase-context";
-import { useRouter } from "next/navigation";
-import { EventCard, EventCardSkeleton } from "@/components/events/event-card";
-import EventDetailsDrawer from "@/components/event-details-drawer";
-import { GameEvent } from "@/lib/types";
-import { getCategoryColor } from "@/lib/utils";
-import {
-  Loader2,
-  Radio,
-  TrendingUp,
-  Sparkles,
-  LayoutGrid,
-  ChevronRight,
-  ArrowRight,
-} from "lucide-react";
-
-const CATEGORY_EMOJI: Record<string, string> = {
-  Sports: "⚽",
-  Music: "🎵",
-  Community: "🤝",
-  Learning: "📚",
-  "Food & Drink": "🍕",
-  Tech: "💻",
-  "Arts & Culture": "🎨",
-  Outdoors: "🌲",
-};
+import { useState, useEffect, useMemo } from "react"
+import { useAuth } from "@/lib/firebase-context"
+import { EventGridCard } from "@/components/dashboard/event-grid-card"
+import EventDetailsDrawer from "@/components/event-details-drawer"
+import { GameEvent } from "@/lib/types"
+import { Loader2, Search, SlidersHorizontal } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 interface FeaturedData {
   happeningNow: GameEvent[];
-  popularThisWeek: GameEvent[];
-  newOnHuddle: GameEvent[];
-  categoryCounts: { name: string; count: number }[];
-  serendipityPicks?: GameEvent[];
+  popular: GameEvent[];
+  newEvents: GameEvent[];
+  categories: { name: string; count: number }[];
 }
 
 export default function HomePage() {
-  const { user } = useAuth();
-  const router = useRouter();
-  const [data, setData] = useState<FeaturedData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null);
+  const { user } = useAuth()
+  const router = useRouter()
+  const [data, setData] = useState<FeaturedData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null)
 
   useEffect(() => {
     async function fetchFeatured() {
@@ -60,275 +39,143 @@ export default function HomePage() {
     fetchFeatured();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-950 px-4 py-6 pb-28">
-        <div className="max-w-2xl mx-auto">
-          <div className="mb-8">
-            <div className="h-8 w-48 bg-slate-800 rounded-lg animate-pulse mb-2" />
-            <div className="h-4 w-64 bg-slate-800/50 rounded animate-pulse" />
-          </div>
-          <div className="space-y-4">
-            <EventCardSkeleton />
-            <EventCardSkeleton />
-            <EventCardSkeleton />
-          </div>
-        </div>
-      </div>
-    );
+  const { topMatches, upcomingEvents } = useMemo(() => {
+    if (!data) return { topMatches: [], upcomingEvents: [] };
+    
+    // Tsenta Layout: "Top Job Matches" -> "Top Event Matches" (happening now + top popular)
+    const matches = [...data.happeningNow, ...data.popular.slice(0, 3)].slice(0, 5).map((e, i) => ({
+      ...e,
+      _matchScore: 98 - (i * 4) // mock match score: 98, 94, 90...
+    }));
+
+    // "All applications" -> "Upcoming Events Grid" (rest of popular + new)
+    const upcoming = [...data.popular.slice(3), ...data.newEvents];
+    
+    // Deduplicate by ID
+    const uniqueUpcoming = upcoming.filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i);
+    // Remove if already in matches
+    const finalUpcoming = uniqueUpcoming.filter(u => !matches.some(m => m.id === u.id));
+
+    return { topMatches: matches, upcomingEvents: finalUpcoming };
+  }, [data]);
+
+  function getGreeting(): string {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    return "Good evening";
   }
 
-  const happeningNow = data?.happeningNow || [];
-  const popular = data?.popularThisWeek || [];
-  const newEvents = data?.newOnHuddle || [];
-  const categories = data?.categoryCounts || [];
-  const serendipityPicks = data?.serendipityPicks || [];
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-teal-500" />
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-slate-950 pb-28">
-      <div className="max-w-2xl mx-auto px-4 py-6">
+    <div className="flex-1 pb-24 overflow-x-hidden pt-4 bg-[#0f172a] min-h-screen">
+      <div className="px-4 max-w-7xl mx-auto space-y-10">
+        
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-black text-white tracking-tight">
+        <div>
+          <h1 className="text-2xl font-display font-bold text-white tracking-tight">
             {getGreeting()}, {user?.displayName?.split(" ")[0] || "there"} 👋
           </h1>
-          <p className="text-slate-400 mt-1">
-            Discover what&apos;s happening around campus
+          <p className="text-sm text-slate-400 mt-1">
+            Discover what's happening around campus, tailored for you.
           </p>
         </div>
 
-        {/* ============ SERENDIPITY PICKS ============ */}
-        {serendipityPicks.length > 0 && (
-          <section className="mb-8">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="relative">
-                <Sparkles className="w-5 h-5 text-teal-400" />
-              </div>
-              <h2 className="text-lg font-black text-white uppercase tracking-wider">
-                Serendipity Picks
+        {/* Tsenta-style Global Search & Quick Filters */}
+        <div className="flex flex-col gap-3">
+          <div 
+            onClick={() => router.push("/discover")}
+            className="flex items-center gap-3 bg-[#1e293b]/50 border border-white/10 hover:border-white/20 transition-all rounded-2xl px-4 py-3 cursor-pointer"
+          >
+            <Search className="w-5 h-5 text-slate-400" />
+            <span className="text-slate-400 text-sm font-medium flex-1">Search events, keywords, or vibes...</span>
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:inline-flex text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-800 px-2 py-1 rounded">cmd + k</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 mask-edges">
+            <button onClick={() => router.push("/discover?time=Today")} className="shrink-0 px-3 py-1.5 rounded-full bg-slate-800/80 hover:bg-slate-700 border border-white/5 text-xs font-bold text-slate-300 transition-colors">
+              Today
+            </button>
+            <button onClick={() => router.push("/discover?time=This Weekend")} className="shrink-0 px-3 py-1.5 rounded-full bg-slate-800/80 hover:bg-slate-700 border border-white/5 text-xs font-bold text-slate-300 transition-colors">
+              This Weekend
+            </button>
+            <div className="w-px h-4 bg-white/10 mx-1 shrink-0" />
+            {["Sports", "Music", "Community", "Food & Drink"].map(cat => (
+              <button key={cat} onClick={() => router.push(`/discover?category=${cat}`)} className="shrink-0 px-3 py-1.5 rounded-full bg-[#1e293b]/50 hover:bg-[#1e293b] border border-white/5 text-xs font-bold text-slate-400 transition-colors">
+                {cat}
+              </button>
+            ))}
+            <button onClick={() => router.push("/discover")} className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/20 text-xs font-bold text-teal-400 transition-colors ml-auto">
+              <SlidersHorizontal className="w-3 h-3" /> Filters
+            </button>
+          </div>
+        </div>
+
+        {/* Top Matches (Horizontal Scroll) */}
+        {topMatches.length > 0 && (
+          <section>
+            <div className="flex justify-between items-end mb-4">
+              <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                Top Event Matches
               </h2>
-              <span className="text-[10px] text-teal-400 font-bold bg-teal-400/10 px-2 py-0.5 rounded-full border border-teal-400/20">
-                Recommended for you
+            </div>
+            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-6 -mx-4 px-4 snap-x snap-mandatory mask-edges">
+              {topMatches.map((event: any) => (
+                <div key={event.id} className="snap-start shrink-0 w-[300px] md:w-[320px]">
+                  <EventGridCard 
+                    event={event} 
+                    onSelectEvent={setSelectedEvent} 
+                    matchPercentage={event._matchScore} 
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Upcoming Events (Grid) */}
+        {upcomingEvents.length > 0 && (
+          <section>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                All Upcoming Events
+              </h2>
+              <span className="text-[10px] font-bold text-slate-500 bg-slate-900 px-2 py-0.5 rounded-full border border-white/5">
+                {upcomingEvents.length} events
               </span>
             </div>
             
-            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4 snap-x snap-mandatory">
-              {serendipityPicks.map((event) => (
-                <div
-                  key={`sp-${event.id}`}
-                  onClick={() => setSelectedEvent(event)}
-                  className="snap-start shrink-0 w-[280px] bg-teal-950/30 border border-teal-500/20 rounded-2xl p-4 cursor-pointer hover:bg-teal-900/40 transition-all group relative overflow-hidden"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xl">
-                      {CATEGORY_EMOJI[event.category || event.sport || ""] || "✨"}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-bold text-white truncate">
-                        {event.name || event.title}
-                      </h3>
-                      <p className="text-[10px] text-teal-400 font-bold uppercase tracking-wider">
-                        {event.category || event.sport}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between mt-3">
-                    <span className="text-xs text-slate-400 truncate max-w-[150px]">
-                      ⏱️ {event.date} {event.time}
-                    </span>
-                    <span className="text-xs text-white font-bold bg-white/10 px-2 py-0.5 rounded-full">
-                      {event.currentPlayers}/{event.maxPlayers}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* ============ HAPPENING NOW ============ */}
-        {happeningNow.length > 0 && (
-          <section className="mb-8">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="relative">
-                <Radio className="w-5 h-5 text-emerald-400" />
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
-              </div>
-              <h2 className="text-lg font-black text-white uppercase tracking-wider">
-                Happening Now
-              </h2>
-              <span className="text-xs text-emerald-400 font-bold bg-emerald-400/10 px-2 py-0.5 rounded-full border border-emerald-400/20">
-                {happeningNow.length} live
-              </span>
-            </div>
-
-            {/* Horizontal scroll carousel */}
-            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4 snap-x snap-mandatory">
-              {happeningNow.map((event) => (
-                <div
-                  key={event.id}
-                  onClick={() => setSelectedEvent(event)}
-                  className="snap-start shrink-0 w-[280px] glass-surface border border-emerald-500/20 rounded-2xl p-4 cursor-pointer hover:bg-white/5 transition-all group relative overflow-hidden"
-                >
-                  {/* Live pulse */}
-                  <div className="absolute top-3 right-3 flex items-center gap-1.5">
-                    <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                    <span className="text-[9px] font-black text-emerald-400 uppercase tracking-wider">
-                      Live
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xl">
-                      {CATEGORY_EMOJI[event.category || event.sport || ""] || "📍"}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-bold text-white truncate">
-                        {event.name || event.title}
-                      </h3>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                        {event.category || event.sport}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between mt-3">
-                    <span className="text-xs text-slate-400 truncate max-w-[150px]">
-                      📍 {event.venue || event.location || "TBD"}
-                    </span>
-                    <span className="text-xs text-white font-bold bg-white/10 px-2 py-0.5 rounded-full">
-                      {event.currentPlayers}/{event.maxPlayers}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* ============ BROWSE BY CATEGORY ============ */}
-        {categories.length > 0 && (
-          <section className="mb-8">
-            <div className="flex items-center gap-2 mb-4">
-              <LayoutGrid className="w-5 h-5 text-primary" />
-              <h2 className="text-lg font-black text-white uppercase tracking-wider">
-                Browse by Category
-              </h2>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {categories.map((cat) => {
-                const color = getCategoryColor(cat.name);
-                const emoji = CATEGORY_EMOJI[cat.name] || "📍";
-                return (
-                  <button
-                    key={cat.name}
-                    onClick={() =>
-                      router.push(
-                        `/discover?category=${encodeURIComponent(cat.name)}`
-                      )
-                    }
-                    className="group flex items-center gap-3 p-3 rounded-xl border transition-all hover:scale-[1.02] active:scale-[0.98]"
-                    style={{
-                      backgroundColor: `${color}15`,
-                      borderColor: `${color}30`,
-                    }}
-                  >
-                    <span className="text-2xl">{emoji}</span>
-                    <div className="text-left min-w-0 flex-1">
-                      <span className="text-sm font-bold text-white truncate block">
-                        {cat.name}
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-bold">
-                        {cat.count} {cat.count === 1 ? "event" : "events"}
-                      </span>
-                    </div>
-                    <ChevronRight
-                      className="w-4 h-4 text-slate-600 group-hover:text-white transition-colors shrink-0"
-                    />
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* ============ POPULAR THIS WEEK ============ */}
-        {popular.length > 0 && (
-          <section className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-orange-400" />
-                <h2 className="text-lg font-black text-white uppercase tracking-wider">
-                  Popular This Week
-                </h2>
-              </div>
-              <button
-                onClick={() => router.push("/discover")}
-                className="text-xs text-primary font-bold flex items-center gap-1 hover:underline"
-              >
-                See all <ArrowRight className="w-3 h-3" />
-              </button>
-            </div>
-            <div className="space-y-3">
-              {popular.slice(0, 6).map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  onSelectEvent={setSelectedEvent}
-                  showMapButton
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {upcomingEvents.map((event) => (
+                <EventGridCard 
+                  key={event.id} 
+                  event={event} 
+                  onSelectEvent={setSelectedEvent} 
                 />
               ))}
             </div>
           </section>
         )}
 
-        {/* ============ NEW ON HUDDLE ============ */}
-        {newEvents.length > 0 && (
-          <section className="mb-8">
-            <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="w-5 h-5 text-violet-400" />
-              <h2 className="text-lg font-black text-white uppercase tracking-wider">
-                New on Huddle
-              </h2>
-            </div>
-            <div className="space-y-3">
-              {newEvents.slice(0, 5).map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  onSelectEvent={setSelectedEvent}
-                  showMapButton
-                />
-              ))}
-            </div>
-          </section>
+        {(!data || (data.happeningNow.length === 0 && data.popular.length === 0 && data.newEvents.length === 0)) && (
+          <div className="text-center py-20 border border-white/10 rounded-3xl bg-slate-900/50">
+            <div className="text-4xl mb-4">🗺️</div>
+            <h2 className="text-xl font-bold text-white mb-2">No events found</h2>
+            <p className="text-slate-400 text-sm">Check back later or be the first to host!</p>
+          </div>
         )}
 
-        {/* Empty state */}
-        {!loading &&
-          happeningNow.length === 0 &&
-          popular.length === 0 &&
-          newEvents.length === 0 && (
-            <div className="text-center pt-16">
-              <div className="text-5xl mb-4">🗺️</div>
-              <h2 className="text-xl font-bold text-white mb-2">
-                No events yet
-              </h2>
-              <p className="text-slate-400 mb-6">
-                Be the first to create an event on campus!
-              </p>
-              <button
-                onClick={() => router.push("/map")}
-                className="bg-primary text-white font-bold px-6 py-3 rounded-xl hover:bg-primary/90 transition-colors"
-              >
-                Go to Map
-              </button>
-            </div>
-          )}
       </div>
 
-      {/* Event Details Drawer */}
       {selectedEvent && (
         <EventDetailsDrawer
           event={selectedEvent}
@@ -338,12 +185,5 @@ export default function HomePage() {
         />
       )}
     </div>
-  );
-}
-
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
+  )
 }
