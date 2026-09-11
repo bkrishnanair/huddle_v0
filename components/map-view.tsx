@@ -560,11 +560,10 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           }
           if (activeTime === 'Today') return isToday(eventDateTime);
           if (activeTime === 'This Week') {
-            const weekEnd = endOfWeek(now, { weekStartsOn: 0 }); // Sunday
-            return eventDateTime >= startOfDay(now) && eventDateTime <= weekEnd;
+            return eventDateTime >= startOfDay(now) && isBefore(eventDateTime, addDays(startOfDay(now), 8));
           }
-          if (activeTime === 'This Weekend') return isWeekend(eventDateTime) && isFuture(eventDateTime);
-          if (activeTime === 'This Month') return isBefore(eventDateTime, addDays(now, 30)) && isFuture(eventDateTime);
+          if (activeTime === 'This Weekend') return isWeekend(eventDateTime) && eventDateTime >= startOfDay(now) && isBefore(eventDateTime, addDays(startOfDay(now), 7));
+          if (activeTime === 'This Month') return eventDateTime >= startOfDay(now) && isBefore(eventDateTime, addDays(startOfDay(now), 31));
         } catch (e) { }
         return true;
       });

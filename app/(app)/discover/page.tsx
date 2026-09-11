@@ -290,10 +290,9 @@ export default function DiscoverPage() {
                             } else if (activeTime === 'Today') {
                                 matchesTime = isToday(eventDateTime);
                             } else if (activeTime === 'This Week') {
-                                const weekEnd = endOfWeek(now, { weekStartsOn: 0 }); // Sunday
-                                matchesTime = eventDateTime >= startOfDay(now) && eventDateTime <= weekEnd;
-                            } else if (activeTime === 'This Weekend') {
-                                matchesTime = isWeekend(eventDateTime) && isFuture(eventDateTime);
+                                matchesTime = eventDateTime >= startOfDay(now) && isBefore(eventDateTime, addDays(startOfDay(now), 8));
+                            } else if (activeTime === 'This Month') { matchesTime = eventDateTime >= startOfDay(now) && isBefore(eventDateTime, addDays(startOfDay(now), 31)); } else if (activeTime === 'This Weekend') {
+                                matchesTime = isWeekend(eventDateTime) && eventDateTime >= startOfDay(now) && isBefore(eventDateTime, addDays(startOfDay(now), 7));
                             }
                         }
                     } catch (e) {
