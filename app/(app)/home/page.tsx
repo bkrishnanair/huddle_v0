@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { useAuth } from "@/lib/firebase-context"
-import { EventGridCard } from "@/components/dashboard/event-grid-card"
+import { EventCard } from "@/components/events/event-card"
 import EventDetailsDrawer from "@/components/event-details-drawer"
 import { GameEvent } from "@/lib/types"
 import { Loader2, Search, SlidersHorizontal } from "lucide-react"
@@ -141,10 +141,10 @@ export default function HomePage() {
             <div className="flex gap-4 overflow-x-auto no-scrollbar pb-6 -mx-4 px-4 snap-x snap-mandatory mask-edges">
               {topMatches.map((event: any) => (
                 <div key={event.id} className="snap-start shrink-0 w-[300px] md:w-[320px]">
-                  <EventGridCard 
+                  <EventCard 
                     event={event} 
-                    onSelectEvent={setSelectedEvent} 
-                    matchPercentage={event._matchScore} 
+                    onSelectEvent={setSelectedEvent}
+                    showMapButton 
                   />
                 </div>
               ))}
@@ -166,10 +166,11 @@ export default function HomePage() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {upcomingEvents.map((event) => (
-                <EventGridCard 
+                <EventCard 
                   key={event.id} 
                   event={event} 
-                  onSelectEvent={setSelectedEvent} 
+                  onSelectEvent={setSelectedEvent}
+                  showMapButton 
                 />
               ))}
             </div>
