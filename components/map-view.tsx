@@ -98,7 +98,9 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>(initialCenter || { lat: 38.9897, lng: -76.9378 }) // College Park, MD
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [activeCategory, setActiveCategory] = useState("All");
-  const [activeTime, setActiveTime] = useState("All");
+  const [activeTime, setActiveTime] = useState("This Week");
+  const [filterStartDate, setFilterStartDate] = useState("");
+  const [filterEndDate, setFilterEndDate] = useState("");
   const [currentZoom, setCurrentZoom] = useState(initialCenter ? 15 : 15);
   const [showListPanel, setShowListPanel] = useState(false);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
@@ -998,6 +1000,51 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
               <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar w-full pt-0.5">
                 <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter mr-1 pl-1">When</span>
                 {TIMES.map(time => (
+                  <Chip
+                    key={time}
+                    size="sm"
+                    isActive={activeTime === time}
+                    onClick={() => {
+                      setActiveTime(time);
+                      // Clear custom dates when clicking a preset
+                      setFilterStartDate("");
+                      setFilterEndDate("");
+                    }}
+                    className={`shrink-0 transition-all font-bold ${activeTime === time ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]' : 'bg-slate-900/50 border-white/5 text-slate-400 hover:text-white'}`}
+                  >
+                    {time}
+                  </Chip>
+                ))}
+                
+                <div className="h-4 w-px bg-white/10 shrink-0 mx-1" />
+                
+                {/* Custom Date Filters */}
+                <div className="flex items-center gap-1 shrink-0 bg-slate-900/50 rounded-full border border-white/5 px-2 py-0.5">
+                  <input
+                    type="date"
+                    value={filterStartDate}
+                    onChange={(e) => {
+                      setFilterStartDate(e.target.value);
+                      setActiveTime("Custom");
+                      if (filterEndDate && e.target.value > filterEndDate) setFilterEndDate("");
+                    }}
+                    className="bg-transparent border-none text-slate-300 h-6 text-[10px] font-bold p-0 focus:ring-0 w-[85px] [color-scheme:dark] outline-none"
+                  />
+                  <span className="text-slate-500 text-[10px] font-black leading-none">→</span>
+                  <input
+                    type="date"
+                    value={filterEndDate}
+                    onChange={(e) => {
+                      setFilterEndDate(e.target.value);
+                      setActiveTime("Custom");
+                    }}
+                    min={filterStartDate}
+                    className="bg-transparent border-none text-slate-300 h-6 text-[10px] font-bold p-0 focus:ring-0 w-[85px] [color-scheme:dark] outline-none"
+                  />
+                </div>
+                
+                {/* Prevent mapping original TIMES twice */}
+                {false && TIMES.map(time => (
                   <Chip
                     key={time}
                     size="sm"
