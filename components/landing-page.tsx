@@ -348,7 +348,7 @@ export default function LandingPage({
               <dl className="mt-6 grid grid-cols-2 gap-4">
                 <div>
                   <dt className="ins-mono text-[10px] leading-[14px] text-slate-500">Events on the map</dt>
-                  <dd className="ins-mono mt-1 text-[22px] font-semibold leading-7 text-white">565</dd>
+                  <dd className="ins-mono mt-1 text-[22px] font-semibold leading-7 text-white">500+</dd>
                 </div>
                 <div>
                   <dt className="ins-mono text-[10px] leading-[14px] text-slate-500">Campus</dt>

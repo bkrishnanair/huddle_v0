@@ -24,19 +24,17 @@ export default function AppLayout({
   const pathname = usePathname()
   
   const [showAuthGate, setShowAuthGate] = useState(false)
-  const isPublicRoute = pathname === "/map" || pathname === "/discover" || pathname === "/login"
+  const isPublicRoute = pathname === "/map" || pathname === "/discover" || pathname === "/login" || (pathname?.startsWith("/profile/") && pathname !== "/profile")
   const showTopNav = pathname === "/map" || pathname === "/home" || pathname === "/"
 
   useEffect(() => {
     // Intercept redirect for unauthenticated users visiting protected routes
     if (!loading && !user && !isPublicRoute) {
-      if (!showAuthGate) {
-        setShowAuthGate(true)
-      }
+      setShowAuthGate(true)
     } else {
       setShowAuthGate(false)
     }
-  }, [user, loading, isPublicRoute, showAuthGate])
+  }, [user, loading, isPublicRoute])
 
   if (loading) {
     return (

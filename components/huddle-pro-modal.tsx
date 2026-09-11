@@ -55,7 +55,7 @@ export default function HuddleProModal({ isOpen, onClose }: HuddleProModalProps)
             size="lg" 
             className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-bold hover:scale-[1.02] transition-transform"
             onClick={() => {
-              import("sonner").then(({ toast }) => toast.success("You've been added to the waitlist!"));
+              import("sonner").then(({ toast }) => toast.success("Thanks for your interest! We'll notify you when it's ready."));
               onClose();
             }}
           >

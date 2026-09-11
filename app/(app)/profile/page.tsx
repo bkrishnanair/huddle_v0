@@ -84,7 +84,7 @@ export default function ProfilePage() {
         })
       },
       () => {
-        setUserLocation({ lat: 37.7749, lng: -122.4194 })
+        setUserLocation(null)
       }
     )
   }, [])

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/firebase-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -24,6 +24,13 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
   const [showVerifyBanner, setShowVerifyBanner] = useState(false)
   const { user } = useAuth()
   const router = useRouter()
+
+  useEffect(() => {
+    // If the user is already signed in, don't trap them on a spinner if onLogin isn't called
+    if (user && !isLoading) {
+      router.push("/map")
+    }
+  }, [user, isLoading, router])
 
   const handleAuthAction = async (action: "login" | "signup") => {
     setIsLoading(true)
@@ -190,8 +197,7 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
               />
             </div>
             <Button
-              type="button"
-              onClick={() => handleAuthAction("login")}
+              type="submit"
               disabled={isLoading || !email || !password}
               className="w-full h-11 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-white font-medium text-sm shadow-sm transition-all active:scale-[0.99]"
             >
@@ -247,8 +253,7 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
               />
             </div>
             <Button
-              type="button"
-              onClick={() => handleAuthAction("signup")}
+              type="submit"
               disabled={isLoading || !email || !password}
               className="w-full h-11 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-white font-medium text-sm shadow-sm transition-all active:scale-[0.99]"
             >

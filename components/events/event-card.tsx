@@ -223,9 +223,9 @@ export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = fal
             size="sm"
             onClick={() => onSelectEvent(event)}
             className="bg-primary text-primary-foreground h-9 px-4"
-            disabled={isFull}
+            
           >
-            {isFull ? "Full" : "View Details"}
+            "View Details"
           </Button>
         </div>
       </div>
