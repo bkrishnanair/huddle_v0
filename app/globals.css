@@ -246,8 +246,8 @@
     /* --- Ink (text) ------------------------------------------------------ */
     --ins-ink:              #191C1E;  /* primary text, active chip fill */
     --ins-ink-2:            #43484D;  /* body copy, inactive chip label */
-    --ins-ink-3:            #767D85;  /* meta, mono labels, icon stroke */
-    --ins-ink-4:            #A8AEB5;  /* placeholder, disabled, dimmed pin */
+    --ins-ink-3:            #5F666D;  /* meta, mono labels, icon stroke - W3C AA compliant */
+    --ins-ink-4:            #8C939A;  /* placeholder, disabled, dimmed pin */
 
     /* --- Lines ----------------------------------------------------------- */
     --ins-line:             #E9E6E0;  /* hairline divider, input border */

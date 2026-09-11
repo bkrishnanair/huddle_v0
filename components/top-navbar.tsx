@@ -37,7 +37,7 @@ export function TopNavbar() {
     }
 
     return (
-        <header className="fixed top-4 inset-x-4 max-w-[1800px] mx-auto z-[100] h-16 bg-white/85 dark:bg-slate-950/90 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-raised pointer-events-auto transition-colors">
+        <header className="fixed top-4 inset-x-4 max-w-[1800px] mx-auto z-40 h-16 bg-white/85 dark:bg-slate-950/90 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-raised pointer-events-auto transition-colors">
             <div className="h-full px-4 flex items-center justify-between gap-4">
                 {/* Logo Section */}
                 <Link href="/home" className="flex items-center gap-3 shrink-0">

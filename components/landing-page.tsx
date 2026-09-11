@@ -120,7 +120,7 @@ function CampusMapVisual() {
       {/* live chip — a fact, so green, and never clickable */}
       <div className="absolute left-3 top-3 flex items-center gap-2 rounded-chip border border-line bg-sheet px-2.5 py-1.5 shadow-raised">
         <span aria-hidden="true" className="h-[7px] w-[7px] rounded-full bg-live" />
-        <span className="ins-mono text-[10px] leading-none text-ink">2 live now · College Park</span>
+        <span className="ins-mono text-[10px] leading-none text-ink">Example: 2 live now · College Park</span>
       </div>
     </div>
   );
@@ -308,7 +308,7 @@ export default function LandingPage({
               <dl className="mt-6 grid grid-cols-2 gap-4">
                 <div>
                   <dt className="ins-mono text-[10px] leading-[14px] text-ink-3">Events on the map</dt>
-                  <dd className="ins-mono mt-1 text-[22px] font-semibold leading-7 text-ink">565</dd>
+                  <dd className="ins-mono mt-1 text-[22px] font-semibold leading-7 text-ink">500+</dd>
                 </div>
                 <div>
                   <dt className="ins-mono text-[10px] leading-[14px] text-ink-3">Campus</dt>

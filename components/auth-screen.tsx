@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/firebase-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,8 +22,14 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [showVerifyBanner, setShowVerifyBanner] = useState(false)
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const router = useRouter()
+
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace("/map") // Note: update destination if returnTo param exists later
+    }
+  }, [loading, user, router])
 
   const handleAuthAction = async (action: "login" | "signup") => {
     setIsLoading(true)
@@ -160,107 +166,109 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
           </div>
 
           {/* Login Tab Form */}
-          <TabsContent value="login" className="space-y-3.5 mt-0">
-            <div className="space-y-1.5">
-              <Label htmlFor="email-login" className="text-xs font-medium text-ink-2">
-                Email address
-              </Label>
-              <Input
-                id="email-login"
-                type="email"
-                placeholder="student@umd.edu"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="h-10 bg-paper border-line text-ink placeholder:text-ink-4 text-sm rounded-chip focus:border-action focus:ring-1 focus:ring-action/20"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password-login" className="text-xs font-medium text-ink-2">
-                  Password
+          <TabsContent value="login" className="mt-0">
+            <form onSubmit={(e) => { e.preventDefault(); handleAuthAction("login"); }} className="space-y-3.5">
+              <div className="space-y-1.5">
+                <Label htmlFor="email-login" className="text-xs font-medium text-ink-2">
+                  Email address
                 </Label>
+                <Input
+                  id="email-login"
+                  type="email"
+                  placeholder="student@umd.edu"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-10 bg-paper border-line text-ink placeholder:text-ink-4 text-sm rounded-chip focus:border-action focus:ring-1 focus:ring-action/20"
+                />
               </div>
-              <Input
-                id="password-login"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-10 bg-paper border-line text-ink placeholder:text-ink-4 text-sm rounded-chip focus:border-action focus:ring-1 focus:ring-action/20"
-              />
-            </div>
-            <Button
-              type="button"
-              onClick={() => handleAuthAction("login")}
-              disabled={isLoading || !email || !password}
-              className="w-full h-11 rounded-control bg-action hover:bg-action-hover text-white font-medium text-sm shadow-sm transition-all active:scale-[0.99]"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Signing in...
-                </>
-              ) : (
-                "Sign In"
-              )}
-            </Button>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password-login" className="text-xs font-medium text-ink-2">
+                    Password
+                  </Label>
+                </div>
+                <Input
+                  id="password-login"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-10 bg-paper border-line text-ink placeholder:text-ink-4 text-sm rounded-chip focus:border-action focus:ring-1 focus:ring-action/20"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={isLoading || !email || !password}
+                className="w-full h-11 rounded-control bg-action hover:bg-action-hover text-white font-medium text-sm shadow-sm transition-all active:scale-[0.99]"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Signing in...
+                  </>
+                ) : (
+                  "Sign In"
+                )}
+              </Button>
+            </form>
           </TabsContent>
 
           {/* Sign Up Tab Form */}
-          <TabsContent value="signup" className="space-y-3.5 mt-0">
-            <div className="space-y-1.5">
-              <Label htmlFor="name-signup" className="text-xs font-medium text-ink-2">
-                Your Name
-              </Label>
-              <Input
-                id="name-signup"
-                placeholder="Alex Morgan"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="h-10 bg-paper border-line text-ink placeholder:text-ink-4 text-sm rounded-chip focus:border-action focus:ring-1 focus:ring-action/20"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="email-signup" className="text-xs font-medium text-ink-2">
-                Email address
-              </Label>
-              <Input
-                id="email-signup"
-                type="email"
-                placeholder="student@umd.edu"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="h-10 bg-paper border-line text-ink placeholder:text-ink-4 text-sm rounded-chip focus:border-action focus:ring-1 focus:ring-action/20"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="password-signup" className="text-xs font-medium text-ink-2">
-                Password
-              </Label>
-              <Input
-                id="password-signup"
-                type="password"
-                placeholder="At least 6 characters"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-10 bg-paper border-line text-ink placeholder:text-ink-4 text-sm rounded-chip focus:border-action focus:ring-1 focus:ring-action/20"
-              />
-            </div>
-            <Button
-              type="button"
-              onClick={() => handleAuthAction("signup")}
-              disabled={isLoading || !email || !password}
-              className="w-full h-11 rounded-control bg-action hover:bg-action-hover text-white font-medium text-sm shadow-sm transition-all active:scale-[0.99]"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Creating account...
-                </>
-              ) : (
-                "Create Account"
-              )}
-            </Button>
+          <TabsContent value="signup" className="mt-0">
+            <form onSubmit={(e) => { e.preventDefault(); handleAuthAction("signup"); }} className="space-y-3.5">
+              <div className="space-y-1.5">
+                <Label htmlFor="name-signup" className="text-xs font-medium text-ink-2">
+                  Your Name
+                </Label>
+                <Input
+                  id="name-signup"
+                  placeholder="Alex Morgan"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-10 bg-paper border-line text-ink placeholder:text-ink-4 text-sm rounded-chip focus:border-action focus:ring-1 focus:ring-action/20"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="email-signup" className="text-xs font-medium text-ink-2">
+                  Email address
+                </Label>
+                <Input
+                  id="email-signup"
+                  type="email"
+                  placeholder="student@umd.edu"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-10 bg-paper border-line text-ink placeholder:text-ink-4 text-sm rounded-chip focus:border-action focus:ring-1 focus:ring-action/20"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="password-signup" className="text-xs font-medium text-ink-2">
+                  Password
+                </Label>
+                <Input
+                  id="password-signup"
+                  type="password"
+                  placeholder="At least 6 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-10 bg-paper border-line text-ink placeholder:text-ink-4 text-sm rounded-chip focus:border-action focus:ring-1 focus:ring-action/20"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={isLoading || !email || !password}
+                className="w-full h-11 rounded-control bg-action hover:bg-action-hover text-white font-medium text-sm shadow-sm transition-all active:scale-[0.99]"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Creating account...
+                  </>
+                ) : (
+                  "Create Account"
+                )}
+              </Button>
+            </form>
           </TabsContent>
 
           {/* Guest fallback button */}

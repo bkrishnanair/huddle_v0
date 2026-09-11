@@ -27,40 +27,30 @@ const proFeatures = [
 export default function HuddleProModal({ isOpen, onClose }: HuddleProModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="glass-surface border-white/15 text-foreground max-w-lg">
+      <DialogContent className="bg-sheet border border-line text-ink max-w-lg rounded-sheet shadow-overlay">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center">
+          <DialogTitle className="text-2xl font-bold text-center font-display">
             Huddle Pro ✨
           </DialogTitle>
-          <DialogDescription className="text-center text-slate-300 text-base mt-2">
+          <DialogDescription className="text-center text-ink-2 text-base mt-2">
             Your community is growing. Now run it like a pro.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto no-scrollbar custom-scrollbar pr-2">
           {proFeatures.map((feature, index) => (
-            <div key={index} className="flex items-start gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
+            <div key={index} className="flex items-start gap-3 bg-surface p-3 rounded-xl border border-line">
               {feature.icon}
               <div>
-                <span className="font-bold text-slate-100">{feature.title}</span> — <span className="text-slate-300 text-sm leading-relaxed">{feature.text}</span>
+                <span className="font-bold text-ink">{feature.title}</span> — <span className="text-ink-2 text-sm leading-relaxed">{feature.text}</span>
               </div>
             </div>
           ))}
         </div>
-        <div className="flex flex-col gap-2 pt-2 border-t border-white/10 mt-2">
+        <div className="flex flex-col gap-2 pt-2 border-t border-line mt-2">
           <div className="text-center">
-            <span className="text-white font-bold text-lg tracking-tight">Coming Spring 2026</span>
+            <span className="text-ink font-bold text-lg tracking-tight">Coming Soon</span>
           </div>
-          <p className="text-center text-sm text-emerald-400 font-medium mb-2">Free for founding organizers who join the waitlist today.</p>
-          <Button 
-            size="lg" 
-            className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-bold hover:scale-[1.02] transition-transform"
-            onClick={() => {
-              import("sonner").then(({ toast }) => toast.success("You've been added to the waitlist!"));
-              onClose();
-            }}
-          >
-            Join the Waitlist
-          </Button>
+          <p className="text-center text-sm text-ink-2 font-medium mb-2">We are currently building this out. Stay tuned!</p>
         </div>
       </DialogContent>
     </Dialog>

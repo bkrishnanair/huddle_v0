@@ -36,9 +36,9 @@ export function EventList({ userId, eventType, searchQuery = "", filterStartDate
         })
       },
       () => {
-        // Default to SF if location denied
-        setUserLocation({ lat: 37.7749, lng: -122.4194 })
-      }
+        // Do nothing on denial, leave location null
+      },
+      { timeout: 10000 }
     )
   }, [])
 

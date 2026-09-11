@@ -1,0 +1,1 @@
+export default function PrivacyPage() { return <div className="p-8"><h1>Privacy Policy</h1><p>Placeholder for privacy policy.</p></div> }

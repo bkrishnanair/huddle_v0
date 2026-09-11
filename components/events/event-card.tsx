@@ -219,13 +219,17 @@ export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = fal
               Unjoin
             </Button>
           )}
+          {isFull && (
+            <Badge variant="destructive" className="bg-red-500/20 text-red-400 border border-red-500/30 whitespace-nowrap text-[9px] font-black uppercase tracking-wider px-1.5 shadow-sm self-center">
+              Full
+            </Badge>
+          )}
           <Button
             size="sm"
             onClick={() => onSelectEvent(event)}
             className="bg-primary text-primary-foreground h-9 px-4"
-            disabled={isFull}
           >
-            {isFull ? "Full" : "View Details"}
+            View Details
           </Button>
         </div>
       </div>
