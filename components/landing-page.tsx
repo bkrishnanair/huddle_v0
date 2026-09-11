@@ -136,7 +136,10 @@ export default function LandingPage({
       name: "landing_cta_click",
       properties: { placement: placement === 'hero' ? 'install_hero' : 'install_nav' },
     });
-    await promptInstall();
+    const outcome = await promptInstall();
+    if (outcome === 'dialog' || outcome === 'unavailable') {
+      setIsDialogOpen(true);
+    }
   };
 
   // The app is still dark-themed: `body` inherits --background (a dark navy) from
