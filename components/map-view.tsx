@@ -825,7 +825,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                         return (
                           <AdvancedMarker
                             key={event.id}
-                            position={{ lat: event.geopoint.latitude, lng: event.geopoint.longitude }}
+                            position={{ lat: (event as any).displayLat || event.geopoint.latitude, lng: (event as any).displayLng || event.geopoint.longitude }}
                             onClick={() => {
                               setSelectedEvent(event);
                               trackEventView(event.id);
@@ -848,7 +848,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                       return (
                         <AdvancedMarker
                           key={event.id}
-                          position={{ lat: event.geopoint.latitude, lng: event.geopoint.longitude }}
+                          position={{ lat: (event as any).displayLat || event.geopoint.latitude, lng: (event as any).displayLng || event.geopoint.longitude }}
                           onClick={() => {
                             setSelectedEvent(event);
                             trackEventView(event.id);

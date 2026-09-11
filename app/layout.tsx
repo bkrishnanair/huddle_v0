@@ -79,7 +79,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${plexMono.variable} ${bricolage.variable} ${inter.className} tracking-tight`}>
         <FirebaseProvider>
           <PWARegister />
