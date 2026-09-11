@@ -21,17 +21,17 @@ export default function Home() {
   // visitor can ever see, so they say something useful rather than "Connecting".
   if (error) {
     return (
-      <div className="min-h-screen bg-paper font-body text-ink flex items-center justify-center p-6">
-        <div className="max-w-md rounded-sheet border border-line bg-sheet p-8 shadow-raised">
-          <h1 className="font-display text-2xl font-bold text-ink">Something went wrong</h1>
-          <p className="mt-3 text-[15px] leading-[22px] text-ink-2">
+      <div className="min-h-screen bg-[#0B101B] font-body text-white flex items-center justify-center p-6">
+        <div className="max-w-md rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md p-8 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+          <h1 className="font-display text-2xl font-bold text-white">Something went wrong</h1>
+          <p className="mt-3 text-[15px] leading-[22px] text-slate-400">
             We could not reach the server. The map should still work — try opening it
             directly, or reload this page.
           </p>
-          <p className="ins-mono mt-4 text-[10px] leading-[14px] text-ink-4 break-words">{error}</p>
+          <p className="ins-mono mt-4 text-[10px] leading-[14px] text-white-4 break-words">{error}</p>
           <a
             href="/map"
-            className="mt-6 inline-flex h-11 items-center rounded-control bg-action px-7 text-[15px] font-semibold text-white transition-colors duration-micro ease-ins hover:bg-action-hover"
+            className="mt-6 inline-flex h-11 items-center rounded-xl bg-primary px-7 text-[15px] font-semibold text-white transition-colors duration-micro ease-ins hover:bg-primary/90"
           >
             Open the map
           </a>
@@ -44,18 +44,18 @@ export default function Home() {
     // Skeleton of the real hero rather than a spinner: the visitor sees the page
     // taking shape instead of a blank wait, which is the moment 84% of them leave.
     return (
-      <div className="min-h-screen bg-paper font-body" aria-busy="true" aria-live="polite">
-        <div className="h-16 border-b border-line" />
+      <div className="min-h-screen bg-[#0B101B] font-body" aria-busy="true" aria-live="polite">
+        <div className="h-16 border-b border-white/10" />
         <div className="mx-auto max-w-[1120px] px-6 py-14">
           <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-12">
             <div>
-              <div className="h-9 w-4/5 rounded-chip bg-surface-sunk" />
-              <div className="mt-3 h-9 w-3/5 rounded-chip bg-surface-sunk" />
-              <div className="mt-6 h-5 w-2/3 rounded-chip bg-surface" />
-              <div className="mt-8 h-11 w-44 rounded-control bg-surface-sunk" />
+              <div className="h-9 w-4/5 rounded-full bg-white/10" />
+              <div className="mt-3 h-9 w-3/5 rounded-full bg-white/10" />
+              <div className="mt-6 h-5 w-2/3 rounded-full bg-slate-800/50" />
+              <div className="mt-8 h-11 w-44 rounded-xl bg-white/10" />
             </div>
             <div
-              className="rounded-sheet border border-line bg-surface"
+              className="rounded-3xl border border-white/10 bg-slate-800/50"
               style={{ aspectRatio: "5 / 4" }}
             />
           </div>

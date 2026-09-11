@@ -31,7 +31,7 @@ interface LandingPageProps {
 function Wordmark({ className = "" }: { className?: string }) {
   return (
     <span
-      className={`font-display text-[22px] leading-6 font-bold text-ink ${className}`}
+      className={`font-display text-[22px] leading-6 font-bold text-white ${className}`}
     >
       Huddle
     </span>
@@ -59,7 +59,7 @@ function CampusMapVisual() {
 
   return (
     <div
-      className="relative w-full overflow-hidden rounded-sheet border border-line bg-paper shadow-raised"
+      className="relative w-full overflow-hidden rounded-3xl border border-white/10 bg-[#0B101B] shadow-[0_0_40px_rgba(0,0,0,0.5)]"
       style={{ aspectRatio: "5 / 4" }}
     >
       <svg
@@ -69,9 +69,9 @@ function CampusMapVisual() {
         aria-label="Stylised map of the University of Maryland campus showing live and upcoming events"
         className="absolute inset-0 h-full w-full"
       >
-        <rect width="500" height="400" fill="var(--ins-paper)" />
+        <rect width="500" height="400" fill="#0a0f1c" />
         {/* Subtle grid to look like paper/radar */}
-        <g stroke="var(--ins-ink-4)" strokeWidth="0.5" strokeDasharray="4 4" opacity="0.5">
+        <g stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" strokeDasharray="4 4" opacity="0.5">
             <line x1="0" y1="100" x2="500" y2="100" />
             <line x1="0" y1="200" x2="500" y2="200" />
             <line x1="0" y1="300" x2="500" y2="300" />
@@ -85,7 +85,7 @@ function CampusMapVisual() {
           [160, 150, 170, 46], [96, 88, 92, 50], [316, 92, 96, 52],
           [120, 262, 96, 54], [300, 258, 84, 48], [156, 330, 100, 44],
         ].map(([x, y, w, h], i) => (
-          <rect key={i} x={x} y={y} width={w} height={h} rx="4" fill="var(--ins-surface-sunk)" stroke="var(--ins-line)" />
+          <rect key={i} x={x} y={y} width={w} height={h} rx="4" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" />
         ))}
         {/* roads */}
         {[
@@ -95,8 +95,8 @@ function CampusMapVisual() {
           "M78,60 C68,180 78,290 116,380",
         ].map((d, i) => (
           <g key={i}>
-            <path d={d} fill="none" stroke="var(--ins-line)" strokeWidth="8" />
-            <path d={d} fill="none" stroke="var(--ins-paper)" strokeWidth="6" />
+            <path d={d} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="8" />
+            <path d={d} fill="none" stroke="#0a0f1c" strokeWidth="6" />
           </g>
         ))}
 
@@ -104,14 +104,14 @@ function CampusMapVisual() {
           <g key={i} style={{ transform: `translate(${v.x}%, ${v.y}%)` }}>
             {v.live ? (
               <>
-                <circle r="4" fill="var(--ins-live)" className="animate-ping" style={{ animationDuration: '2s' }} />
-                <circle r="4" fill="var(--ins-live)" />
-                <rect x="8" y="-7" rx="3" width="70" height="14" fill="var(--ins-live-tint)" stroke="var(--ins-live)" strokeOpacity="0.2" />
+                <circle r="4" fill="#2DD4BF" className="animate-ping" style={{ animationDuration: '2s' }} />
+                <circle r="4" fill="#2DD4BF" />
+                <rect x="8" y="-7" rx="3" width="70" height="14" fill="rgba(45,212,191,0.2)" stroke="#2DD4BF" strokeOpacity="0.2" />
                 <text x="14" y="2" className="ins-mono text-[6px] font-bold fill-live-ink uppercase">{v.label}</text>
               </>
             ) : (
               <>
-                <circle r="3" fill="var(--ins-ink-3)" />
+                <circle r="3" fill="rgba(255,255,255,0.4)" />
                 <text x="8" y="2" className="ins-mono text-[6px] fill-ink-3 uppercase">{v.label}</text>
               </>
             )}
@@ -148,7 +148,7 @@ export default function LandingPage({
     trackFunnelEvent({ name: "landing_view" });
     const { body } = document;
     const previous = body.style.backgroundColor;
-    body.style.backgroundColor = "var(--ins-paper)";
+    body.style.backgroundColor = "#0a0f1c";
     return () => {
       body.style.backgroundColor = previous;
     };
@@ -177,9 +177,9 @@ export default function LandingPage({
   ];
 
   return (
-    <div className="min-h-screen bg-paper font-body text-ink">
+    <div className="min-h-screen bg-[#0B101B] font-body text-white">
       {/* ---------------------------------------------------------- nav --- */}
-      <header className="border-b border-line bg-paper">
+      <header className="border-b border-white/10 bg-[#0B101B]">
         <nav
           aria-label="Primary"
           className="mx-auto flex h-16 max-w-[1120px] items-center justify-between gap-4 px-6"
@@ -187,7 +187,7 @@ export default function LandingPage({
           <button
             type="button"
             onClick={() => router.push("/")}
-            className="-my-2 rounded-chip py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action"
+            className="-my-2 rounded-full py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action"
             aria-label="Huddle home"
           >
             <Wordmark />
@@ -196,7 +196,7 @@ export default function LandingPage({
           <div className="flex items-center gap-3 sm:gap-5">
             <a
               href="#organizers"
-              className="-my-2 hidden rounded-chip py-2 text-[15px] font-medium text-ink-2 transition-colors duration-micro ease-ins hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action sm:inline"
+              className="-my-2 hidden rounded-full py-2 text-[15px] font-medium text-slate-400 transition-colors duration-micro ease-ins hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action sm:inline"
             >
               I organize events
             </a>
@@ -204,7 +204,7 @@ export default function LandingPage({
               <button
                 type="button"
                 onClick={onGetStarted}
-                className="inline-flex h-9 items-center rounded-chip border border-line bg-sheet px-4 text-sm font-semibold text-ink transition-colors duration-micro ease-ins hover:bg-surface"
+                className="inline-flex h-9 items-center rounded-full border border-white/10 bg-white/5 backdrop-blur-md px-4 text-sm font-semibold text-white transition-colors duration-micro ease-ins hover:bg-slate-900/50"
               >
                 Sign in
               </button>
@@ -213,16 +213,16 @@ export default function LandingPage({
               <button
                 type="button"
                 onClick={() => handleInstallClick('nav')}
-                className="hidden sm:inline-flex h-9 items-center gap-1.5 rounded-chip border border-line bg-sheet px-3.5 text-sm font-medium text-ink transition-colors duration-micro ease-ins hover:bg-surface"
+                className="hidden sm:inline-flex h-9 items-center gap-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md px-3.5 text-sm font-medium text-white transition-colors duration-micro ease-ins hover:bg-slate-900/50"
               >
-                <Download className="h-3.5 w-3.5 text-ink-2" />
+                <Download className="h-3.5 w-3.5 text-slate-400" />
                 Install app
               </button>
             )}
             <button
               type="button"
               onClick={() => handleOpenMap('nav')}
-              className="inline-flex h-9 items-center rounded-chip bg-action px-4 text-sm font-semibold text-white transition-colors duration-micro ease-ins hover:bg-action-hover"
+              className="inline-flex h-9 items-center rounded-full bg-primary shadow-[0_0_20px_rgba(249,115,22,0.4)] px-4 text-sm font-semibold text-white transition-colors duration-micro ease-ins hover:bg-primary/90"
             >
               Open the map
             </button>
@@ -232,15 +232,18 @@ export default function LandingPage({
 
       <main>
         {/* -------------------------------------------------------- hero --- */}
-        <section className="mx-auto max-w-[1120px] px-6 py-14 sm:py-16">
+        <section className="relative mx-auto max-w-[1120px] px-6 py-14 sm:py-16">
+          {/* Glow effect */}
+          <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[500px] h-[500px] bg-primary/10 blur-[120px] pointer-events-none -z-10 rounded-full" />
+          <div className="absolute top-1/3 right-1/4 -translate-y-1/2 w-[400px] h-[400px] bg-teal-500/10 blur-[100px] pointer-events-none -z-10 rounded-full" />
           <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-12">
             <div>
-              <h1 className="font-display text-[34px] font-bold leading-[1.1] text-ink sm:text-[40px] sm:leading-[44px]">
+              <h1 className="font-display text-[34px] font-bold leading-[1.1] text-white sm:text-[40px] sm:leading-[44px]">
                 See what&rsquo;s happening around campus.{" "}
-                <span className="whitespace-nowrap text-action">Right now.</span>
+                <span className="whitespace-nowrap text-primary">Right now.</span>
               </h1>
 
-              <p className="mt-5 max-w-[40ch] text-[15px] leading-[22px] text-ink-2">
+              <p className="mt-5 max-w-[40ch] text-[15px] leading-[22px] text-slate-400">
                 Live events near you with no app, no account, no missing out.
               </p>
 
@@ -249,7 +252,7 @@ export default function LandingPage({
                   <button
                     type="button"
                     onClick={() => handleOpenMap('hero')}
-                    className="inline-flex h-11 items-center rounded-control bg-action px-7 text-[15px] font-semibold text-white transition-[background-color,transform] duration-micro ease-ins hover:bg-action-hover active:scale-[0.98]"
+                    className="inline-flex h-11 items-center rounded-xl bg-primary shadow-[0_0_20px_rgba(249,115,22,0.4)] px-7 text-[15px] font-semibold text-white transition-[background-color,transform] duration-micro ease-ins hover:bg-primary/90 active:scale-[0.98]"
                   >
                     Open the map
                   </button>
@@ -257,14 +260,14 @@ export default function LandingPage({
                     <button
                       type="button"
                       onClick={() => handleInstallClick('hero')}
-                      className="inline-flex h-11 items-center gap-2 rounded-control border border-line bg-sheet px-5 text-[15px] font-medium text-ink transition-[background-color,transform] duration-micro ease-ins hover:bg-surface-sunk active:scale-[0.98]"
+                      className="inline-flex h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/5 backdrop-blur-md px-5 text-[15px] font-medium text-white transition-[background-color,transform] duration-micro ease-ins hover:bg-white/10 active:scale-[0.98]"
                     >
-                      <Download className="h-4 w-4 text-ink-2" />
+                      <Download className="h-4 w-4 text-slate-400" />
                       Install app
                     </button>
                   )}
                 </div>
-                <p className="ins-mono text-xs leading-4 text-ink-3">
+                <p className="ins-mono text-xs leading-4 text-slate-500">
                   Free · no signup · works in your browser or home screen
                 </p>
               </div>
@@ -281,15 +284,15 @@ export default function LandingPage({
           aria-labelledby="how-it-works"
           className="mx-auto max-w-[1120px] px-6 py-14 sm:py-16"
         >
-          <h2 id="how-it-works" className="ins-mono text-xs leading-4 text-ink-3">
+          <h2 id="how-it-works" className="ins-mono text-xs leading-4 text-slate-500">
             How it works
           </h2>
           <div className="mt-8 grid gap-8 sm:grid-cols-3">
             {steps.map((s) => (
-              <div key={s.n} className="border-l border-line pl-6">
-                <div className="ins-mono text-xs leading-4 text-ink-4">{s.n}</div>
-                <h3 className="mt-3 text-lg font-semibold leading-6 text-ink">{s.title}</h3>
-                <p className="mt-2 text-[15px] leading-[22px] text-ink-2">{s.body}</p>
+              <div key={s.n} className="border-l border-white/10 pl-6">
+                <div className="ins-mono text-xs leading-4 text-slate-600">{s.n}</div>
+                <h3 className="mt-3 text-lg font-semibold leading-6 text-white">{s.title}</h3>
+                <p className="mt-2 text-[15px] leading-[22px] text-slate-400">{s.body}</p>
               </div>
             ))}
           </div>
@@ -299,14 +302,14 @@ export default function LandingPage({
         <section
           id="organizers"
           aria-labelledby="organizers-heading"
-          className="border-y border-line bg-surface"
+          className="border-y border-white/10 bg-slate-900/50"
         >
           <div className="mx-auto grid max-w-[1120px] items-start gap-10 px-6 py-14 sm:py-16 lg:grid-cols-2 lg:gap-12">
             <div>
-              <p className="ins-mono text-xs leading-4 text-ink-3">For organizers</p>
+              <p className="ins-mono text-xs leading-4 text-slate-500">For organizers</p>
               <h2
                 id="organizers-heading"
-                className="mt-3 font-display text-[28px] font-bold leading-[1.15] text-ink sm:text-[32px] sm:leading-9"
+                className="mt-3 font-display text-[28px] font-bold leading-[1.15] text-white sm:text-[32px] sm:leading-9"
               >
                 Run events people actually show up to.
               </h2>
@@ -315,11 +318,11 @@ export default function LandingPage({
                 {organizerClaims.map((c, i) => (
                   <div
                     key={c.label}
-                    className={`border-t border-line py-4 ${i === organizerClaims.length - 1 ? "border-b" : ""
+                    className={`border-t border-white/10 py-4 ${i === organizerClaims.length - 1 ? "border-b" : ""
                       }`}
                   >
-                    <dt className="ins-mono text-xs leading-4 text-ink-3">{c.label}</dt>
-                    <dd className="mt-1.5 text-[15px] leading-[22px] text-ink">{c.body}</dd>
+                    <dt className="ins-mono text-xs leading-4 text-slate-500">{c.label}</dt>
+                    <dd className="mt-1.5 text-[15px] leading-[22px] text-white">{c.body}</dd>
                   </div>
                 ))}
               </dl>
@@ -327,26 +330,26 @@ export default function LandingPage({
               <button
                 type="button"
                 onClick={handleHostEvent}
-                className="mt-8 inline-flex h-11 items-center rounded-control border border-line bg-sheet px-7 text-[15px] font-semibold text-ink transition-colors duration-micro ease-ins hover:bg-surface-sunk"
+                className="mt-8 inline-flex h-11 items-center rounded-xl border border-white/10 bg-white/5 backdrop-blur-md px-7 text-[15px] font-semibold text-white transition-colors duration-micro ease-ins hover:bg-white/10"
               >
                 Create your first event
               </button>
             </div>
 
-            <div className="rounded-sheet border border-line bg-sheet p-5 shadow-raised">
-              <p className="ins-mono text-xs leading-4 text-ink-3">Already on Huddle</p>
-              <p className="mt-3 text-[15px] leading-[22px] text-ink-2">
+            <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md p-5 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+              <p className="ins-mono text-xs leading-4 text-slate-500">Already on Huddle</p>
+              <p className="mt-3 text-[15px] leading-[22px] text-slate-400">
                 Campus events from TerpLink are already on the map. If one of them is
                 yours, claim it and the RSVPs students have already made come with it.
               </p>
               <dl className="mt-6 grid grid-cols-2 gap-4">
                 <div>
-                  <dt className="ins-mono text-[10px] leading-[14px] text-ink-3">Events on the map</dt>
-                  <dd className="ins-mono mt-1 text-[22px] font-semibold leading-7 text-ink">565</dd>
+                  <dt className="ins-mono text-[10px] leading-[14px] text-slate-500">Events on the map</dt>
+                  <dd className="ins-mono mt-1 text-[22px] font-semibold leading-7 text-white">565</dd>
                 </div>
                 <div>
-                  <dt className="ins-mono text-[10px] leading-[14px] text-ink-3">Campus</dt>
-                  <dd className="mt-1 text-[15px] font-semibold leading-7 text-ink">UMD</dd>
+                  <dt className="ins-mono text-[10px] leading-[14px] text-slate-500">Campus</dt>
+                  <dd className="mt-1 text-[15px] font-semibold leading-7 text-white">UMD</dd>
                 </div>
               </dl>
             </div>
@@ -355,9 +358,9 @@ export default function LandingPage({
       </main>
 
       {/* ------------------------------------------------------- footer --- */}
-      <footer className="bg-paper">
+      <footer className="bg-[#0B101B]">
         <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-3 px-6 py-6">
-          <p className="text-[13px] leading-5 text-ink-3">
+          <p className="text-[13px] leading-5 text-slate-500">
             Huddle Map, LLC · College Park, MD
           </p>
           <nav aria-label="Footer" className="flex gap-5">
@@ -369,7 +372,7 @@ export default function LandingPage({
               <Link
                 key={l.href}
                 href={l.href}
-                className="-my-2 rounded-chip py-2 text-[13px] leading-5 text-ink-2 transition-colors duration-micro ease-ins hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action"
+                className="-my-2 rounded-full py-2 text-[13px] leading-5 text-slate-400 transition-colors duration-micro ease-ins hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action"
               >
                 {l.label}
               </Link>

@@ -97,7 +97,7 @@ export function FollowButton({
       className={`font-semibold rounded-full ${
         isFollowing
           ? "bg-slate-800 text-slate-300 hover:bg-slate-700"
-          : "bg-action hover:bg-action-hover text-white"
+          : "bg-primary hover:bg-primary/90 text-white"
       } ${className || ""}`}
     >
       {isUpdating ? (

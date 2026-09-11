@@ -77,7 +77,7 @@ export default function BottomNavigation() {
                 <div className="relative">
                   <Icon className="w-5 h-5 mb-0.5" />
                   {liveCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 bg-live text-live-ink text-[10px] font-mono font-bold tracking-mono uppercase rounded-full min-w-[16px] h-4 flex items-center justify-center px-0.5 leading-none shadow-raised border border-live-ink/10">
+                    <span className="absolute -top-1.5 -right-1.5 bg-live text-live-ink text-[10px] font-mono font-bold tracking-mono uppercase rounded-full min-w-[16px] h-4 flex items-center justify-center px-0.5 leading-none shadow-2xl border border-live-ink/10">
                       {liveCount > 9 ? "9+" : liveCount}
                     </span>
                   )}
