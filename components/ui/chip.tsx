@@ -43,9 +43,12 @@ const Chip = React.forwardRef<HTMLButtonElement, ChipProps>(
       inlineStyle.backgroundColor = color;
       inlineStyle.color = "#ffffff";
       inlineStyle.borderColor = color;
+      inlineStyle.boxShadow = `0 0 16px -1px ${color}80`;
     } else if (color && !isActive) {
-      // Add subtle tint border when inactive
-      inlineStyle.borderColor = `${color}40`;
+      // Distinct category border, tinted backdrop, and colored text for high vibrancy
+      inlineStyle.borderColor = `${color}55`;
+      inlineStyle.backgroundColor = `${color}12`;
+      inlineStyle.color = color;
     }
 
     return (

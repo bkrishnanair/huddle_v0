@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { CategoryIcon } from '@/components/category-icon'
+import { getCategoryColor } from "@/lib/utils"
 import { GameEvent } from "@/lib/types"
 import { Users, Calendar, Clock, MapPin, Loader2, Share, Trash2, Download, Copy, MessageCircle, AlertTriangle, Info, CalendarPlus, CheckCircle2, Video, Monitor, ExternalLink, Crown, Mail, BadgeCheck, X } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -589,14 +590,38 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
     return "default" as const
   }
 
+  const catColor = getCategoryColor(event.category || event.sport || "default");
+
   return (
     <Drawer open={isOpen} onOpenChange={onClose}>
-      <DrawerContent className="border-white/10 bg-panel/95 text-foreground max-w-2xl mx-auto rounded-t-[2rem] max-h-[92dvh] flex flex-col focus:outline-none backdrop-blur-xl">
-        <DrawerHeader className="px-5 pb-5 pt-3 sm:px-6 shrink-0 text-left">
+      <DrawerContent 
+        className="border-white/10 bg-panel/95 text-foreground max-w-2xl mx-auto rounded-t-[2rem] max-h-[92dvh] flex flex-col focus:outline-none backdrop-blur-xl relative overflow-hidden"
+        style={{
+          borderTop: `3.5px solid ${catColor}`,
+          boxShadow: `0 -8px 30px -4px ${catColor}25`
+        }}
+      >
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-36 opacity-75"
+          style={{
+            background: `radial-gradient(ellipse 90% 70% at 20% 0%, ${catColor}30, transparent 70%)`,
+          }}
+        />
+        <DrawerHeader className="px-5 pb-5 pt-3 sm:px-6 shrink-0 text-left relative">
           <div className="flex justify-between items-start gap-4">
             <div className="flex-1">
               <DrawerTitle className="font-display text-2xl sm:text-3xl font-bold text-white tracking-tight leading-tight flex flex-wrap items-center gap-2">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-orange-400">{event.icon || <CategoryIcon category={event.sport || event.category} />}</span>
+                <span 
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
+                  style={{
+                    color: catColor,
+                    backgroundColor: `${catColor}18`,
+                    border: `1.5px solid ${catColor}40`,
+                    boxShadow: `0 0 14px -2px ${catColor}30`
+                  }}
+                >
+                  {event.icon || <CategoryIcon category={event.sport || event.category} />}
+                </span>
                 {event.title || event.name}
                 {event.maxPlayers - event.currentPlayers > 0 && event.maxPlayers - event.currentPlayers <= 3 && (
                   <span className="bg-red-500 text-white px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(239,68,68,0.5)]">
@@ -606,7 +631,16 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                 )}
               </DrawerTitle>
               <DrawerDescription className="flex flex-wrap items-center gap-2 mt-3">
-                <span className="bg-primary/20 text-primary px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider">{event.sport}</span>
+                <span 
+                  className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
+                  style={{
+                    color: catColor,
+                    backgroundColor: `${catColor}18`,
+                    border: `1px solid ${catColor}35`
+                  }}
+                >
+                  {event.category || event.sport}
+                </span>
                 {(event.eventType === 'virtual' || event.eventType === 'hybrid') && (
                   <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border ${event.eventType === 'virtual'
                     ? 'bg-blue-500/20 text-blue-400 border-blue-500/20'

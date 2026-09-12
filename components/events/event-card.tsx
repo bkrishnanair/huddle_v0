@@ -98,24 +98,33 @@ export const EventCard = React.memo(
     };
 
     const ongoing = isEventOngoing();
+    const catColor = getCategoryColor(event.category);
 
     return (
       <Card 
-        className="group flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-panel shadow-lg transition-all duration-200 hover:border-white/25 hover:shadow-xl"
-        style={{ borderTop: `3px solid ${getCategoryColor(event.category)}90` }}
+        className="group flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-panel shadow-lg transition-all duration-200 hover:border-white/25 hover:shadow-xl relative"
+        style={{ 
+          borderTop: `3.5px solid ${catColor}`,
+          boxShadow: `0 4px 20px -4px ${catColor}25`
+        }}
       >
         <CardContent className="relative flex flex-1 flex-col p-5">
           <div
-            className="pointer-events-none absolute inset-x-0 top-0 h-32 opacity-80"
+            className="pointer-events-none absolute inset-x-0 top-0 h-40 opacity-90 transition-opacity group-hover:opacity-100"
             style={{
-              background: `linear-gradient(130deg, ${getCategoryColor(event.category)}30, transparent 75%)`,
+              background: `radial-gradient(ellipse 90% 70% at 20% -10%, ${catColor}38, transparent 70%)`,
             }}
           />
           <div className="relative mb-5 flex items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2.5">
               <span
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5"
-                style={{ color: getCategoryColor(event.category) }}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-transform duration-200 group-hover:scale-105"
+                style={{ 
+                  color: catColor,
+                  backgroundColor: `${catColor}18`,
+                  border: `1.5px solid ${catColor}40`,
+                  boxShadow: `0 0 14px -2px ${catColor}30`
+                }}
               >
                 {event.icon ? (
                   <span className="text-xl">{event.icon}</span>
@@ -124,8 +133,12 @@ export const EventCard = React.memo(
                 )}
               </span>
               <span 
-                className="truncate text-xs font-bold"
-                style={{ color: getCategoryColor(event.category) }}
+                className="truncate text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full"
+                style={{ 
+                  color: catColor,
+                  backgroundColor: `${catColor}16`,
+                  border: `1px solid ${catColor}35`
+                }}
               >
                 {event.category}
               </span>

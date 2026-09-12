@@ -26,18 +26,18 @@ export function formatTime(time24: string) {
 
 export const getCategoryColor = (category: string): string => {
   const colors: { [key: string]: string } = {
-    Sports: "#E74C3C", // Red Line
-    Music: "#9B59B6", // Purple Line
-    Community: "#EC407A", // Lighter Pink
-    Learning: "#3498DB", // Sky Blue
-    "Food & Drink": "#F39C12", // Gold Line
-    Tech: "#00796B", // Deeper Teal/Green
-    "Arts & Culture": "#C0392B", // Strong Red
-    Outdoors: "#2ECC71", // Emerald Green
-    "🖥️ Virtual": "#8E44AD", // Dark Purple
-    Recommended: "#f59e0b", // Amber
-    Joined: "#3b82f6", // Blue
-    default: "#64748b", // Slate
+    Sports: "#FF4D4D", // Electric Crimson / Coral Red
+    Music: "#A855F7", // Neon Purple
+    Community: "#F43F5E", // Radiant Hot Pink / Rose
+    Learning: "#38BDF8", // Electric Sky Blue
+    "Food & Drink": "#FBBF24", // Radiant Amber Gold
+    Tech: "#06B6D4", // Electric Cyan
+    "Arts & Culture": "#FB7185", // Electric Coral / Salmon
+    Outdoors: "#10B981", // Vivid Emerald Green
+    "🖥️ Virtual": "#8B5CF6", // Electric Violet
+    Recommended: "#F59E0B", // Amber
+    Joined: "#3B82F6", // Electric Blue
+    default: "#94A3B8", // Bright Slate
   }
   return colors[category] || colors.default
 }
