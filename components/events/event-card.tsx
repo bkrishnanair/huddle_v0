@@ -100,12 +100,15 @@ export const EventCard = React.memo(
     const ongoing = isEventOngoing();
 
     return (
-      <Card className="group flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-panel shadow-lg transition-all duration-200 hover:border-white/25 hover:shadow-xl">
+      <Card 
+        className="group flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-panel shadow-lg transition-all duration-200 hover:border-white/25 hover:shadow-xl"
+        style={{ borderTop: `3px solid ${getCategoryColor(event.category)}90` }}
+      >
         <CardContent className="relative flex flex-1 flex-col p-5">
           <div
-            className="pointer-events-none absolute inset-x-0 top-0 h-32 opacity-70"
+            className="pointer-events-none absolute inset-x-0 top-0 h-32 opacity-80"
             style={{
-              background: `linear-gradient(130deg, ${getCategoryColor(event.category)}24, transparent 75%)`,
+              background: `linear-gradient(130deg, ${getCategoryColor(event.category)}30, transparent 75%)`,
             }}
           />
           <div className="relative mb-5 flex items-center justify-between gap-2">
@@ -120,7 +123,10 @@ export const EventCard = React.memo(
                   <CategoryIcon category={event.category} />
                 )}
               </span>
-              <span className="truncate text-xs font-semibold text-slate-300">
+              <span 
+                className="truncate text-xs font-bold"
+                style={{ color: getCategoryColor(event.category) }}
+              >
                 {event.category}
               </span>
             </div>

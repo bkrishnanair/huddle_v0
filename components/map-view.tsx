@@ -988,6 +988,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                     size="sm"
                     isActive={activeCategory === category}
                     onClick={() => setActiveCategory(category)}
+                    color={category !== 'All' ? getCategoryColor(category) : undefined}
                     className="shrink-0 text-xs px-3 py-2 rounded-full whitespace-nowrap h-11"
                   >
                     {category}
