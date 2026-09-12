@@ -3,387 +3,481 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Download } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarCheck,
+  Check,
+  Compass,
+  Download,
+  MapPin,
+  Music2,
+  Radio,
+  Sparkles,
+  Users,
+  Zap,
+} from "lucide-react";
 import { trackFunnelEvent } from "@/lib/analytics";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
 import { InstallDialog } from "@/components/install-dialog";
-
-/**
- * Marketing landing page — the "Instrument" surface (design block 7).
- *
- * This is the only route that uses the display face (Bricolage Grotesque, via
- * --font-display). Everything else here is the shared Instrument token set from
- * app/globals.css: paper ground, ink text, blue for action, green for liveness.
- *
- * Two rules this page exists to respect:
- *   1. Blue (`action`) is anything you can press. Green (`live`) is a fact about
- *      the world and is never a control.
- *   2. All numerals are mono, uppercase, tabular — see the `.ins-mono` utility.
- */
+import { HuddleLogo } from "@/components/huddle-logo";
+import { Button } from "@/components/ui/button";
 
 interface LandingPageProps {
   onGetStarted: () => void;
   isAuthenticated?: boolean;
 }
 
-/* ---------------------------------------------------------------- wordmark */
-
-function Wordmark({ className = "" }: { className?: string }) {
-  return (
-    <span
-      className={`font-display text-[22px] leading-6 font-bold text-white ${className}`}
-    >
-      Huddle
-    </span>
-  );
-}
-
-/* ------------------------------------------------------------- hero visual */
-
-/**
- * Abstract campus map in Instrument tones. Deliberately not a screenshot: it
- * shows the pin language (live ring, upcoming dot, cluster) at a glance without
- * claiming to be a literal capture of the app. Self-contained inline SVG — the
- * previous version pulled a noise texture from a third-party domain, which put
- * someone else's uptime in front of our hero.
- */
+/** Illustrative campus preview, not a claim about live inventory. */
 function CampusMapVisual() {
-  const venues = [
-    { x: 30, y: 44, label: "Flower Power Hour", live: true, delay: 0.2 },
-    { x: 62, y: 66, label: "Mario Kart Tournament", live: true, delay: 0.6 },
-    { x: 24, y: 28, label: "Softball v. Rutgers", live: false, delay: 0.1 },
-    { x: 71, y: 30, label: "EnTERPreneur Conf.", live: false, delay: 0.8 },
-    { x: 44, y: 78, label: "Open Mic Night", live: false, delay: 0.4 },
-    { x: 82, y: 56, label: "Arboretum Walk", live: false, delay: 0.9 },
-  ];
-
   return (
-    <div
-      className="relative w-full overflow-hidden rounded-3xl border border-white/10 bg-[#0B101B] shadow-[0_0_40px_rgba(0,0,0,0.5)]"
-      style={{ aspectRatio: "5 / 4" }}
-    >
-      <svg
-        viewBox="0 0 500 400"
-        preserveAspectRatio="xMidYMid slice"
-        role="img"
-        aria-label="Stylised map of the University of Maryland campus showing live and upcoming events"
-        className="absolute inset-0 h-full w-full"
-      >
-        <rect width="500" height="400" fill="#0a0f1c" />
-        {/* Subtle grid to look like paper/radar */}
-        <g stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" strokeDasharray="4 4" opacity="0.5">
-            <line x1="0" y1="100" x2="500" y2="100" />
-            <line x1="0" y1="200" x2="500" y2="200" />
-            <line x1="0" y1="300" x2="500" y2="300" />
-            <line x1="125" y1="0" x2="125" y2="400" />
-            <line x1="250" y1="0" x2="250" y2="400" />
-            <line x1="375" y1="0" x2="375" y2="400" />
-        </g>
-        
-        {/* blocks / buildings */}
-        {[
-          [160, 150, 170, 46], [96, 88, 92, 50], [316, 92, 96, 52],
-          [120, 262, 96, 54], [300, 258, 84, 48], [156, 330, 100, 44],
-        ].map(([x, y, w, h], i) => (
-          <rect key={i} x={x} y={y} width={w} height={h} rx="4" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" />
-        ))}
-        {/* roads */}
-        {[
-          "M0,150 C150,142 330,148 500,140",
-          "M0,246 C170,238 330,242 500,234",
-          "M250,20 C254,150 256,280 252,400",
-          "M78,60 C68,180 78,290 116,380",
-        ].map((d, i) => (
-          <g key={i}>
-            <path d={d} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="8" />
-            <path d={d} fill="none" stroke="#0a0f1c" strokeWidth="6" />
+    <div className="relative isolate mx-auto w-full max-w-xl">
+      <div className="absolute -inset-8 -z-10 rounded-full bg-teal-400/10 blur-3xl" />
+      <div className="relative aspect-square overflow-hidden rounded-[2rem] border border-white/10 bg-panel shadow-2xl sm:aspect-[1/1.05]">
+        <svg
+          viewBox="0 0 500 520"
+          className="absolute inset-0 h-full w-full"
+          role="img"
+          aria-label="Illustration of campus paths and event pins"
+        >
+          <defs>
+            <pattern
+              id="campus-grid"
+              width="32"
+              height="32"
+              patternUnits="userSpaceOnUse"
+            >
+              <path
+                d="M32 0H0V32"
+                fill="none"
+                stroke="#ffffff"
+                strokeOpacity=".035"
+              />
+            </pattern>
+          </defs>
+          <rect width="500" height="520" fill="url(#campus-grid)" />
+          <path
+            d="M290 0C260 95 390 120 385 245S475 365 500 375V0Z"
+            fill="#173934"
+            fillOpacity=".45"
+          />
+          <path
+            d="M0 400Q130 300 215 365T440 460L500 520H0Z"
+            fill="#173934"
+            fillOpacity=".5"
+          />
+          <g fill="#1D2A3D" stroke="#2A3A4F" strokeWidth="1.5">
+            <rect
+              x="74"
+              y="108"
+              width="87"
+              height="52"
+              rx="8"
+              transform="rotate(-12 74 108)"
+            />
+            <rect
+              x="195"
+              y="53"
+              width="62"
+              height="96"
+              rx="8"
+              transform="rotate(-12 195 53)"
+            />
+            <rect
+              x="342"
+              y="177"
+              width="104"
+              height="62"
+              rx="8"
+              transform="rotate(-12 342 177)"
+            />
+            <rect
+              x="95"
+              y="274"
+              width="83"
+              height="64"
+              rx="8"
+              transform="rotate(-12 95 274)"
+            />
+            <rect
+              x="253"
+              y="295"
+              width="72"
+              height="80"
+              rx="8"
+              transform="rotate(-12 253 295)"
+            />
           </g>
-        ))}
-
-        {venues.map((v, i) => (
-          <g key={i} style={{ transform: `translate(${v.x}%, ${v.y}%)` }}>
-            {v.live ? (
-              <>
-                <circle r="4" fill="#2DD4BF" className="animate-ping" style={{ animationDuration: '2s' }} />
-                <circle r="4" fill="#2DD4BF" />
-                <rect x="8" y="-7" rx="3" width="70" height="14" fill="rgba(45,212,191,0.2)" stroke="#2DD4BF" strokeOpacity="0.2" />
-                <text x="14" y="2" className="ins-mono text-[6px] font-bold fill-live-ink uppercase">{v.label}</text>
-              </>
-            ) : (
-              <>
-                <circle r="3" fill="rgba(255,255,255,0.4)" />
-                <text x="8" y="2" className="ins-mono text-[6px] fill-ink-3 uppercase">{v.label}</text>
-              </>
-            )}
+          <g fill="none" strokeLinecap="round">
+            <path
+              d="M-30 250L540 125M-20 432L530 318M170 -20Q115 230 235 550M308 -20L425 550"
+              stroke="#29374A"
+              strokeWidth="13"
+            />
+            <path
+              d="M-30 250L540 125M-20 432L530 318M170 -20Q115 230 235 550M308 -20L425 550"
+              stroke="#182336"
+              strokeWidth="8"
+            />
+            <path
+              d="M160 370Q155 220 300 200"
+              stroke="#2DD4BF"
+              strokeWidth="3"
+              strokeDasharray="3 9"
+              opacity=".7"
+            />
           </g>
-        ))}
-      </svg>
+          <g
+            fill="#7C8EA6"
+            fontFamily="sans-serif"
+            fontSize="10"
+            letterSpacing="2"
+          >
+            <text x="42" y="204" transform="rotate(-12 42 204)">
+              CAMPUS DRIVE
+            </text>
+            <text x="337" y="297">
+              THE QUAD
+            </text>
+          </g>
+        </svg>
+        <div className="absolute inset-x-5 top-5 flex items-center justify-between gap-2">
+          <span className="flex items-center gap-2 rounded-full border border-white/10 bg-canvas/80 px-3 py-2 text-xs font-medium text-slate-200 backdrop-blur-md">
+            <MapPin className="h-3.5 w-3.5 text-orange-400" /> College Park, MD
+          </span>
+          <span className="text-[10px] font-medium uppercase tracking-widest text-slate-400">
+            Campus preview
+          </span>
+        </div>
+        <div className="absolute left-[21%] top-[25%] flex h-12 w-12 rotate-[-8deg] items-center justify-center rounded-2xl border border-orange-300/40 bg-orange-500 text-canvas shadow-glow">
+          <Zap className="h-6 w-6" />
+        </div>
+        <div className="absolute right-[27%] top-[36%] flex h-16 w-16 items-center justify-center rounded-full border-8 border-teal-400/15 bg-teal-400/20 shadow-xl">
+          <span className="absolute inset-0 rounded-full border border-teal-300/30 motion-safe:animate-ping" />
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-teal-400 text-canvas">
+            <Music2 className="h-5 w-5" />
+          </span>
+        </div>
+        <div className="absolute bottom-[30%] left-[25%] flex h-11 w-11 items-center justify-center rounded-full border border-violet-300/40 bg-violet-500 text-white shadow-xl">
+          <Users className="h-5 w-5" />
+        </div>
+        <div className="absolute bottom-5 left-5 right-5 rounded-3xl border border-white/15 bg-canvas/85 p-4 shadow-2xl backdrop-blur-xl sm:p-5">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-300/25 to-emerald-500/5 text-teal-300">
+              <Music2 className="h-7 w-7" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium text-teal-300">
+                Find your kind of night
+              </p>
+              <h3 className="mt-1 font-display text-xl font-bold text-white">
+                Open mic. Open invite.
+              </h3>
+              <p className="mt-1 text-xs text-slate-400">
+                Your next plan could be right here.
+              </p>
+            </div>
+            <ArrowRight className="hidden h-5 w-5 text-slate-300 sm:block" />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
-
-/* -------------------------------------------------------------------- page */
 
 export default function LandingPage({
   onGetStarted,
   isAuthenticated = false,
 }: LandingPageProps) {
   const router = useRouter();
-  const { isMounted, isInstalled, isDialogOpen, setIsDialogOpen, promptInstall } = usePwaInstall();
-
-  const handleInstallClick = async (placement: 'hero' | 'nav') => {
+  const {
+    isMounted,
+    isInstalled,
+    isDialogOpen,
+    setIsDialogOpen,
+    promptInstall,
+  } = usePwaInstall();
+  const handleInstallClick = async (placement: "hero" | "nav") => {
     trackFunnelEvent({
       name: "landing_cta_click",
-      properties: { placement: placement === 'hero' ? 'install_hero' : 'install_nav' },
+      properties: {
+        placement: placement === "hero" ? "install_hero" : "install_nav",
+      },
     });
     const outcome = await promptInstall();
-    if (outcome === 'dialog' || outcome === 'unavailable') {
+    if (outcome === "dialog" || outcome === "unavailable")
       setIsDialogOpen(true);
-    }
   };
-
-  // The app is still dark-themed: `body` inherits --background (a dark navy) from
-  // the legacy token set. This page is the first Instrument surface, so while it
-  // is mounted we paint the document ground paper and restore it on unmount.
-  // Without this, iOS rubber-band scrolling and route transitions flash navy
-  // behind a light page. Remove once the whole app has migrated and :root is light.
   useEffect(() => {
     trackFunnelEvent({ name: "landing_view" });
-    const { body } = document;
-    const previous = body.style.backgroundColor;
-    body.style.backgroundColor = "#0a0f1c";
+    const previous = document.body.style.backgroundColor;
+    document.body.style.backgroundColor = "#0B101B";
     return () => {
-      body.style.backgroundColor = previous;
+      document.body.style.backgroundColor = previous;
     };
   }, []);
-
-  const handleOpenMap = (placement: 'hero' | 'nav' | 'footer' = 'hero') => {
+  const handleOpenMap = (placement: "hero" | "nav" | "footer" = "hero") => {
     trackFunnelEvent({ name: "landing_cta_click", properties: { placement } });
     router.push("/map");
   };
-
   const handleHostEvent = () => {
-    trackFunnelEvent({ name: "landing_cta_click", properties: { placement: "organizer" } });
+    trackFunnelEvent({
+      name: "landing_cta_click",
+      properties: { placement: "organizer" },
+    });
     router.push("/map?intent=create");
   };
 
-  const steps = [
-    { n: "01", title: "Open the map", body: "Events near you appear as pins. Instant in your browser or installed as an app." },
-    { n: "02", title: "Tap a pin", body: "Time, place, how many people are going." },
-    { n: "03", title: "Show up", body: "Get a reminder before it starts." },
-  ];
-
-  const organizerClaims = [
-    { label: "Show-rate tracking", body: "Every event's show rate is computed from real check-ins, not RSVPs." },
-    { label: "One-tap check-ins", body: "Open check-in at start time; attendees confirm themselves." },
-    { label: "Roster export", body: "Download any roster as CSV, including answers to your RSVP questions." },
-  ];
-
   return (
-    <div className="min-h-screen bg-[#0B101B] font-body text-white">
-      {/* ---------------------------------------------------------- nav --- */}
-      <header className="border-b border-white/10 bg-[#0B101B]">
+    <div className="min-h-screen overflow-hidden bg-canvas font-body text-slate-100">
+      <header className="relative z-10 border-b border-white/5">
         <nav
           aria-label="Primary"
-          className="mx-auto flex h-16 max-w-[1120px] items-center justify-between gap-4 px-6"
+          className="mx-auto flex min-h-20 max-w-7xl items-center justify-between gap-3 px-5 sm:px-8"
         >
           <button
-            type="button"
             onClick={() => router.push("/")}
-            className="-my-2 rounded-full py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action"
             aria-label="Huddle home"
+            className="flex items-center gap-2.5 rounded-xl pr-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-400"
           >
-            <Wordmark />
+            <HuddleLogo size={34} />
+            <span className="font-display text-2xl font-bold tracking-tight">
+              huddle<span className="text-orange-400">.</span>
+            </span>
           </button>
-
-          <div className="flex items-center gap-3 sm:gap-5">
+          <div className="flex items-center gap-2 sm:gap-5">
             <a
               href="#organizers"
-              className="-my-2 hidden rounded-full py-2 text-[15px] font-medium text-slate-400 transition-colors duration-micro ease-ins hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action sm:inline"
+              className="hidden min-h-11 items-center text-sm font-medium text-slate-300 hover:text-white md:inline-flex"
             >
-              I organize events
+              For organizers
             </a>
+            {!isInstalled && isMounted && (
+              <Button
+                variant="ghost"
+                className="hidden text-slate-300 lg:inline-flex"
+                onClick={() => handleInstallClick("nav")}
+              >
+                <Download /> Install app
+              </Button>
+            )}
             {!isAuthenticated && (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
                 onClick={onGetStarted}
-                className="inline-flex h-9 items-center rounded-full border border-white/10 bg-white/5 backdrop-blur-md px-4 text-sm font-semibold text-white transition-colors duration-micro ease-ins hover:bg-slate-900/50"
+                className="px-3 text-slate-300"
               >
                 Sign in
-              </button>
+              </Button>
             )}
-            {!isInstalled && isMounted && (
-              <button
-                type="button"
-                onClick={() => handleInstallClick('nav')}
-                className="hidden sm:inline-flex h-9 items-center gap-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md px-3.5 text-sm font-medium text-white transition-colors duration-micro ease-ins hover:bg-slate-900/50"
-              >
-                <Download className="h-3.5 w-3.5 text-slate-400" />
-                Install app
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => handleOpenMap('nav')}
-              className="inline-flex h-9 items-center rounded-full bg-primary shadow-[0_0_20px_rgba(249,115,22,0.4)] px-4 text-sm font-semibold text-white transition-colors duration-micro ease-ins hover:bg-primary/90"
+            <Button
+              onClick={() => handleOpenMap("nav")}
+              className="rounded-full px-4 sm:px-5"
             >
-              Open the map
-            </button>
+              Explore <ArrowRight />
+            </Button>
           </div>
         </nav>
       </header>
-
       <main>
-        {/* -------------------------------------------------------- hero --- */}
-        <section className="relative mx-auto max-w-[1120px] px-6 py-14 sm:py-16">
-          {/* Glow effect */}
-          <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[500px] h-[500px] bg-primary/10 blur-[120px] pointer-events-none -z-10 rounded-full" />
-          <div className="absolute top-1/3 right-1/4 -translate-y-1/2 w-[400px] h-[400px] bg-teal-500/10 blur-[100px] pointer-events-none -z-10 rounded-full" />
-          <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-12">
-            <div>
-              <h1 className="font-display text-[34px] font-bold leading-[1.1] text-white sm:text-[40px] sm:leading-[44px]">
-                See what&rsquo;s happening around campus.{" "}
-                <span className="whitespace-nowrap text-primary">Right now.</span>
-              </h1>
-
-              <p className="mt-5 max-w-[40ch] text-[15px] leading-[22px] text-slate-400">
-                Live events near you with no app, no account, no missing out.
-              </p>
-
-              <div className="mt-8 flex flex-col items-start gap-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => handleOpenMap('hero')}
-                    className="inline-flex h-11 items-center rounded-xl bg-primary shadow-[0_0_20px_rgba(249,115,22,0.4)] px-7 text-[15px] font-semibold text-white transition-[background-color,transform] duration-micro ease-ins hover:bg-primary/90 active:scale-[0.98]"
-                  >
-                    Open the map
-                  </button>
-                  {!isInstalled && isMounted && (
-                    <button
-                      type="button"
-                      onClick={() => handleInstallClick('hero')}
-                      className="inline-flex h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/5 backdrop-blur-md px-5 text-[15px] font-medium text-white transition-[background-color,transform] duration-micro ease-ins hover:bg-white/10 active:scale-[0.98]"
-                    >
-                      <Download className="h-4 w-4 text-slate-400" />
-                      Install app
-                    </button>
-                  )}
-                </div>
-                <p className="ins-mono text-xs leading-4 text-slate-500">
-                  Free · no signup · works in your browser or home screen
-                </p>
-              </div>
+        <section className="relative isolate mx-auto grid max-w-7xl items-center gap-12 px-5 pb-16 pt-12 sm:px-8 sm:py-20 lg:grid-cols-2 lg:gap-16 lg:py-24">
+          <div className="pointer-events-none absolute -left-40 top-0 -z-10 h-96 w-96 rounded-full bg-orange-500/10 blur-3xl" />
+          <div>
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-teal-400/20 bg-teal-400/5 px-3 py-2 text-xs font-semibold text-teal-300">
+              <Radio className="h-3.5 w-3.5" /> Less scrolling. More showing up.
             </div>
-
-            <div className="lg:pl-4">
-              <CampusMapVisual />
+            <h1 className="font-display text-5xl font-bold leading-[1.04] tracking-tight text-white sm:text-6xl xl:text-7xl">
+              See what’s happening around campus.
+              <br />
+              <span className="text-orange-400">Right now.</span>
+            </h1>
+            <p className="mt-6 max-w-md text-base leading-relaxed text-slate-400 sm:text-lg">
+              The pickup game. The open mic. The people you haven’t met yet.
+              Your next good plan is closer than you think.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Button
+                size="lg"
+                onClick={() => handleOpenMap("hero")}
+                className="rounded-2xl px-7 text-base"
+              >
+                Find my next plan <ArrowRight />
+              </Button>
+              {!isInstalled && isMounted && (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => handleInstallClick("hero")}
+                  className="rounded-2xl px-5"
+                >
+                  <Download /> Get the app
+                </Button>
+              )}
+            </div>
+            <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-400">
+              {[
+                "Free to explore",
+                "No download needed",
+                "Browse without an account",
+              ].map((text) => (
+                <span key={text} className="inline-flex items-center gap-1.5">
+                  <Check className="h-3.5 w-3.5 text-teal-400" />
+                  {text}
+                </span>
+              ))}
             </div>
           </div>
+          <CampusMapVisual />
         </section>
-
-        {/* ------------------------------------------------ how it works --- */}
         <section
           aria-labelledby="how-it-works"
-          className="mx-auto max-w-[1120px] px-6 py-14 sm:py-16"
+          className="mx-auto max-w-7xl px-5 pb-20 sm:px-8"
         >
-          <h2 id="how-it-works" className="ins-mono text-xs leading-4 text-slate-500">
-            How it works
-          </h2>
-          <div className="mt-8 grid gap-8 sm:grid-cols-3">
-            {steps.map((s) => (
-              <div key={s.n} className="border-l border-white/10 pl-6">
-                <div className="ins-mono text-xs leading-4 text-slate-600">{s.n}</div>
-                <h3 className="mt-3 text-lg font-semibold leading-6 text-white">{s.title}</h3>
-                <p className="mt-2 text-[15px] leading-[22px] text-slate-400">{s.body}</p>
+          <div className="mb-8 flex items-center gap-3">
+            <span className="h-px flex-1 bg-white/10" />
+            <h2
+              id="how-it-works"
+              className="text-xs font-semibold uppercase tracking-widest text-slate-400"
+            >
+              Out of the group chat. Into the moment.
+            </h2>
+            <span className="h-px flex-1 bg-white/10" />
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {[
+              {
+                icon: Compass,
+                title: "Find your scene",
+                body: "A whole campus of plans, on one map. Filter by what you’re into and when you’re free.",
+              },
+              {
+                icon: MapPin,
+                title: "Get the whole picture",
+                body: "The time, the place, the people going. Everything you need before heading out.",
+              },
+              {
+                icon: Users,
+                title: "Make it a plan",
+                body: "Sign in, save your spot, and show up. Good things happen when you get together.",
+              },
+            ].map((step, i) => (
+              <div
+                key={step.title}
+                className="rounded-3xl border border-white/10 bg-white/[0.025] p-6 sm:p-7"
+              >
+                <div className="mb-7 flex items-center justify-between">
+                  <step.icon className="h-6 w-6 text-orange-400" />
+                  <span className="font-mono text-xs text-slate-500">
+                    0{i + 1}
+                  </span>
+                </div>
+                <h3 className="font-display text-xl font-bold">{step.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-slate-400">
+                  {step.body}
+                </p>
               </div>
             ))}
           </div>
         </section>
-
-        {/* -------------------------------------------------- organizers --- */}
         <section
           id="organizers"
           aria-labelledby="organizers-heading"
-          className="border-y border-white/10 bg-slate-900/50"
+          className="mx-auto max-w-7xl px-5 pb-20 sm:px-8"
         >
-          <div className="mx-auto grid max-w-[1120px] items-start gap-10 px-6 py-14 sm:py-16 lg:grid-cols-2 lg:gap-12">
+          <div className="relative isolate overflow-hidden rounded-[2rem] border border-white/10 bg-panel px-6 py-10 sm:p-12 lg:grid lg:grid-cols-2 lg:gap-16">
+            <div className="pointer-events-none absolute -right-24 -top-24 -z-10 h-96 w-96 rounded-full bg-orange-500/10 blur-3xl" />
             <div>
-              <p className="ins-mono text-xs leading-4 text-slate-500">For organizers</p>
+              <span className="text-xs font-semibold uppercase tracking-widest text-orange-400">
+                For the people who make it happen
+              </span>
               <h2
                 id="organizers-heading"
-                className="mt-3 font-display text-[28px] font-bold leading-[1.15] text-white sm:text-[32px] sm:leading-9"
+                className="mt-4 font-display text-3xl font-bold tracking-tight sm:text-4xl"
               >
-                Run events people actually show up to.
+                Bring the plan.
+                <br />
+                We’ll help bring the people.
               </h2>
-
-              <dl className="mt-6">
-                {organizerClaims.map((c, i) => (
-                  <div
-                    key={c.label}
-                    className={`border-t border-white/10 py-4 ${i === organizerClaims.length - 1 ? "border-b" : ""
-                      }`}
-                  >
-                    <dt className="ins-mono text-xs leading-4 text-slate-500">{c.label}</dt>
-                    <dd className="mt-1.5 text-[15px] leading-[22px] text-white">{c.body}</dd>
-                  </div>
-                ))}
-              </dl>
-
-              <button
-                type="button"
-                onClick={handleHostEvent}
-                className="mt-8 inline-flex h-11 items-center rounded-xl border border-white/10 bg-white/5 backdrop-blur-md px-7 text-[15px] font-semibold text-white transition-colors duration-micro ease-ins hover:bg-white/10"
-              >
-                Create your first event
-              </button>
-            </div>
-
-            <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md p-5 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
-              <p className="ins-mono text-xs leading-4 text-slate-500">Already on Huddle</p>
-              <p className="mt-3 text-[15px] leading-[22px] text-slate-400">
-                Campus events from TerpLink are already on the map. If one of them is
-                yours, claim it and the RSVPs students have already made come with it.
+              <p className="mt-4 max-w-md text-sm leading-relaxed text-slate-400">
+                Club meetup or your first pickup game — give it a place on the
+                map and keep everyone in the loop.
               </p>
-              <dl className="mt-6 grid grid-cols-2 gap-4">
-                <div>
-                  <dt className="ins-mono text-[10px] leading-[14px] text-slate-500">Events on the map</dt>
-                  <dd className="ins-mono mt-1 text-[22px] font-semibold leading-7 text-white">500+</dd>
+              <Button onClick={handleHostEvent} className="mt-7">
+                Create your first event <ArrowRight />
+              </Button>
+            </div>
+            <div className="mt-10 space-y-3 lg:mt-0">
+              {[
+                {
+                  icon: MapPin,
+                  title: "Get discovered",
+                  text: "Put your event where your campus is looking.",
+                },
+                {
+                  icon: Users,
+                  title: "Keep your crew together",
+                  text: "Manage RSVPs, waitlists, and event chat in one place.",
+                },
+                {
+                  icon: CalendarCheck,
+                  title: "See who shows up",
+                  text: "Check in your attendees and understand your turnout.",
+                },
+              ].map((item) => (
+                <div
+                  key={item.title}
+                  className="flex items-center gap-4 rounded-2xl border border-white/5 bg-white/5 p-4"
+                >
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-400/10 text-teal-300">
+                    <item.icon className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-semibold">{item.title}</h3>
+                    <p className="mt-1 text-sm text-slate-400">{item.text}</p>
+                  </div>
                 </div>
-                <div>
-                  <dt className="ins-mono text-[10px] leading-[14px] text-slate-500">Campus</dt>
-                  <dd className="mt-1 text-[15px] font-semibold leading-7 text-white">UMD</dd>
-                </div>
-              </dl>
+              ))}
             </div>
           </div>
         </section>
+        <section className="px-5 pb-20 text-center">
+          <Sparkles className="mx-auto mb-5 h-6 w-6 text-teal-300" />
+          <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
+            Your next “you had to be there” starts here.
+          </h2>
+          <Button
+            size="lg"
+            className="mt-7 rounded-full"
+            onClick={() => handleOpenMap("footer")}
+          >
+            Open the map <ArrowRight />
+          </Button>
+          <p className="mt-4 text-sm text-slate-400">
+            See what’s out there. Decide when you get there.
+          </p>
+        </section>
       </main>
-
-      {/* ------------------------------------------------------- footer --- */}
-      <footer className="bg-[#0B101B]">
-        <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-3 px-6 py-6">
-          <p className="text-[13px] leading-5 text-slate-500">
+      <footer className="border-t border-white/10">
+        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-3 px-5 py-6 sm:flex-row sm:items-center sm:px-8">
+          <p className="text-xs text-slate-400">
             Huddle Map, LLC · College Park, MD
           </p>
-          <nav aria-label="Footer" className="flex gap-5">
+          <nav aria-label="Footer" className="flex gap-6">
             {[
               { href: "/privacy", label: "Privacy" },
               { href: "/terms", label: "Terms" },
               { href: "/contact", label: "Contact" },
-            ].map((l) => (
+            ].map((link) => (
               <Link
-                key={l.href}
-                href={l.href}
-                className="-my-2 rounded-full py-2 text-[13px] leading-5 text-slate-400 transition-colors duration-micro ease-ins hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action"
+                key={link.href}
+                href={link.href}
+                className="inline-flex min-h-11 items-center text-xs text-slate-400 hover:text-white"
               >
-                {l.label}
+                {link.label}
               </Link>
             ))}
           </nav>
         </div>
       </footer>
-
       <InstallDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
     </div>
   );

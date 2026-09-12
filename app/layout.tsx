@@ -68,7 +68,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#FCFBF9",
+  themeColor: "#0B101B",
 }
 
 export default function RootLayout({
@@ -78,7 +78,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${plexMono.variable} ${bricolage.variable} ${inter.className} tracking-tight`}>
+      <body className={`${inter.variable} ${plexMono.variable} ${bricolage.variable} ${inter.className} antialiased selection:bg-orange-500/30 [&_button]:min-h-11 [&_button]:min-w-11`}>
         <FirebaseProvider>
           <PWARegister />
           <InstallPrompt />

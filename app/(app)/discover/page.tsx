@@ -26,7 +26,7 @@ const TIME_FILTERS = ["All", "Live", "Today", "This Week", "This Weekend"];
 const ActionableEmptyState = ({ onOpenCreateModal }: { onOpenCreateModal: () => void }) => (
     <div className="text-center glass-surface border-white/15 rounded-2xl p-8 mt-8">
         <PlusCircle className="w-16 h-16 text-primary mx-auto mb-4" />
-        <h3 className="text-2xl font-bold text-slate-50 mb-2">No Events Nearby</h3>
+        <h3 className="font-display text-2xl font-bold text-slate-50 mb-2">No Events Nearby</h3>
         <p className="text-slate-300 mb-6">Your area is waiting for a leader. Be the one to get things started.</p>
         <Button size="lg" onClick={onOpenCreateModal} className="h-12 px-8 text-lg">
             Create the First Event
@@ -403,7 +403,7 @@ export default function DiscoverPage() {
                 )}
                 {hasRecommended && (
                     <section className="mb-8">
-                        <h2 className="text-2xl font-bold text-slate-50 mb-4 flex items-center gap-2"><Star className="w-6 h-6 text-yellow-400" /> Recommended For You</h2>
+                        <h2 className="font-display text-2xl font-bold text-slate-50 mb-4 flex items-center gap-2"><Star className="w-6 h-6 text-yellow-400" /> Picked for you</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {recommendedEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} showMapButton={true} />)}
                         </div>
@@ -412,7 +412,7 @@ export default function DiscoverPage() {
                 
                 {communityEvents.length > 0 && (
                     <section className="mb-8">
-                        <h2 className="text-2xl font-bold text-slate-50 mb-4">Community Events</h2>
+                        <h2 className="font-display text-2xl font-bold text-slate-50 mb-4">Campus community</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {communityEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} showMapButton={true} />)}
                         </div>
@@ -422,7 +422,7 @@ export default function DiscoverPage() {
                 {terplinkEvents.length > 0 && (
                     <section className="mb-8">
                         <div className="flex items-center gap-3 mb-4">
-                            <h2 className="text-2xl font-bold text-slate-50">From TerpLink</h2>
+                            <h2 className="font-display text-2xl font-bold text-slate-50">From TerpLink</h2>
                             <span className="text-[10px] font-bold bg-white/10 text-slate-300 px-2 py-0.5 rounded border border-white/5 uppercase tracking-wider">
                                 Sourced
                             </span>
@@ -437,14 +437,14 @@ export default function DiscoverPage() {
     }
 
     return (
-        <div className="min-h-screen w-full liquid-gradient p-4 pb-[var(--safe-bottom)] md:p-8 md:pb-[var(--safe-bottom)] overflow-x-hidden">
+        <div className="min-h-screen w-full bg-canvas p-5 pb-[calc(var(--safe-bottom)+2rem)] sm:p-8 sm:pb-[calc(var(--safe-bottom)+2rem)] overflow-x-hidden [&>header]:max-w-7xl [&>header]:mx-auto [&>div]:max-w-7xl [&>div]:mx-auto">
             <header className="flex justify-between items-start mb-10">
                 <div className="space-y-1">
-                    <h1 className="text-4xl font-extrabold text-slate-50 tracking-tight">Discover</h1>
-                    <p className="text-slate-400 font-medium text-lg">Find events happening around you.</p>
+                    <h1 className="font-display text-4xl sm:text-5xl font-bold text-white tracking-tight">Discover</h1>
+                    <p className="text-slate-400 text-base">A little curiosity. A lot happening.</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl glass-surface border border-rose-500/20 shadow-xl hover:bg-rose-500/10 text-rose-400" onClick={handleLogout}>
+                    <Button variant="ghost" size="icon" aria-label="Sign out" className="h-11 w-11 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 text-slate-400" onClick={handleLogout}>
                         <LogOut className="w-5 h-5" />
                     </Button>
                 </div>
@@ -456,7 +456,8 @@ export default function DiscoverPage() {
                     <div className="relative flex-1 w-full group">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors z-10" />
                         <Input
-                            placeholder="Search by name, category, or event vibe..."
+                            aria-label="Search campus events"
+                            placeholder="What are you in the mood for?"
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                             onKeyDown={e => {
@@ -464,7 +465,7 @@ export default function DiscoverPage() {
                                     handleAiSearch(searchQuery);
                                 }
                             }}
-                            className="pl-12 pr-12 glass-surface border-white/10 h-14 rounded-2xl shadow-2xl text-lg focus:ring-primary/20"
+                            className="pl-12 pr-12 bg-white/5 border-white/10 h-14 rounded-2xl text-base focus:ring-primary/20"
                         />
                         {isAiSearching && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-teal-400 animate-spin" />}
                     </div>
@@ -487,7 +488,7 @@ export default function DiscoverPage() {
                 {/* Filter Cluster */}
                 <div className="flex flex-col gap-3 w-full">
                     {/* Category Group - always visible */}
-                    <div className="flex items-center gap-2 p-1.5 glass-surface border border-white/10 rounded-full shadow-2xl max-w-max overflow-x-auto no-scrollbar">
+                    <div className="flex items-center gap-2 p-1.5 bg-white/[0.025] border border-white/10 rounded-3xl max-w-full overflow-x-auto no-scrollbar">
                         {CATEGORY_FILTERS.map(category => (
                             <div key={category} className="shrink-0">
                                 <Chip
@@ -503,7 +504,7 @@ export default function DiscoverPage() {
 
                     {/* Compact filter row: Time chips + More Filters toggle */}
                     <div className="flex items-center gap-3 flex-wrap">
-                        <div className="flex items-center gap-1.5 p-1 glass-surface border border-white/10 rounded-full shadow-xl overflow-x-auto no-scrollbar">
+                        <div className="flex items-center gap-1.5 p-1 bg-white/[0.025] border border-white/10 rounded-3xl max-w-full overflow-x-auto no-scrollbar">
                             {TIME_FILTERS.map(time => (
                                 <div key={time} className="shrink-0">
                                     <Chip

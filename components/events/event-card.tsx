@@ -2,25 +2,33 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, MapPin, Users, CalendarPlus, Monitor, Eye, Repeat, Megaphone, BadgeCheck } from "lucide-react";
+import {
+  Clock,
+  MapPin,
+  Users,
+  CalendarPlus,
+  Monitor,
+  Eye,
+  Repeat,
+  Megaphone,
+  BadgeCheck,
+  ArrowUpRight,
+} from "lucide-react";
 import { GameEvent } from "@/lib/types";
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from "date-fns";
 
 import { generateGoogleCalendarUrl, downloadIcsFile } from "@/lib/calendar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import Link from "next/link";
 import { useFollowing } from "@/hooks/use-following";
 import { getCategoryColor } from "@/lib/utils";
-
-const getCategoryIcon = (category: string): string => {
-  const icons: { [key: string]: string } = {
-    Sports: "⚽", Music: "🎵", Community: "🤝", Learning: "📚",
-    "Food & Drink": "🍕", Tech: "💻", "Arts & Culture": "🎨",
-    Outdoors: "🌲", default: "📍"
-  }
-  return icons[category] || icons.default
-}
+import { CategoryIcon } from "@/components/category-icon";
 
 interface EventCardProps {
   event: GameEvent;
@@ -30,227 +38,322 @@ interface EventCardProps {
   hasNewUpdate?: boolean;
 }
 
-export const EventCard = React.memo(({ event, onSelectEvent, showMapButton = false, onUnjoin, hasNewUpdate }: EventCardProps) => {
-  const isFull = event.currentPlayers >= event.maxPlayers;
-  const { followingSet } = useFollowing();
+export const EventCard = React.memo(
+  ({
+    event,
+    onSelectEvent,
+    showMapButton = false,
+    onUnjoin,
+    hasNewUpdate,
+  }: EventCardProps) => {
+    const isFull = event.currentPlayers >= event.maxPlayers;
+    const { followingSet } = useFollowing();
 
-  // Calculate friends attending
-  const friendsAttendingCount = event.players ? event.players.filter(uid => followingSet.has(uid)).length : 0;
+    // Calculate friends attending
+    const friendsAttendingCount = event.players
+      ? event.players.filter((uid) => followingSet.has(uid)).length
+      : 0;
 
-  const getTimeDifference = (date: string, time: string) => {
-    if (!date || date === "Today" || date === "Tomorrow" || date.includes("/")) {
-      return date || "TBD";
-    }
-
-    try {
-      const eventDateTime = new Date(`${date}T${time || '00:00'}`);
-      if (isNaN(eventDateTime.getTime())) return "Upcoming";
-      return formatDistanceToNow(eventDateTime, { addSuffix: true });
-    } catch (error) {
-      console.error("Error formatting date:", error);
-      return "Upcoming";
-    }
-  };
-
-  const isEventOngoing = () => {
-    if (!event.date || !event.time) return false;
-    try {
-      const startDateTime = new Date(`${event.date}T${event.time}`);
-      if (isNaN(startDateTime.getTime())) return false;
-
-      const now = new Date();
-      if (now < startDateTime) return false;
-
-      let endDateTime;
-      if (event.endTime) {
-        endDateTime = new Date(`${event.date}T${event.endTime}`);
-      } else {
-        // Default to 2 hours duration
-        endDateTime = new Date(startDateTime.getTime() + 2 * 60 * 60 * 1000);
+    const getTimeDifference = (date: string, time: string) => {
+      if (
+        !date ||
+        date === "Today" ||
+        date === "Tomorrow" ||
+        date.includes("/")
+      ) {
+        return date || "TBD";
       }
 
-      return now <= endDateTime;
-    } catch (error) {
-      return false;
-    }
-  };
+      try {
+        const eventDateTime = new Date(`${date}T${time || "00:00"}`);
+        if (isNaN(eventDateTime.getTime())) return "Upcoming";
+        return formatDistanceToNow(eventDateTime, { addSuffix: true });
+      } catch (error) {
+        console.error("Error formatting date:", error);
+        return "Upcoming";
+      }
+    };
 
-  const ongoing = isEventOngoing();
+    const isEventOngoing = () => {
+      if (!event.date || !event.time) return false;
+      try {
+        const startDateTime = new Date(`${event.date}T${event.time}`);
+        if (isNaN(startDateTime.getTime())) return false;
 
-  return (
-    <Card className="glass-surface overflow-hidden flex flex-col" style={{ border: '1px solid rgba(255,255,255,0.15)', borderLeft: `6px solid ${getCategoryColor(event.category)}` }}>
-      <CardContent className="p-4 flex-grow relative transition-colors duration-300" style={{ background: `linear-gradient(135deg, ${getCategoryColor(event.category)}b3 0%, ${getCategoryColor(event.category)}1a 100%)` }}>
-        <div className="flex justify-between items-start mb-3">
-          <div className="flex items-center gap-2 pr-2 overflow-hidden">
-            <h3 className="font-bold text-lg text-white drop-shadow-md truncate flex items-center pr-1">
-              <span className="mr-1.5">{event.icon || getCategoryIcon(event.category)}</span>
-              {event.name}
-              {event.isOrganizerVerified && (
-                <BadgeCheck className="w-4 h-4 ml-1.5 text-blue-400 shrink-0" />
-              )}
-            </h3>
-            {ongoing && (
-              <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 whitespace-nowrap text-[9px] font-black uppercase tracking-wider px-1.5 shadow-sm animate-pulse">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-ping"></span>
-                Ongoing
-              </Badge>
-            )}
-            {event.recurrence && (
-              <Badge className="bg-teal-500/20 text-teal-400 border border-teal-500/30 whitespace-nowrap text-[9px] font-black uppercase tracking-wider px-1.5 shadow-sm gap-0.5">
-                <Repeat className="w-2.5 h-2.5" />
-                {event.recurrence.type}{(event as any).recurringCount > 1 ? ` · ${(event as any).recurringCount} upcoming` : ''}
-              </Badge>
-            )}
-            {event.maxPlayers - event.currentPlayers > 0 && event.maxPlayers - event.currentPlayers <= 3 && (
-              <Badge variant="destructive" className="bg-red-500/20 text-red-400 border border-red-500/30 whitespace-nowrap text-[9px] font-black uppercase tracking-wider px-1.5 shadow-sm">
-                Limited Seating
-              </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-1.5">
-            {friendsAttendingCount > 0 && (
-              <Badge variant="secondary" className="bg-orange-500/20 text-orange-400 border border-orange-500/30 whitespace-nowrap text-[10px] font-bold px-1.5 shadow-sm">
-                🔥 {friendsAttendingCount} {friendsAttendingCount === 1 ? 'friend' : 'friends'}
-              </Badge>
-            )}
-            {(event.eventType === 'virtual' || event.eventType === 'hybrid') && (
-              <Badge className={`border whitespace-nowrap text-[9px] font-black uppercase tracking-wider px-1.5 ${event.eventType === 'virtual'
-                ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-                : 'bg-violet-500/20 text-violet-400 border-violet-500/30'
-                }`}>
-                {event.eventType === 'virtual' ? '🖥️ Virtual' : '📡 Hybrid'}
-              </Badge>
-            )}
-            <span className="whitespace-nowrap shrink-0 text-xs font-bold drop-shadow-md text-white/90">
-              {event.category}
-            </span>
-            {event.tags && event.tags.length > 0 && event.tags.map(tag => (
-              <span key={tag} className="whitespace-nowrap text-[8px] font-bold bg-white/10 text-white/60 px-1.5 py-0.5 rounded-md border border-white/10">
-                {tag}
+        const now = new Date();
+        if (now < startDateTime) return false;
+
+        let endDateTime;
+        if (event.endTime) {
+          endDateTime = new Date(`${event.date}T${event.endTime}`);
+        } else {
+          // Default to 2 hours duration
+          endDateTime = new Date(startDateTime.getTime() + 2 * 60 * 60 * 1000);
+        }
+
+        return now <= endDateTime;
+      } catch (error) {
+        return false;
+      }
+    };
+
+    const ongoing = isEventOngoing();
+
+    return (
+      <Card className="group flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-panel shadow-lg transition-all duration-200 hover:border-white/25 hover:shadow-xl">
+        <CardContent className="relative flex flex-1 flex-col p-5">
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-32 opacity-70"
+            style={{
+              background: `linear-gradient(130deg, ${getCategoryColor(event.category)}24, transparent 75%)`,
+            }}
+          />
+          <div className="relative mb-5 flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5"
+                style={{ color: getCategoryColor(event.category) }}
+              >
+                {event.icon ? (
+                  <span className="text-xl">{event.icon}</span>
+                ) : (
+                  <CategoryIcon category={event.category} />
+                )}
               </span>
-            ))}
-          </div>
-        </div>
-        <div className="space-y-2 text-sm text-white/90 drop-shadow-sm font-medium">
-          <div className="flex items-center">
-            <Clock className="w-4 h-4 mr-2 opacity-80" />
-            <span>{getTimeDifference(event.date, event.time)} • {event.time}</span>
-          </div>
-          <div className="flex items-center">
-            {event.eventType === 'virtual' ? (
-              <>
-                <Monitor className="w-4 h-4 mr-2 text-blue-400" />
-                <span className="truncate">🖥️ Virtual Event{event.location ? ` • ${event.location}` : ''}</span>
-              </>
+              <span className="truncate text-xs font-semibold text-slate-300">
+                {event.category}
+              </span>
+            </div>
+            {ongoing ? (
+              <Badge className="gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />{" "}
+                Live now
+              </Badge>
+            ) : isFull ? (
+              <Badge className="rounded-full border border-white/10 bg-white/5 text-[10px] text-slate-300">
+                Waitlist open
+              </Badge>
             ) : (
-              <>
-                <MapPin className="w-4 h-4 mr-2 opacity-80" />
-                <span className="truncate">{event.distance ? `${event.distance.toFixed(1)} miles away` : (event.venue || event.location || 'Location TBD')}</span>
-              </>
+              event.maxPlayers - event.currentPlayers <= 3 && (
+                <Badge className="rounded-full border border-orange-400/20 bg-orange-400/10 text-[10px] text-orange-300">
+                  Filling up
+                </Badge>
+              )
             )}
           </div>
-        </div>
-      </CardContent>
-      <div className="bg-white/5 px-4 py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center">
-            <Users className="w-4 h-4 mr-2 text-slate-400" />
-            <span className="text-slate-300 font-medium">
-              {event.currentPlayers} / {event.maxPlayers}
-            </span>
-          </div>
-          {(event.viewCount ?? 0) > 0 && (
-            <div className="flex items-center">
-              <Eye className="w-3.5 h-3.5 mr-1 text-slate-500" />
-              <span className="text-slate-500 text-xs font-medium">{event.viewCount}</span>
-            </div>
-          )}
-          {hasNewUpdate && (
-            <div className="flex items-center gap-1.5">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500"></span>
+          <h3 className="relative mb-2 line-clamp-2 min-h-14 font-display text-xl font-bold leading-7 tracking-tight text-white">
+            {event.name}
+            {event.isOrganizerVerified && (
+              <BadgeCheck
+                className="ml-1.5 inline h-4 w-4 text-teal-300"
+                aria-label="Verified organizer"
+              />
+            )}
+          </h3>
+          <p className="mb-5 truncate text-xs text-slate-400">
+            Hosted by {event.organizerName || "your campus community"}
+          </p>
+          <div className="space-y-3 text-xs text-slate-300">
+            <div className="flex items-start gap-2.5">
+              <Clock className="h-4 w-4 shrink-0 text-slate-500" />
+              <span className="font-mono text-[11px]">
+                {getTimeDifference(event.date, event.time)} · {event.time}
               </span>
-              <span className="text-[10px] font-bold text-orange-400 uppercase tracking-wider">New update</span>
+            </div>
+            <div className="flex items-start gap-2.5">
+              {event.eventType === "virtual" ? (
+                <>
+                  <Monitor className="h-4 w-4 shrink-0 text-teal-300" />
+                  <span className="truncate">
+                    Virtual event
+                    {typeof event.location === "string"
+                      ? ` · ${event.location}`
+                      : ""}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <MapPin className="h-4 w-4 shrink-0 text-slate-500" />
+                  <span className="truncate">
+                    {event.distance ? (
+                      <>
+                        <span className="font-mono">
+                          {event.distance.toFixed(1)}
+                        </span>{" "}
+                        miles away
+                      </>
+                    ) : typeof event.venue === "string" ? (
+                      event.venue
+                    ) : typeof event.location === "string" ? (
+                      event.location
+                    ) : (
+                      "Location to be announced"
+                    )}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+          {(friendsAttendingCount > 0 ||
+            event.recurrence ||
+            event.eventType === "hybrid" ||
+            hasNewUpdate) && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {friendsAttendingCount > 0 && (
+                <Badge className="gap-1.5 rounded-lg bg-orange-400/10 text-orange-300">
+                  <Users className="h-3 w-3" />
+                  <span className="font-mono">
+                    {friendsAttendingCount}
+                  </span>{" "}
+                  {friendsAttendingCount === 1
+                    ? "friend going"
+                    : "friends going"}
+                </Badge>
+              )}
+              {event.recurrence && (
+                <Badge className="gap-1 rounded-lg bg-white/5 text-slate-300">
+                  <Repeat className="h-3 w-3" />
+                  {event.recurrence.type}
+                  {(event as any).recurringCount > 1
+                    ? ` · ${(event as any).recurringCount} upcoming`
+                    : ""}
+                </Badge>
+              )}
+              {event.eventType === "hybrid" && (
+                <Badge className="rounded-lg bg-violet-400/10 text-violet-300">
+                  In person + online
+                </Badge>
+              )}
+              {hasNewUpdate && (
+                <Badge className="gap-1 rounded-lg bg-orange-400/10 text-orange-300">
+                  <Megaphone className="h-3 w-3" /> New update
+                </Badge>
+              )}
             </div>
           )}
-        </div>
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end sm:justify-end mt-2 sm:mt-0">
-          {showMapButton && (
+          {!!event.tags?.length && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {event.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-md bg-white/5 px-2 py-1 text-[10px] text-slate-400"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </CardContent>
+        <div className="border-t border-white/5 bg-white/[0.025] p-4">
+          <div className="mb-3 flex items-center justify-between gap-2 text-xs text-slate-400">
+            <span className="inline-flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              <span>
+                <span className="font-mono text-slate-200">
+                  {event.currentPlayers}
+                </span>{" "}
+                / <span className="font-mono">{event.maxPlayers}</span> going
+              </span>
+            </span>
+            {(event.viewCount ?? 0) > 0 && (
+              <span className="inline-flex items-center gap-1.5">
+                <Eye className="h-3.5 w-3.5" />
+                <span className="font-mono">{event.viewCount}</span>
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {showMapButton && (
+              <Button
+                size="icon"
+                variant="outline"
+                asChild
+                className="rounded-xl"
+              >
+                <Link
+                  href={`/map?eventId=${event.id}&intent=locate`}
+                  aria-label={`Find ${event.name} on the map`}
+                >
+                  <MapPin className="h-4 w-4" />
+                </Link>
+              </Button>
+            )}
+            {onUnjoin && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    aria-label={`Add ${event.name} to calendar`}
+                    className="rounded-xl"
+                  >
+                    <CalendarPlus />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-52 rounded-2xl border-white/10 bg-panel p-2 text-slate-200"
+                >
+                  <DropdownMenuItem
+                    onClick={() =>
+                      window.open(generateGoogleCalendarUrl(event), "_blank")
+                    }
+                    className="min-h-11 rounded-xl"
+                  >
+                    Google Calendar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => downloadIcsFile(event)}
+                    className="min-h-11 rounded-xl"
+                  >
+                    Apple / Outlook (.ics)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            {onUnjoin && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onUnjoin(event.id);
+                }}
+                className="rounded-xl"
+              >
+                Leave
+              </Button>
+            )}
             <Button
               size="sm"
-              variant="outline"
-              asChild
-              className="bg-white/5 border-white/20 text-white hover:bg-white/10 h-9 px-3"
+              onClick={() => onSelectEvent(event)}
+              className="flex-1 rounded-xl bg-white/10 text-white shadow-none hover:bg-orange-500 hover:text-canvas"
             >
-              <Link href={`/map?eventId=${event.id}&intent=locate`}>
-                <MapPin className="w-4 h-4 mr-1.5 text-primary" />
-                Map
-              </Link>
+              View details <ArrowUpRight />
             </Button>
-          )}
-          {onUnjoin && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="icon" variant="outline" className="h-9 w-9 bg-white/5 border-white/20 text-white hover:bg-white/10 shrink-0">
-                  <CalendarPlus className="w-4 h-4 text-primary" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 bg-slate-900 border-white/10 text-slate-200">
-                <DropdownMenuItem onClick={() => window.open(generateGoogleCalendarUrl(event), '_blank')} className="cursor-pointer hover:bg-white/10 text-xs font-bold">
-                  Google Calendar
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => downloadIcsFile(event)} className="cursor-pointer hover:bg-white/10 text-xs font-bold">
-                  Apple / Outlook (.ics)
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-          {onUnjoin && (
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={(e) => {
-                e.preventDefault();
-                onUnjoin(event.id);
-              }}
-              className="h-9 px-3"
-            >
-              Unjoin
-            </Button>
-          )}
-          <Button
-            size="sm"
-            onClick={() => onSelectEvent(event)}
-            className="bg-primary text-primary-foreground h-9 px-4"
-            
-          >
-            "View Details"
-          </Button>
+          </div>
         </div>
-      </div>
-    </Card>
-  );
-});
+      </Card>
+    );
+  },
+);
 
-EventCard.displayName = 'EventCard';
+EventCard.displayName = "EventCard";
 
 export function EventCardSkeleton() {
   return (
-    <Card className="glass-surface border-white/15 overflow-hidden flex flex-col animate-pulse">
-      <CardContent className="p-4 flex-grow">
-        <div className="flex justify-between items-start mb-3">
-          <div className="h-6 w-3/4 bg-slate-700 rounded-md"></div>
-          <div className="h-6 w-1/4 bg-slate-700 rounded-md"></div>
-        </div>
-        <div className="space-y-2">
-          <div className="h-4 w-5/6 bg-slate-700 rounded-md"></div>
-          <div className="h-4 w-4/6 bg-slate-700 rounded-md"></div>
-        </div>
+    <Card
+      className="flex h-80 flex-col overflow-hidden rounded-3xl border-white/10 bg-panel motion-safe:animate-pulse"
+      aria-label="Loading event"
+    >
+      <CardContent className="flex-1 space-y-5 p-5">
+        <div className="h-11 w-11 rounded-2xl bg-white/10" />
+        <div className="h-6 w-4/5 rounded-lg bg-white/10" />
+        <div className="h-4 w-2/3 rounded-lg bg-white/5" />
+        <div className="h-4 w-3/4 rounded-lg bg-white/5" />
       </CardContent>
-      <div className="bg-white/5 px-4 py-3 flex justify-between items-center">
-        <div className="h-5 w-1/3 bg-slate-700 rounded-md"></div>
-        <div className="h-9 w-1/4 bg-primary rounded-md"></div>
+      <div className="border-t border-white/5 p-4">
+        <div className="h-11 rounded-xl bg-white/10" />
       </div>
     </Card>
   );

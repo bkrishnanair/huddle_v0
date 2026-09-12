@@ -22,8 +22,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
+import { CategoryIcon } from '@/components/category-icon'
 import { GameEvent } from "@/lib/types"
-import { Users, Calendar, Clock, MapPin, Loader2, Share, Trash2, Download, Copy, MessageCircle, AlertTriangle, Info, CalendarPlus, CheckCircle2, Video, Monitor, ExternalLink, Crown, Mail, BadgeCheck } from "lucide-react"
+import { Users, Calendar, Clock, MapPin, Loader2, Share, Trash2, Download, Copy, MessageCircle, AlertTriangle, Info, CalendarPlus, CheckCircle2, Video, Monitor, ExternalLink, Crown, Mail, BadgeCheck, X } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import EventChat from "./event-chat"
@@ -590,22 +591,21 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
 
   return (
     <Drawer open={isOpen} onOpenChange={onClose}>
-      <DrawerContent className="glass-surface border-white/15 text-foreground max-w-2xl mx-auto rounded-t-[2rem] max-h-[80vh] flex flex-col focus:outline-none">
-        <div className="mx-auto mt-4 h-1.5 w-12 rounded-full bg-white/20 shrink-0" />
-        <DrawerHeader className="pb-2 pt-2 shrink-0">
+      <DrawerContent className="border-white/10 bg-panel/95 text-foreground max-w-2xl mx-auto rounded-t-[2rem] max-h-[92dvh] flex flex-col focus:outline-none backdrop-blur-xl">
+        <DrawerHeader className="px-5 pb-5 pt-3 sm:px-6 shrink-0 text-left">
           <div className="flex justify-between items-start gap-4">
             <div className="flex-1">
-              <DrawerTitle className="text-2xl font-black text-white tracking-tight leading-tight flex items-center gap-2">
-                <span>{event.icon || getCategoryIcon(event.sport || event.category)}</span>
-                {event.title}
+              <DrawerTitle className="font-display text-2xl sm:text-3xl font-bold text-white tracking-tight leading-tight flex flex-wrap items-center gap-2">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-orange-400">{event.icon || <CategoryIcon category={event.sport || event.category} />}</span>
+                {event.title || event.name}
                 {event.maxPlayers - event.currentPlayers > 0 && event.maxPlayers - event.currentPlayers <= 3 && (
                   <span className="bg-red-500 text-white px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(239,68,68,0.5)]">
                     <AlertTriangle className="w-3 h-3" />
-                    Limited Seating!
+                    Filling up
                   </span>
                 )}
               </DrawerTitle>
-              <DrawerDescription className="flex items-center gap-2 mt-1">
+              <DrawerDescription className="flex flex-wrap items-center gap-2 mt-3">
                 <span className="bg-primary/20 text-primary px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider">{event.sport}</span>
                 {(event.eventType === 'virtual' || event.eventType === 'hybrid') && (
                   <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border ${event.eventType === 'virtual'
@@ -618,24 +618,25 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                 <span className="text-slate-500 text-xs font-medium flex items-center gap-1">by {event.organizerName}{event.isOrganizerVerified && <BadgeCheck className="w-3.5 h-3.5 text-blue-400 shrink-0" />}</span>
               </DrawerDescription>
             </div>
+            <DrawerClose asChild><Button variant="ghost" size="icon" aria-label="Close event details" className="shrink-0 rounded-full border border-white/10 text-slate-400"><X /></Button></DrawerClose>
           </div>
         </DrawerHeader>
 
         <Tabs defaultValue="details" className="flex-1 w-full h-full flex flex-col min-h-0 overflow-hidden">
           <div className="px-5 mb-3">
-            <TabsList className="grid w-full grid-cols-3 bg-slate-900/50 border border-white/5 rounded-xl p-1 h-10">
-              <TabsTrigger value="details" className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white text-xs font-bold transition-all rounded-lg">Details</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3 bg-canvas/60 border border-white/5 rounded-2xl p-1 h-auto">
+              <TabsTrigger value="details" className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white min-h-11 text-sm font-semibold transition-all rounded-xl">Details</TabsTrigger>
               <TabsTrigger
                 value="chat"
                 disabled={!user || (!hasJoined && !isOrganizer)}
-                className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white text-xs font-bold transition-all rounded-lg flex items-center gap-2"
+                className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white min-h-11 text-sm font-semibold transition-all rounded-xl flex items-center gap-2"
               >
                 <MessageCircle className="w-3.5 h-3.5" />
                 Chat
               </TabsTrigger>
               <TabsTrigger
                 value="gallery"
-                className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white text-xs font-bold transition-all rounded-lg flex items-center gap-2"
+                className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white min-h-11 text-sm font-semibold transition-all rounded-xl flex items-center gap-2"
               >
                 <ImageIcon className="w-3.5 h-3.5" />
                 Gallery
@@ -646,7 +647,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
           <TabsContent value="details" className="flex-1 h-full overflow-y-auto outline-none pb-4 mt-0 data-[state=inactive]:hidden">
             <div className="px-5 space-y-4">
               {/* Info Grid - Modern Compact */}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 {[
                   { icon: Users, label: "Capacity", value: `${event.currentPlayers} / ${event.maxPlayers}` },
                   { icon: Calendar, label: "Date", value: (() => {
@@ -661,16 +662,16 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                     : [{ icon: MapPin, label: "Location", value: typeof event.location === 'string' ? event.location : 'Unavailable' }]
                   )
                 ].map((item, i) => (
-                  <div key={i} className="bg-white/5 border border-white/5 p-3 rounded-xl flex items-center gap-3">
+                  <div key={i} className="bg-gradient-to-br from-white/[0.06] to-white/[0.02] border border-white/10 p-4 rounded-2xl flex flex-col items-start gap-3 min-h-28">
                     <item.icon className="w-4 h-4 text-primary shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest leading-none mb-1">{item.label}</p>
+                      <p className="text-[10px] text-slate-400 uppercase font-medium tracking-widest leading-none mb-2">{item.label}</p>
                       {item.label === "Location" && event.eventType !== 'virtual' ? (
-                        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.value)}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-emerald-400 hover:text-emerald-300 truncate block hover:underline">
+                        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.value)}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm font-semibold text-teal-300 hover:text-teal-200 break-words hover:underline">
                           {item.value} ↗
                         </a>
                       ) : (
-                        <p className="text-xs font-bold text-slate-200 truncate">{item.value}</p>
+                        <p className="text-sm font-mono font-medium text-slate-100 break-words">{item.value}</p>
                       )}
                     </div>
                   </div>
@@ -1024,7 +1025,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
             </div>
           </TabsContent>
         </Tabs>
-        <DrawerFooter className="flex flex-col gap-2 p-5 pt-3 pb-6 bg-slate-950/20 border-t border-white/5 shrink-0">
+        <DrawerFooter className="flex flex-col gap-3 p-5 pt-4 bg-canvas/70 backdrop-blur-xl border-t border-white/10 shrink-0">
           {/* Main Action Button */}
           {!isOrganizer && (
             <div className="flex flex-col gap-2">
@@ -1048,18 +1049,19 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                 onClick={handleRSVPClick}
                 disabled={isLoading || loading}
                 variant={getButtonVariant()}
-                className="h-12 rounded-xl text-sm font-black uppercase tracking-widest shadow-lg transition-all active:scale-95"
+                className={`h-14 rounded-2xl text-base font-bold transition-all active:scale-[0.98] ${hasJoined || isWaitlisted ? 'border border-white/10 bg-white/5 text-rose-300 shadow-none hover:bg-rose-500/10' : 'bg-primary text-canvas shadow-glow hover:bg-orange-400'}`}
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {getButtonText()}
               </Button>
+              {!user && <p className="text-center text-xs text-slate-400">Sign in to save your spot. Browsing is always free.</p>}
             </div>
           )}
 
           {/* Organizer Secondary Actions */}
           {isOrganizer && (
             <div className="flex flex-col gap-2">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <Button
                   variant="outline"
                   onClick={() => setIsEditing(true)}

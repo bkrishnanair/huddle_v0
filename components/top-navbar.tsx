@@ -37,12 +37,12 @@ export function TopNavbar() {
     }
 
     return (
-        <header className="fixed top-4 inset-x-4 max-w-[1800px] mx-auto z-40 h-16 bg-white/85 dark:bg-slate-950/90 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-2xl pointer-events-auto transition-colors">
-            <div className="h-full px-4 flex items-center justify-between gap-4">
+        <header className="fixed top-[max(0.75rem,env(safe-area-inset-top))] inset-x-3 max-w-[1800px] mx-auto z-40 h-16 bg-canvas/90 backdrop-blur-xl border border-white/10 rounded-3xl shadow-xl pointer-events-auto transition-colors sm:inset-x-4">
+            <div className="h-full px-4 flex items-center justify-between gap-3">
                 {/* Logo Section */}
-                <Link href="/home" className="flex items-center gap-3 shrink-0">
+                <Link href="/home" className="flex min-h-11 items-center gap-2.5 shrink-0">
                     <HuddleLogo size={32} />
-                    <span className="text-2xl font-black bg-gradient-to-r from-teal-400 to-teal-600 bg-clip-text text-transparent tracking-tighter">Huddle</span>
+                    <span className="font-display text-2xl font-bold text-white tracking-tight">huddle<span className="text-orange-400">.</span></span>
                 </Link>
 
                 {/* Search Bar Integration (Cross-Platform) */}
@@ -50,13 +50,13 @@ export function TopNavbar() {
                     {/* Location Search */}
                     <div className="flex-1 min-w-0 relative group">
                         <div className="absolute inset-0 bg-teal-500/10 rounded-xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none" />
-                        <div className="relative h-[38px] bg-slate-100/90 dark:bg-slate-800/90 backdrop-blur-2xl rounded-xl border border-slate-200/80 dark:border-slate-700/80 p-[1px] flex items-center group-focus-within:border-teal-500/70 transition-all">
+                        <div className="relative h-11 bg-white/5 rounded-2xl border border-white/10 p-px flex items-center group-focus-within:border-teal-500/70 transition-all">
                             <Search className="w-4 h-4 ml-3 text-slate-400 dark:text-slate-400 group-focus-within:text-teal-500 transition-colors shrink-0" />
                             <div className="flex-1 h-full flex items-center pr-2">
                                 <LocationSearchInput
                                     onPlaceSelect={handlePlaceSelect}
                                     onAiSearch={handleAiSearch}
-                                    className="bg-transparent !border-0 !ring-0 !outline-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 text-[14px] h-full placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-900 dark:text-slate-100 font-medium"
+                                    className="bg-transparent !border-0 !ring-0 !outline-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 text-[14px] h-full placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-100 font-medium"
                                 />
                             </div>
                             {isAiSearching && (
@@ -70,12 +70,13 @@ export function TopNavbar() {
                     {/* Event Text Search */}
                     <div className="flex-1 min-w-0 relative group shrink-0">
                         <div className="absolute inset-0 bg-teal-500/10 rounded-xl blur-xl opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity pointer-events-none" />
-                        <div className="relative h-[38px] bg-slate-100/90 dark:bg-slate-800/90 backdrop-blur-2xl rounded-xl border border-slate-200/80 dark:border-slate-700/80 p-[1px] flex items-center hover:border-teal-500/50 focus-within:border-teal-500/70 transition-all">
+                        <div className="relative h-11 bg-white/5 rounded-2xl border border-white/10 p-px flex items-center hover:border-teal-500/50 focus-within:border-teal-500/70 transition-all">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-400 pointer-events-none" />
                             <input
                                 type="text"
-                                placeholder="Search by Event"
-                                className="w-full h-full pl-9 pr-3 bg-transparent !border-0 !ring-0 !outline-none text-[14px] text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 font-medium transition-all rounded-xl"
+                                aria-label="Search events on the map"
+                                placeholder="Search events"
+                                className="w-full h-full pl-9 pr-3 bg-transparent !border-0 !ring-0 !outline-none text-[14px] text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 font-medium transition-all rounded-xl"
                                 onChange={(e) => {
                                     window.dispatchEvent(new CustomEvent('huddle-text-search', { detail: { query: e.target.value } }));
                                 }}
@@ -91,7 +92,8 @@ export function TopNavbar() {
                             variant="ghost"
                             size="icon"
                             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                            className="w-10 h-10 rounded-xl text-slate-600 hover:text-black dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+                            aria-label={theme === 'dark' ? 'Use a light map' : 'Use a dark map'}
+                            className="w-11 h-11 rounded-2xl text-slate-400 hover:text-white hover:bg-white/10 transition-all"
                         >
                             {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                         </Button>

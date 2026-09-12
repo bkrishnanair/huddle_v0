@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Chip } from "@/components/ui/chip"
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Plus, MapPin, LocateFixed, AlertCircle, Loader2, Star, Calendar, Clock, Map as MapIcon, List, Search } from "lucide-react"
 import { useTheme } from "next-themes"
 import EventDetailsDrawer from "./event-details-drawer"
@@ -742,7 +743,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                             <div className="flex flex-col items-center cursor-pointer group">
                               <div className={`
                                   relative flex items-center justify-center
-                                  ${currentZoom <= 14 ? 'w-10 h-10' : 'w-12 h-12'}
+                                  ${currentZoom <= 14 ? 'w-11 h-11' : 'w-12 h-12'}
                                   rounded-full border-2 shadow-xl
                                   ${liveCount > 0 ? 'border-emerald-400 bg-emerald-500/90' : 'border-white/60 bg-slate-800/90'}
                                   backdrop-blur-sm transition-transform group-hover:scale-110
@@ -750,7 +751,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                                 {liveCount > 0 && (
                                   <div className="absolute inset-0 rounded-full bg-emerald-400/30 animate-ping" />
                                 )}
-                                <span className="relative text-white font-black text-sm">
+                                <span className="relative text-white font-mono font-bold text-sm">
                                   {cluster.events.length}
                                 </span>
                               </div>
@@ -931,7 +932,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                                 return (
                                   <div
                                     className={`
-                                      relative ${pinSize} flex items-center justify-center
+                                      relative ${pinSize} min-h-11 min-w-11 flex items-center justify-center
                                       rounded-full rounded-br-none rotate-45
                                       border-2 ${animClass} transition-all duration-300
                                       ${isFutureEvent ? 'opacity-70 saturate-50' : 'opacity-100'}
@@ -973,21 +974,21 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           </Map >
         </div >
 
-        <div className="absolute top-[92px] inset-x-4 max-w-[1800px] mx-auto z-20 flex flex-col gap-2 pointer-events-none">
+        <div className="absolute top-[calc(max(0.75rem,env(safe-area-inset-top))+4.75rem)] inset-x-3 sm:inset-x-4 max-w-[1800px] mx-auto z-20 flex flex-col gap-2 pointer-events-none">
           {/* Filter Chips & View Toggle Container */}
           <div className="pointer-events-auto flex justify-between gap-2 h-auto w-full">
             {/* Filters Pill */}
-            <div className="w-fit max-w-full glass-surface rounded-[24px] p-2 flex flex-col gap-1.5 shadow-2xl border border-white/15 overflow-hidden backdrop-blur-xl">
+            <div className="min-w-0 flex-1 max-w-full bg-canvas/85 rounded-3xl p-2 flex flex-col gap-1.5 shadow-2xl border border-white/10 overflow-hidden backdrop-blur-xl">
               {/* Category Row */}
               <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar w-full pb-0.5">
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter mr-1 pl-1">What</span>
+                <span className="hidden sm:block shrink-0 text-[10px] font-medium text-slate-400 uppercase tracking-widest mr-1 pl-2">What</span>
                 {CATEGORIES.map(category => (
                   <Chip
                     key={category}
                     size="sm"
                     isActive={activeCategory === category}
                     onClick={() => setActiveCategory(category)}
-                    className="shrink-0 text-[11px] px-2.5 py-0.5 rounded-full whitespace-nowrap h-6"
+                    className="shrink-0 text-xs px-3 py-2 rounded-full whitespace-nowrap h-11"
                   >
                     {category}
                   </Chip>
@@ -998,7 +999,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
               {/* Time Row */}
               <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar w-full pt-0.5">
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter mr-1 pl-1">When</span>
+                <span className="hidden sm:block shrink-0 text-[10px] font-medium text-slate-400 uppercase tracking-widest mr-1 pl-2">When</span>
                 {TIMES.map(time => (
                   <Chip
                     key={time}
@@ -1010,7 +1011,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                       setFilterStartDate("");
                       setFilterEndDate("");
                     }}
-                    className={`shrink-0 transition-all font-bold ${activeTime === time ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]' : 'bg-slate-900/50 border-white/5 text-slate-400 hover:text-white'}`}
+                    className={`shrink-0 transition-all font-bold ${activeTime === time ? 'bg-orange-500/15 text-orange-300 border-orange-400/30' : 'bg-slate-900/50 border-white/5 text-slate-400 hover:text-white'}`}
                   >
                     {time}
                   </Chip>
@@ -1018,31 +1019,37 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                 
                 <div className="h-4 w-px bg-white/10 shrink-0 mx-1" />
                 
-                {/* Custom Date Filters */}
-                <div className="flex items-center gap-1 shrink-0 bg-slate-900/50 rounded-full border border-white/5 px-2 py-0.5">
+                <Popover>
+                  <PopoverTrigger asChild><Button variant="outline" size="sm" className="shrink-0 rounded-full text-xs"><Calendar className="h-4 w-4" />{filterStartDate ? "Dates selected" : "Choose dates"}</Button></PopoverTrigger>
+                  <PopoverContent align="end" className="w-72 border-white/10 bg-panel p-4 text-white shadow-2xl">
+                    <p className="mb-3 text-sm font-semibold">Make time for a plan</p>
+<div className="grid gap-3">
                   <input
                     type="date"
-                    value={filterStartDate}
+                    aria-label="Start date" value={filterStartDate}
                     onChange={(e) => {
                       setFilterStartDate(e.target.value);
                       setActiveTime("Custom");
                       if (filterEndDate && e.target.value > filterEndDate) setFilterEndDate("");
                     }}
-                    className="bg-transparent border-none text-slate-300 h-6 text-[10px] font-bold p-0 focus:ring-0 w-[85px] [color-scheme:dark] outline-none"
+                    className="w-full min-h-12 rounded-xl border border-white/10 bg-white/5 px-3 text-base font-mono text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-orange-400"
                   />
                   <span className="text-slate-500 text-[10px] font-black leading-none">→</span>
                   <input
                     type="date"
-                    value={filterEndDate}
+                    aria-label="End date" value={filterEndDate}
                     onChange={(e) => {
                       setFilterEndDate(e.target.value);
                       setActiveTime("Custom");
                     }}
                     min={filterStartDate}
-                    className="bg-transparent border-none text-slate-300 h-6 text-[10px] font-bold p-0 focus:ring-0 w-[85px] [color-scheme:dark] outline-none"
+                    className="w-full min-h-12 rounded-xl border border-white/10 bg-white/5 px-3 text-base font-mono text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-orange-400"
                   />
                 </div>
                 
+
+                  </PopoverContent>
+                </Popover>
                 {/* Prevent mapping original TIMES twice */}
                 {false && TIMES.map(time => (
                   <Chip
@@ -1050,7 +1057,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                     size="sm"
                     isActive={activeTime === time}
                     onClick={() => setActiveTime(time)}
-                    className="shrink-0 text-[11px] px-2.5 py-0.5 rounded-full whitespace-nowrap h-6"
+                    className="shrink-0 text-xs px-3 py-2 rounded-full whitespace-nowrap h-11"
                   >
                     {time === 'All' ? 'Any time' : time}
                   </Chip>
@@ -1068,18 +1075,18 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             </div>
 
             {/* View Toggle Pill */}
-            <div className="glass-surface rounded-[24px] p-1 flex flex-col gap-1 items-center justify-center shadow-2xl border border-white/15 shrink-0 w-12 h-auto backdrop-blur-xl">
+            <div className="bg-canvas/85 rounded-3xl p-1 flex flex-col gap-1 items-center justify-center shadow-2xl border border-white/15 shrink-0 w-14 h-auto backdrop-blur-xl">
               <button
-                className={`rounded-xl h-10 w-10 flex items-center justify-center transition-all duration-300 ${!showListPanel ? 'bg-primary text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                className={`rounded-2xl h-11 w-11 flex items-center justify-center transition-all duration-300 ${!showListPanel ? 'bg-orange-500/15 text-orange-300' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
                 onClick={() => setShowListPanel(false)}
-                title="Map View"
+                aria-label="Show map" aria-pressed={!showListPanel} title="Map view"
               >
                 <MapIcon className="w-4 h-4" />
               </button>
               <button
-                className={`rounded-xl h-10 w-10 flex items-center justify-center transition-all duration-300 ${showListPanel ? 'bg-primary text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                className={`rounded-2xl h-11 w-11 flex items-center justify-center transition-all duration-300 ${showListPanel ? 'bg-orange-500/15 text-orange-300' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
                 onClick={() => setShowListPanel(true)}
-                title="List View"
+                aria-label="Show event list" aria-pressed={showListPanel} title="List view"
               >
                 <List className="w-4 h-4" />
               </button>
@@ -1143,7 +1150,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
         {/* Mobile Floating Search Bar ("Where to?") - Stays visible even when list is hidden */}
         {!showListPanel && (
-          <div className="md:hidden absolute bottom-[92px] inset-x-4 z-30 animate-in fade-in slide-in-from-bottom-4 duration-500 pointer-events-none">
+          <div className="md:hidden absolute bottom-[calc(var(--safe-bottom)+0.5rem)] inset-x-4 z-30 animate-in fade-in slide-in-from-bottom-4 duration-500 pointer-events-none">
             <div className="pointer-events-auto relative h-[48px] bg-slate-950/80 backdrop-blur-3xl rounded-2xl border border-primary/40 p-[1px] flex items-center focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20 transition-all shadow-[0_8px_32px_rgba(0,0,0,0.4),0_0_15px_rgba(245,158,11,0.15)]">
               <Search className="w-4 h-4 ml-4 text-primary/80 shrink-0" />
               <div className="flex-1 h-full flex items-center pr-3">
@@ -1158,8 +1165,8 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
         {/* Location Permission Toast/Prompt */}
         {showLocationPrompt && !userLocation && (
-          <div className="pointer-events-auto mx-auto mt-4 w-[90%] max-w-sm">
-            <div className="bg-slate-950/80 backdrop-blur-xl border border-primary/30 p-4 rounded-2xl shadow-[0_0_30px_rgba(245,158,11,0.15)] animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="absolute inset-x-4 bottom-[calc(var(--safe-bottom)+4.5rem)] z-50 mx-auto max-w-sm pointer-events-auto" role="region" aria-label="Location preference">
+            <div className="bg-panel/95 backdrop-blur-xl border border-white/15 p-4 rounded-3xl shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
                   <MapPin className="w-5 h-5 text-primary" />
@@ -1174,9 +1181,9 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                       size="sm"
                       variant="default"
                       onClick={handleRecenter}
-                      className="bg-primary hover:bg-orange-600 text-white text-xs font-bold rounded-full px-4"
+                      className="bg-primary hover:bg-orange-400 text-canvas text-xs font-semibold rounded-xl px-4"
                     >
-                      Share Location
+                      Share location
                     </Button>
                     <Button
                       size="sm"
@@ -1207,13 +1214,13 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
         {
           !showListPanel && (
-            <div className="absolute bottom-[156px] md:bottom-12 right-4 z-40 flex flex-col gap-4 pointer-events-none">
+            <div className="absolute bottom-[calc(var(--safe-bottom)+4.5rem)] md:bottom-[calc(var(--safe-bottom)+1rem)] right-4 z-40 flex flex-col gap-4 pointer-events-none">
               <Button
                 onClick={handleRecenter}
                 onTouchEnd={(e) => { e.preventDefault(); handleRecenter(); }}
                 variant="default"
                 size="icon"
-                className="h-12 w-12 md:h-14 md:w-14 rounded-full glass-surface text-slate-700 dark:text-white border border-white/20 shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:bg-white/10 hover:scale-110 transition-all pointer-events-auto cursor-pointer"
+                className="h-12 w-12 md:h-14 md:w-14 rounded-full glass-surface text-white border border-white/20 shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:bg-white/10 hover:scale-110 transition-all pointer-events-auto cursor-pointer"
               >
                 <LocateFixed className="w-5 h-5 md:w-6 md:h-6" />
               </Button>

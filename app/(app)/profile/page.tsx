@@ -192,14 +192,14 @@ export default function ProfilePage() {
 
   return (
     <>
-      <div className="min-h-screen liquid-gradient pb-[var(--safe-bottom)]">
+      <div className="min-h-screen bg-canvas pb-[calc(var(--safe-bottom)+2rem)]">
         <header className="p-4 flex justify-end items-center gap-3">
-          <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl glass-surface border border-rose-500/20 shadow-xl hover:bg-rose-500/10 text-rose-400" onClick={handleLogout}>
+          <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl glass-surface border border-rose-500/20 shadow-xl hover:bg-rose-500/10 text-rose-400" onClick={handleLogout} aria-label="Sign out">
             <LogOut className="w-5 h-5" />
           </Button>
         </header>
 
-        <div className="px-4 md:px-6 -mt-10 space-y-6">
+        <div className="px-5 md:px-8 space-y-6 max-w-7xl mx-auto">
           <div className="flex flex-col items-center text-center">
             <Avatar className="w-24 h-24 mb-4 border-4 border-slate-800">
               <AvatarImage src={userProfile?.photoURL} />
@@ -207,7 +207,7 @@ export default function ProfilePage() {
                 <UserCircle className="w-full h-full text-slate-500" />
               </AvatarFallback>
             </Avatar>
-            <h1 className="text-2xl font-bold text-slate-50">{userProfile?.displayName || "Huddle User"}</h1>
+            <h1 className="font-display text-3xl font-bold text-slate-50">{userProfile?.displayName || "Huddle User"}</h1>
             <p className="text-slate-400">{userProfile?.email}</p>
 
             {/* Followers / Following Row - Better UI */}
@@ -216,7 +216,7 @@ export default function ProfilePage() {
                 onClick={() => { setFollowModalType("following"); setFollowModalOpen(true); }}
                 className="flex flex-col items-center justify-center min-w-24 px-4 py-2 rounded-xl hover:bg-white/10 transition-all group"
               >
-                <span className="text-xl font-black text-slate-50 group-hover:text-primary transition-colors">{followingCount ?? '-'}</span>
+                <span className="font-mono text-xl font-semibold text-slate-50 group-hover:text-primary transition-colors">{followingCount ?? '-'}</span>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 group-hover:text-slate-300 transition-colors">Following</span>
               </button>
 
@@ -226,7 +226,7 @@ export default function ProfilePage() {
                 onClick={() => { setFollowModalType("followers"); setFollowModalOpen(true); }}
                 className="flex flex-col items-center justify-center min-w-24 px-4 py-2 rounded-xl hover:bg-white/10 transition-all group"
               >
-                <span className="text-xl font-black text-slate-50 group-hover:text-primary transition-colors">
+                <span className="font-mono text-xl font-semibold text-slate-50 group-hover:text-primary transition-colors">
                   {followerCount === null ? '-' : followerCount}
                 </span>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 group-hover:text-slate-300 transition-colors">Followers</span>
@@ -244,11 +244,11 @@ export default function ProfilePage() {
 
             <Button variant="secondary" size="sm" className="mt-4" onClick={() => setIsEditModalOpen(true)}>
               <Pencil className="w-4 h-4 mr-2" />
-              Edit Profile
+              Edit profile
             </Button>
           </div>
 
-          <div className="grid grid-cols-3 gap-6 max-w-4xl mx-auto w-full">
+          <div className="grid grid-cols-3 gap-3 md:gap-6 max-w-4xl mx-auto w-full">
             <StatCard label="Joined" value={userStats?.joined || 0} />
             <StatCard label="Organized" value={userStats?.organized || 0} />
             <StatCard label="Upcoming" value={userStats?.upcoming || 0} />
@@ -257,10 +257,10 @@ export default function ProfilePage() {
           <div className="max-w-6xl mx-auto w-full space-y-8">
             <Card className="glass-surface border-white/10 shadow-2xl overflow-hidden rounded-3xl">
               <CardHeader className="border-b border-white/5 bg-white/5">
-                <CardTitle className="text-xl font-bold text-slate-50">About Me</CardTitle>
+                <CardTitle className="text-xl font-bold text-slate-50">About me</CardTitle>
               </CardHeader>
-              <CardContent className="p-8">
-                <p className="text-slate-300 text-lg leading-relaxed whitespace-pre-wrap">{userProfile?.bio || "No bio yet. Click 'Edit Profile' to add one."}</p>
+              <CardContent className="p-5 md:p-8">
+                <p className="text-slate-300 text-lg leading-relaxed whitespace-pre-wrap">{userProfile?.bio || "No bio yet. Click 'Edit profile' to add one."}</p>
                 {userProfile?.favoriteSports && userProfile.favoriteSports.length > 0 && (
                   <div className="mt-6 flex flex-wrap gap-3">
                     {userProfile.favoriteSports.map((sport: string) => (
@@ -275,9 +275,9 @@ export default function ProfilePage() {
 
             <Card className="glass-surface border-white/10 shadow-2xl rounded-3xl overflow-hidden">
               <CardContent className="p-6">
-                <Button size="lg" className="w-full h-14 rounded-2xl bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-extrabold text-lg shadow-xl hover:scale-[1.02] transition-all" onClick={() => setIsProModalOpen(true)}>
+                <Button size="lg" className="w-full h-14 rounded-2xl bg-orange-500 text-canvas font-semibold text-base shadow-glow hover:bg-orange-400 transition-all" onClick={() => setIsProModalOpen(true)}>
                   <Zap className="w-6 h-6 mr-2 fill-current" />
-                  Upgrade to Huddle Pro ✨
+                  Explore Huddle Pro
                 </Button>
               </CardContent>
             </Card>
@@ -300,7 +300,7 @@ export default function ProfilePage() {
                   <CardTitle className="flex items-center justify-between text-xl font-bold w-full">
                     <div className="flex items-center gap-2">
                       <Star className="w-6 h-6 text-primary" />
-                      Reliability Score
+                      Reliability score
                     </div>
                     <TooltipProvider delayDuration={100}>
                       <Tooltip>
@@ -318,14 +318,14 @@ export default function ProfilePage() {
                   {reliabilityScore !== null ? (
                     <>
                       <div className="flex items-end gap-2">
-                        <span className="text-5xl font-extrabold text-slate-50 tracking-tighter">{reliabilityScore}%</span>
+                        <span className="font-mono text-5xl font-semibold text-slate-50 tracking-tighter">{reliabilityScore}%</span>
                         <span className="text-slate-500 font-bold mb-1 uppercase tracking-widest text-sm">Attendance</span>
                       </div>
                       <p className="text-slate-400 mt-4">Based on {totalTracked} tracked {totalTracked === 1 ? 'event' : 'events'}.</p>
                     </>
                   ) : (
                     <div className="flex flex-col items-center justify-center py-4 opacity-50">
-                      <span className="text-2xl font-bold text-slate-400 tracking-tight">No Data Yet</span>
+                      <span className="text-2xl font-bold text-slate-400 tracking-tight">No data yet</span>
                       <p className="text-slate-500 text-sm mt-2 text-center">Attend events that use check-in to build reliability.</p>
                     </div>
                   )}

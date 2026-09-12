@@ -561,7 +561,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="bg-[#0B101B] border-white/10 shadow-2xl text-slate-50 p-0 gap-0 sm:max-w-md max-h-[calc(100vh-var(--safe-bottom))] sm:max-h-[90vh] flex flex-col"
+        className="bg-panel/95 backdrop-blur-xl border-white/10 rounded-3xl shadow-2xl text-slate-50 p-0 gap-0 sm:max-w-lg max-h-[92dvh] flex flex-col"
         onInteractOutside={(e) => {
           const target = e.target as HTMLElement;
           // Prevent Radix from closing the modal or blocking the click 
@@ -574,7 +574,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         {postCreateState.show ? (
           <div className="p-6 flex flex-col items-center justify-center min-h-[300px] text-center animate-in zoom-in-95 duration-300">
             <div className="text-5xl mb-4">🎉</div>
-            <h3 className="text-xl font-black text-slate-50 mb-1">Event is Live!</h3>
+            <h3 className="text-xl font-black text-slate-50 mb-1">Your event is on the map.</h3>
             <p className="text-slate-500 text-sm mb-5">Share this link to start getting RSVPs</p>
 
             <div className="bg-white/10 w-full rounded-xl p-3 flex items-center gap-2 mb-4 border border-white/10">
@@ -590,7 +590,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                     toast.error("Failed to copy link");
                   }
                 }}
-                className="bg-primary hover:bg-primary/90 text-paper text-slate-50 px-3 py-1.5 rounded-full text-sm font-bold shrink-0 transition-colors flex items-center gap-1.5 cursor-pointer pointer-events-auto"
+                className="bg-primary hover:bg-primary/90 text-paper text-slate-50 px-3 py-1.5 rounded-2xl text-sm font-bold shrink-0 transition-colors flex items-center gap-1.5 cursor-pointer pointer-events-auto"
               >
                 {copied ? <CheckCheck className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                 {copied ? "Copied!" : "Copy"}
@@ -618,7 +618,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
         ) : (
           <>
             <DialogHeader className="p-6 pb-4">
-              <DialogTitle>{isEditMode ? "Edit Event" : "Create a New Event"}</DialogTitle>
+              <DialogTitle className="font-display text-2xl font-bold pr-12">{isEditMode ? "Edit Event" : "Create an event"}</DialogTitle>
               <DialogDescription>{isEditMode ? "Update your event details." : "Fill in the details to get your event on the map."}</DialogDescription>
             </DialogHeader>
 
@@ -627,16 +627,16 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
             {/* Event Type Segmented Toggle */}
             <div>
               <Label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2 block">Event Type</Label>
-              <div className="flex items-center gap-1.5 p-1 bg-slate-800/50 border border-white/10 rounded-full w-fit">
+              <div className="flex items-center gap-1.5 p-1 bg-slate-800/50 border border-white/10 rounded-2xl w-fit">
                 {(["in-person", "virtual", "hybrid"] as const).map(type => (
                   <button
                     key={type}
                     type="button"
                     onClick={() => setEventType(type)}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${eventType === type
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all ${eventType === type
                       ? type === "virtual" ? "bg-blue-500 text-slate-50 shadow-lg shadow-blue-500/30"
                         : type === "hybrid" ? "bg-violet-500 text-slate-50 shadow-lg shadow-violet-500/30"
-                          : "bg-primary text-action-foreground shadow-lg"
+                          : "bg-primary text-canvas shadow-lg"
                       : "text-slate-500 hover:text-slate-50 hover:bg-white/10"
                       }`}
                   >
@@ -677,7 +677,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                 maxLength={500}
               />
               {suggestions && (
-                <div className="mt-2 p-3 rounded-full bg-primary text-paper/10 border border-action-tint space-y-2">
+                <div className="mt-2 p-3 rounded-2xl bg-primary text-paper/10 border border-action-tint space-y-2">
                   <div className="flex items-center gap-2 mb-1">
                     <Sparkles className="w-3 h-3 text-primary" />
                     <span className="text-xs font-bold text-primary">AI Suggestions</span>
@@ -766,7 +766,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                             handleInputChange("tags", [...formData.tags, tag]);
                           }
                         }}
-                        className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                        className={`px-3 py-1.5 rounded-2xl text-xs font-bold transition-all border ${
                           isSelected
                             ? 'bg-primary/20 border-primary/40 text-primary'
                             : 'bg-white/5 border-white/10 text-slate-500 hover:bg-white/10'
@@ -835,7 +835,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                         <Navigation className="w-4 h-4" />
                       </Button>
                     </div>
-                    <div className={`${isFullscreenMap ? "flex-1 mt-4" : "h-48 mt-2"} w-full rounded-full overflow-hidden relative border border-border`}>
+                    <div className={`${isFullscreenMap ? "flex-1 mt-4" : "h-48 mt-2"} w-full rounded-2xl overflow-hidden relative border border-border`}>
                       <Map
                         center={mapCenter}
                         defaultZoom={15}
@@ -869,7 +869,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
 
                   </APIProvider>
                 ) : (
-                  <div className="h-48 w-full rounded-full mt-2 border border-border flex items-center justify-center text-center bg-slate-800/50/50">
+                  <div className="h-48 w-full rounded-2xl mt-2 border border-border flex items-center justify-center text-center bg-white/5">
                     <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading Map...
                   </div>
                 )}
@@ -903,12 +903,12 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
               {/* Repeat Toggle (Only on creation) */}
               {!isEditMode && (
                 <div className="space-y-3 pt-2">
-                  <div className="flex items-center justify-between p-3 rounded-full bg-white/5 border border-white/10">
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10">
                     <span className="text-sm font-medium text-slate-200">Repeat Event</span>
                     <Switch checked={isRecurring} onCheckedChange={setIsRecurring} />
                   </div>
                   {isRecurring && (
-                    <div className="grid grid-cols-2 gap-4 p-3 rounded-full bg-black/20 border border-primary/20">
+                    <div className="grid grid-cols-2 gap-4 p-3 rounded-2xl bg-black/20 border border-primary/20">
                       <div>
                         <Label htmlFor="recurrenceType">Frequency</Label>
                         <Select value={recurrenceType} onValueChange={(v: any) => setRecurrenceType(v)}>
@@ -941,7 +941,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
 
             {
               conflictWarning && (
-                <div className="bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-bold p-3 rounded-full flex items-center gap-2">
+                <div className="bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-bold p-3 rounded-2xl flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   {conflictWarning}
                 </div>
@@ -966,16 +966,16 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
 
               <div className="space-y-2 pb-2">
                 <Label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Requested Attendee Info</Label>
-                <div className="flex items-center justify-between p-3 rounded-full bg-white/5 border border-white/10">
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10">
                   <span className="text-sm font-medium text-slate-200">"Do you need a ride?"</span>
                   <Switch checked={askRide} onCheckedChange={setAskRide} />
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-full bg-white/5 border border-white/10">
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10">
                   <span className="text-sm font-medium text-slate-200">"Any dietary restrictions?"</span>
                   <Switch checked={askDiet} onCheckedChange={setAskDiet} />
                 </div>
                 {savedQuestions.map(q => (
-                  <div key={q} className="flex items-center justify-between p-3 rounded-full bg-white/5 border border-primary/20">
+                  <div key={q} className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-primary/20">
                     <span className="text-sm font-medium text-slate-200 flex items-center gap-2"><Bookmark className="w-3 h-3 text-primary" /> {q}</span>
                     <div className="flex items-center gap-2">
                       <Switch checked={selectedQuestions.includes(q)} onCheckedChange={(checked) => {
@@ -1004,7 +1004,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
               <div className="space-y-3 pb-2 pt-2 border-t border-white/10">
                 <Label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Pickup Points</Label>
                 {pickupPoints.map((pt, i) => (
-                  <div key={pt.id} className="flex items-center gap-2 bg-slate-900/50 p-2 rounded-full border border-white/10">
+                  <div key={pt.id} className="flex items-center gap-2 bg-slate-900/50 p-2 rounded-2xl border border-white/10">
                     <Input
                       placeholder="Location (e.g. GH Lobby)"
                       value={pt.location}
@@ -1036,7 +1036,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
 
               <div className="space-y-3 pb-2 pt-2 border-t border-white/10">
                 <Label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Organization HQ (Optional)</Label>
-                <div className="p-3 bg-black/20 rounded-full border border-primary/20">
+                <div className="p-3 bg-black/20 rounded-2xl border border-primary/20">
                   <p className="text-[10px] text-slate-600 mb-2 mt-1">If your club is travelling, add your campus HQ here so local members can discover this trip.</p>
                   {mapsApiKey && (
                     <APIProvider apiKey={mapsApiKey}>
@@ -1059,7 +1059,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                     <div className="flex flex-col gap-1.5 mb-2">
                       {savedTransitTips.map(tip => (
                         <div key={tip} className="flex items-center text-[10px] rounded bg-primary/20 border border-primary/30 overflow-hidden w-full max-w-full group">
-                          <button type="button" onClick={() => setTransitTips(tip)} className="px-2 py-1.5 text-action-foreground hover:bg-primary/30 transition-colors truncate text-left flex-1" title={tip}>
+                          <button type="button" onClick={() => setTransitTips(tip)} className="px-2 py-1.5 text-canvas hover:bg-primary/30 transition-colors truncate text-left flex-1" title={tip}>
                             {tip}
                           </button>
                           <button type="button" onClick={() => handleDeletePreset('transitTips', tip)} className="px-2 py-1.5 text-slate-500 hover:bg-red-500/20 hover:text-red-400 transition-colors border-l border-primary/30 opacity-70 group-hover:opacity-100 shrink-0">
@@ -1081,13 +1081,13 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
               <div className="space-y-3 pb-2 pt-2 border-t border-white/10">
                 <Label className="text-xs text-slate-500 font-bold uppercase tracking-wider">Scheduled Broadcasts</Label>
                 {scheduledBroadcasts.map((b, i) => (
-                  <div key={i} className="flex gap-2 bg-slate-900/50 p-2 rounded-full border border-white/10">
+                  <div key={i} className="flex gap-2 bg-slate-900/50 p-2 rounded-2xl border border-white/10">
                     <Select value={String(b.relativeHours)} onValueChange={(v) => setScheduledBroadcasts(prev => {
                       const newArr = [...prev];
                       newArr[i].relativeHours = Number(v);
                       return newArr;
                     })}>
-                      <SelectTrigger className="w-[110px] text-xs bg-slate-800/50/50 border-none shrink-0">
+                      <SelectTrigger className="w-[110px] text-xs bg-white/5 border-none shrink-0">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1125,7 +1125,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
             </div>
 
             <div className="space-y-4 pt-6 border-t border-border mt-6">
-              <div className="flex items-center justify-between p-4 rounded-full bg-white/5">
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5">
                 <div>
                   <Label htmlFor="private" className="font-bold flex items-center gap-2">
                     Make Private (Link Only)
@@ -1135,7 +1135,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                 <Switch id="private" checked={isPrivate} onCheckedChange={setIsPrivate} />
               </div>
 
-              <div className="flex items-center justify-between p-4 rounded-full bg-white/5">
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5">
                 <div>
                   <Label htmlFor="boost" className="font-bold flex items-center gap-2">
                     <Rocket className="w-5 h-5 text-yellow-400" />

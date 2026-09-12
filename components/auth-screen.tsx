@@ -74,7 +74,7 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
   }
 
   return (
-    <div className="w-full p-8">
+    <div className="w-full p-6 pt-10 sm:p-8 sm:pt-10">
       {/* Back button if landing callback provided */}
       {onBackToLanding && (
         <button
@@ -88,14 +88,14 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
 
       {/* Header */}
       <div className="text-center mb-6">
-        <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-teal-500/20 text-teal-400 font-black text-lg mb-3">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-orange-500/15 text-orange-400 font-black text-lg mb-3">
           H
         </div>
         <h2 className="font-display text-2xl font-bold text-white tracking-tight">
-          Welcome to Huddle
+          Your people are out there.
         </h2>
-        <p className="text-xs text-slate-300 mt-1">
-          The live map for campus events and pickup games
+        <p className="text-sm text-slate-400 mt-2 leading-relaxed">
+          Sign in to turn a campus plan into your plan.
         </p>
       </div>
 
@@ -111,23 +111,23 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
       )}
 
       <Tabs defaultValue="login" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-slate-800 border border-white/10 rounded-xl p-1 h-auto mb-5">
+        <TabsList className="grid w-full grid-cols-2 bg-slate-800 border border-white/10 rounded-2xl p-1 h-auto mb-5">
           <TabsTrigger
             value="login"
-            className="data-[state=active]:bg-slate-900 data-[state=active]:text-white data-[state=active]:shadow-sm text-slate-400 text-xs font-medium rounded-full py-2 transition-all"
+            className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-slate-400 text-sm font-semibold rounded-xl min-h-11 transition-all"
           >
-            Sign In
+            Sign in
           </TabsTrigger>
           <TabsTrigger
             value="signup"
-            className="data-[state=active]:bg-slate-900 data-[state=active]:text-white data-[state=active]:shadow-sm text-slate-400 text-xs font-medium rounded-full py-2 transition-all"
+            className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-slate-400 text-sm font-semibold rounded-xl min-h-11 transition-all"
           >
-            Create Account
+            Create account
           </TabsTrigger>
         </TabsList>
 
         <div className="space-y-4">
-          {/* Google Sign In */}
+          {/* Google Sign in */}
           <Button
             type="button"
             onClick={handleGoogleSignIn}
@@ -167,18 +167,21 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
           </div>
 
           {/* Login Tab Form */}
-          <TabsContent value="login" className="space-y-3.5 mt-0">
+          <TabsContent value="login" className="mt-0">
+            <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); void handleAuthAction('login'); }}>
             <div className="space-y-1.5">
               <Label htmlFor="email-login" className="text-xs font-medium text-slate-300">
                 Email address
               </Label>
               <Input
                 id="email-login"
+                autoComplete="email"
+                required
                 type="email"
                 placeholder="student@umd.edu"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-10 bg-slate-900/50 border-white/10 text-white placeholder:text-white-4 text-sm rounded-full focus:border-action focus:ring-1 focus:ring-action/20"
+                className="h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-500 text-base rounded-2xl focus:border-orange-400 focus:ring-1 focus:ring-orange-400/20"
               />
             </div>
             <div className="space-y-1.5">
@@ -189,17 +192,19 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
               </div>
               <Input
                 id="password-login"
+                autoComplete="current-password"
+                required
                 type="password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-10 bg-slate-900/50 border-white/10 text-white placeholder:text-white-4 text-sm rounded-full focus:border-action focus:ring-1 focus:ring-action/20"
+                className="h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-500 text-base rounded-2xl focus:border-orange-400 focus:ring-1 focus:ring-orange-400/20"
               />
             </div>
             <Button
               type="submit"
               disabled={isLoading || !email || !password}
-              className="w-full h-11 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-white font-medium text-sm shadow-sm transition-all active:scale-[0.99]"
+              className="w-full h-12 rounded-2xl bg-primary hover:bg-orange-400 text-canvas font-semibold text-sm shadow-glow transition-all active:scale-[0.98]"
             >
               {isLoading ? (
                 <>
@@ -207,23 +212,27 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
                   Signing in...
                 </>
               ) : (
-                "Sign In"
+                "Sign in"
               )}
             </Button>
+            </form>
           </TabsContent>
 
           {/* Sign Up Tab Form */}
-          <TabsContent value="signup" className="space-y-3.5 mt-0">
+          <TabsContent value="signup" className="mt-0">
+            <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); void handleAuthAction('signup'); }}>
             <div className="space-y-1.5">
               <Label htmlFor="name-signup" className="text-xs font-medium text-slate-300">
-                Your Name
+                Your name
               </Label>
               <Input
                 id="name-signup"
+                autoComplete="name"
+                required
                 placeholder="Alex Morgan"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="h-10 bg-slate-900/50 border-white/10 text-white placeholder:text-white-4 text-sm rounded-full focus:border-action focus:ring-1 focus:ring-action/20"
+                className="h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-500 text-base rounded-2xl focus:border-orange-400 focus:ring-1 focus:ring-orange-400/20"
               />
             </div>
             <div className="space-y-1.5">
@@ -232,11 +241,13 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
               </Label>
               <Input
                 id="email-signup"
+                autoComplete="email"
+                required
                 type="email"
                 placeholder="student@umd.edu"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-10 bg-slate-900/50 border-white/10 text-white placeholder:text-white-4 text-sm rounded-full focus:border-action focus:ring-1 focus:ring-action/20"
+                className="h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-500 text-base rounded-2xl focus:border-orange-400 focus:ring-1 focus:ring-orange-400/20"
               />
             </div>
             <div className="space-y-1.5">
@@ -245,17 +256,20 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
               </Label>
               <Input
                 id="password-signup"
+                autoComplete="new-password"
+                minLength={6}
+                required
                 type="password"
                 placeholder="At least 6 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-10 bg-slate-900/50 border-white/10 text-white placeholder:text-white-4 text-sm rounded-full focus:border-action focus:ring-1 focus:ring-action/20"
+                className="h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-500 text-base rounded-2xl focus:border-orange-400 focus:ring-1 focus:ring-orange-400/20"
               />
             </div>
             <Button
               type="submit"
               disabled={isLoading || !email || !password}
-              className="w-full h-11 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-white font-medium text-sm shadow-sm transition-all active:scale-[0.99]"
+              className="w-full h-12 rounded-2xl bg-primary hover:bg-orange-400 text-canvas font-semibold text-sm shadow-glow transition-all active:scale-[0.98]"
             >
               {isLoading ? (
                 <>
@@ -263,9 +277,10 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
                   Creating account...
                 </>
               ) : (
-                "Create Account"
+                "Create account"
               )}
             </Button>
+            </form>
           </TabsContent>
 
           {/* Guest fallback button */}
@@ -279,11 +294,11 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
             disabled={isLoading}
             className="w-full h-10 text-slate-400 hover:text-white hover:bg-slate-800 text-xs font-medium rounded-xl"
           >
-            Continue as Guest without signing in
+            Just looking? Explore the map
           </Button>
 
           {error && (
-            <div className="bg-red-500/20 border border-red-500/30 text-red-400 text-xs rounded-full p-3 text-center">
+            <div role="alert" className="bg-red-500/10 border border-red-500/20 text-red-300 text-sm rounded-2xl p-3 text-center">
               {error}
             </div>
           )}

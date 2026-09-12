@@ -28,7 +28,7 @@ export default function Home() {
             We could not reach the server. The map should still work — try opening it
             directly, or reload this page.
           </p>
-          <p className="ins-mono mt-4 text-[10px] leading-[14px] text-white-4 break-words">{error}</p>
+          <p className="ins-mono mt-4 text-[10px] leading-[14px] text-slate-400 break-words">{error}</p>
           <a
             href="/map"
             className="mt-6 inline-flex h-11 items-center rounded-xl bg-primary px-7 text-[15px] font-semibold text-white transition-colors duration-micro ease-ins hover:bg-primary/90"
@@ -79,7 +79,7 @@ export default function Home() {
       />
 
       <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
-        <DialogContent className="glass-surface border-white/15 bg-slate-900/80 max-w-md p-0 gap-0 rounded-2xl overflow-hidden">
+        <DialogContent className="border-white/10 bg-panel/95 sm:max-w-md p-0 gap-0 rounded-3xl overflow-y-auto">
           <VisuallyHidden>
             <DialogTitle>Authentication</DialogTitle>
           </VisuallyHidden>

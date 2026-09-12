@@ -23,22 +23,23 @@ export default function LivePin({ category, icon, name, size = 44 }: LivePinProp
   const emoji = icon || getCategoryIcon(category)
 
   return (
-    <div className="relative flex flex-col items-center cursor-pointer group">
+    <div className="relative flex min-h-11 min-w-11 flex-col items-center justify-center cursor-pointer group" title={name || category}>
       {/* Glow ring animation */}
       <div
-        className="absolute rounded-full animate-ping opacity-30"
+        className="absolute rounded-full motion-safe:animate-ping opacity-20"
         style={{
           width: size + 16,
           height: size + 16,
-          top: -8,
-          left: -8,
+          top: "50%",
+          left: "50%",
+          translate: "-50% -50%",
           backgroundColor: color,
         }}
       />
 
       {/* Main pin */}
       <div
-        className="rounded-full flex items-center justify-center text-white font-bold transition-transform duration-200 group-hover:scale-110 border-2 border-white/30 relative z-10"
+        className="rounded-2xl flex items-center justify-center text-white font-bold transition-transform duration-200 group-hover:scale-110 border-2 border-white/40 relative z-10"
         style={{
           width: size,
           height: size,

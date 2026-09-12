@@ -25,13 +25,13 @@ export function InstallDialog({ open, onOpenChange }: InstallDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md border-line bg-sheet p-6 shadow-overlay rounded-sheet font-body text-ink">
+      <DialogContent className="sm:max-w-md border-white/10 bg-panel/95 p-6 pt-16 shadow-overlay rounded-3xl font-body text-ink">
         <DialogHeader className="text-left space-y-2">
           <DialogTitle className="font-display text-xl font-bold text-ink tracking-tight">
             Install Huddle
           </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed text-ink-2">
-            Add Huddle to your device for fullscreen access, instant loading, and real-time event alerts.
+            Add Huddle to your device for quick access to campus plans, right from your home screen.
           </DialogDescription>
         </DialogHeader>
 
@@ -52,14 +52,14 @@ export function InstallDialog({ open, onOpenChange }: InstallDialogProps) {
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="inline-flex h-9 items-center justify-center rounded-control border border-line bg-sheet px-4 text-xs font-medium text-ink transition-colors hover:bg-surface"
+                className="inline-flex h-11 items-center justify-center rounded-control border border-line bg-sheet px-4 text-xs font-medium text-ink transition-colors hover:bg-surface"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleNativeInstall}
-                className="inline-flex h-9 items-center justify-center gap-2 rounded-control bg-action px-5 text-xs font-semibold text-white transition-colors hover:bg-action-hover"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-control bg-action px-5 text-sm font-semibold text-canvas transition-colors hover:bg-action-hover"
               >
                 <Download className="h-3.5 w-3.5" />
                 Install app
@@ -108,7 +108,7 @@ export function InstallDialog({ open, onOpenChange }: InstallDialogProps) {
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="inline-flex h-9 items-center justify-center rounded-control bg-action px-5 text-xs font-semibold text-white transition-colors hover:bg-action-hover"
+                className="inline-flex h-11 items-center justify-center rounded-control bg-action px-5 text-sm font-semibold text-canvas transition-colors hover:bg-action-hover"
               >
                 Got it
               </button>
@@ -152,7 +152,7 @@ export function InstallDialog({ open, onOpenChange }: InstallDialogProps) {
               <button
                 type="button"
                 onClick={handleDownloadShortcut}
-                className="inline-flex h-9 items-center gap-1.5 rounded-control border border-line bg-sheet px-3 text-xs font-medium text-ink transition-colors hover:bg-surface"
+                className="inline-flex h-11 items-center gap-1.5 rounded-control border border-line bg-sheet px-3 text-xs font-medium text-ink transition-colors hover:bg-surface"
               >
                 <Download className="h-3.5 w-3.5 text-ink-3" />
                 Download shortcut
@@ -160,7 +160,7 @@ export function InstallDialog({ open, onOpenChange }: InstallDialogProps) {
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="inline-flex h-9 items-center justify-center rounded-control bg-action px-5 text-xs font-semibold text-white transition-colors hover:bg-action-hover"
+                className="inline-flex h-11 items-center justify-center rounded-control bg-action px-5 text-sm font-semibold text-canvas transition-colors hover:bg-action-hover"
               >
                 Got it
               </button>
@@ -204,7 +204,7 @@ export function InstallDialog({ open, onOpenChange }: InstallDialogProps) {
               <button
                 type="button"
                 onClick={handleDownloadShortcut}
-                className="inline-flex h-9 items-center gap-1.5 rounded-control border border-line bg-sheet px-3 text-xs font-medium text-ink transition-colors hover:bg-surface"
+                className="inline-flex h-11 items-center gap-1.5 rounded-control border border-line bg-sheet px-3 text-xs font-medium text-ink transition-colors hover:bg-surface"
               >
                 <Download className="h-3.5 w-3.5 text-ink-3" />
                 Download shortcut
@@ -212,7 +212,7 @@ export function InstallDialog({ open, onOpenChange }: InstallDialogProps) {
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="inline-flex h-9 items-center justify-center rounded-control bg-action px-5 text-xs font-semibold text-white transition-colors hover:bg-action-hover"
+                className="inline-flex h-11 items-center justify-center rounded-control bg-action px-5 text-sm font-semibold text-canvas transition-colors hover:bg-action-hover"
               >
                 Got it
               </button>
@@ -243,7 +243,7 @@ export function InstallDialog({ open, onOpenChange }: InstallDialogProps) {
               <button
                 type="button"
                 onClick={handleDownloadShortcut}
-                className="inline-flex h-9 items-center gap-1.5 rounded-control border border-line bg-sheet px-3 text-xs font-medium text-ink transition-colors hover:bg-surface"
+                className="inline-flex h-11 items-center gap-1.5 rounded-control border border-line bg-sheet px-3 text-xs font-medium text-ink transition-colors hover:bg-surface"
               >
                 <Download className="h-3.5 w-3.5 text-ink-3" />
                 Download shortcut
@@ -251,7 +251,7 @@ export function InstallDialog({ open, onOpenChange }: InstallDialogProps) {
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="inline-flex h-9 items-center justify-center rounded-control bg-action px-5 text-xs font-semibold text-white transition-colors hover:bg-action-hover"
+                className="inline-flex h-11 items-center justify-center rounded-control bg-action px-5 text-sm font-semibold text-canvas transition-colors hover:bg-action-hover"
               >
                 Got it
               </button>
