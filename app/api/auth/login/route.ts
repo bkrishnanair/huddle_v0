@@ -1,15 +1,16 @@
+import "server-only";
+
 export const dynamic = "force-dynamic";
 
 import { type NextRequest, NextResponse } from "next/server"
 import { getFirebaseAdminAuth, getFirebaseAdminDb } from "@/lib/firebase-admin"
+import { loginInput } from '@/lib/request-schemas'
 
 export async function POST(request: NextRequest) {
   try {
-    const { idToken } = await request.json()
-
-    if (!idToken) {
-      return NextResponse.json({ error: "ID token is required" }, { status: 400 })
-    }
+    const validation = loginInput.safeParse(await request.json().catch(() => null));
+    if (!validation.success) return NextResponse.json({ error: 'Invalid login input' }, { status: 400 });
+    const { idToken } = validation.data;
 
     // Check if Firebase is configured
     if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     const cookieStore = await import("next/headers").then(mod => mod.cookies())
     cookieStore.set("session", sessionCookie, {
-      maxAge: expiresIn,
+      maxAge: expiresIn / 1000, // Cookie maxAge is seconds; Firebase expects milliseconds.
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       path: "/",

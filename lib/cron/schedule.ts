@@ -75,6 +75,11 @@ export function resolveCronPlan(raw: string | undefined): CronPlan {
   return (raw || '').toLowerCase() === 'pro' ? 'pro' : 'hobby';
 }
 
+/** Missing/invalid configuration defaults to the safe once-daily behavior. */
+export function resolveCronMode(raw: string | undefined): 'daily' | 'hourly' {
+  return raw?.trim().toLowerCase() === 'hourly' ? 'hourly' : 'daily';
+}
+
 /** Function timeout ceiling per plan, in seconds. Hobby caps at 60. */
 export const MAX_DURATION_BY_PLAN: Record<CronPlan, number> = {
   hobby: 60,

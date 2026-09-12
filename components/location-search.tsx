@@ -50,6 +50,7 @@ export default function LocationSearchInput({ onPlaceSelect, onAiSearch, insideM
   return (
     <Input
       ref={inputRef}
+      aria-label="Search for a place or event"
       placeholder="Search for an address, place, or event vibe..."
       className={className !== undefined ? `w-full ${className}` : "glass border-white/30 text-white placeholder:text-white/60 w-full"}
       onKeyDown={(e) => {

@@ -1,6 +1,6 @@
 "use client"
 
-import { getCategoryColor } from "@/lib/utils"
+import { getCategoryColor, getAccentTokens } from "@/lib/utils"
 
 const getCategoryIcon = (category: string): string => {
   const icons: { [key: string]: string } = {
@@ -44,7 +44,7 @@ export default function LivePin({ category, icon, name, size = 44 }: LivePinProp
           width: size,
           height: size,
           background: `linear-gradient(135deg, ${color}, ${color}dd)`,
-          boxShadow: `0 0 20px ${color}60, 0 4px 12px rgba(0,0,0,0.3)`,
+          boxShadow: `0 0 10px ${color}40, 0 3px 6px rgba(0,0,0,0.3)`,
           fontSize: size * 0.4,
         }}
       >
@@ -56,7 +56,8 @@ export default function LivePin({ category, icon, name, size = 44 }: LivePinProp
         <div
           className="mt-1 px-2 py-0.5 rounded-md text-[9px] font-black text-white whitespace-nowrap max-w-[120px] truncate relative z-10"
           style={{
-            backgroundColor: `${color}cc`,
+            backgroundColor: getAccentTokens(color).surface,
+            color: getAccentTokens(color).text,
             boxShadow: `0 2px 6px ${color}40`,
           }}
         >

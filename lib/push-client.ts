@@ -2,6 +2,7 @@
 
 import { getMessaging, getToken, isSupported } from 'firebase/messaging'
 import { app } from './firebase'
+import { readBrowserStorage, writeBrowserStorage } from './browser-storage'
 
 export async function requestPushPermission(): Promise<boolean> {
   if (typeof window === 'undefined') return false
@@ -17,9 +18,9 @@ export async function requestPushPermission(): Promise<boolean> {
 }
 
 export async function getAndRegisterPushToken() {
-  if (typeof window === 'undefined') return null
+  if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) return null
   
-  const isSupportedBrowser = await isSupported()
+  const isSupportedBrowser = await isSupported().catch(() => false)
   if (!isSupportedBrowser) {
     console.log("Firebase Messaging not supported in this browser.")
     return null
@@ -55,11 +56,12 @@ export async function getAndRegisterPushToken() {
 
     if (token) {
       // Register token with our backend
-      await fetch('/api/users/push-token', {
+      const response = await fetch('/api/users/push-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token })
       })
+      if (!response.ok) throw new Error('Push token could not be saved');
       return token
     } else {
       console.log('No registration token available. Request permission to generate one.')
@@ -75,11 +77,12 @@ export async function getAndRegisterPushToken() {
  * On app load, audit and sync the browser's native Notification.permission
  * state to Firestore ('default' | 'granted' | 'denied').
  */
-export async function syncPushPermissionState() {
+export async function syncPushPermissionState(uid: string) {
   if (typeof window === 'undefined' || !('Notification' in window)) return;
   const permission = Notification.permission; // 'default' | 'granted' | 'denied'
 
-  const lastReported = localStorage.getItem('lastReportedPushPermission');
+  const storageKey = `lastReportedPushPermission:${uid}`;
+  const lastReported = readBrowserStorage(storageKey);
   if (lastReported === permission) return;
 
   try {
@@ -89,7 +92,7 @@ export async function syncPushPermissionState() {
       body: JSON.stringify({ pushPermissionState: permission })
     });
     if (res.ok) {
-      localStorage.setItem('lastReportedPushPermission', permission);
+      writeBrowserStorage(storageKey, permission);
     }
   } catch (err) {
     console.error('Failed to sync push permission state:', err);

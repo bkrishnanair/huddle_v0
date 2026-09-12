@@ -2,7 +2,7 @@
 // This file contains authentication logic that is ONLY safe to run on the server.
 import "server-only"; // Ensures this module is never imported into a client component.
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { adminAuth } from "./firebase-admin";
 
 /**
@@ -11,33 +11,30 @@ import { adminAuth } from "./firebase-admin";
  * This is the correct way to handle authentication in Next.js API Routes and Server Components.
  */
 export const getServerCurrentUser = async () => {
+  // An explicitly supplied token identifies this request. Never substitute a
+  // previous account's session cookie while login/logout synchronization runs.
+  const authHeader = (await headers()).get("authorization");
+  if (authHeader) {
+    const match = authHeader.match(/^Bearer\s+(\S+)$/i);
+    if (!match || !adminAuth) return null;
+    try {
+      return await adminAuth.verifyIdToken(match[1]);
+    } catch {
+      return null;
+    }
+  }
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("session")?.value;
 
-  // 1. Try Session Cookie first
+  // Cookie-only requests (including server-rendered pages).
   if (sessionCookie) {
     try {
       if (adminAuth) {
         return await adminAuth.verifySessionCookie(sessionCookie, true);
       }
     } catch (error) {
-      console.warn("Session cookie verification failed, falling back to Bearer token");
+      console.warn("Session cookie verification failed");
     }
-  }
-
-  // 2. Fallback to Authorization Header (Bearer Token)
-  try {
-    const headersList = await import("next/headers").then(mod => mod.headers());
-    const authHeader = (await headersList).get("authorization");
-
-    if (authHeader?.startsWith("Bearer ")) {
-      const idToken = authHeader.split("Bearer ")[1];
-      if (adminAuth) {
-        return await adminAuth.verifyIdToken(idToken);
-      }
-    }
-  } catch (error) {
-    console.error("Bearer token verification failed:", error);
   }
 
   return null;

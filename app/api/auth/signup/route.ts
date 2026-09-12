@@ -1,27 +1,30 @@
+import "server-only";
+
 import { type NextRequest, NextResponse } from "next/server"
-import { signUpWithEmail } from "@/lib/auth"
+import { getFirebaseAdminAuth, getFirebaseAdminDb } from '@/lib/firebase-admin'
+import { FieldValue } from 'firebase-admin/firestore'
+import { signupInput } from '@/lib/request-schemas'
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, name } = await request.json()
-
-    if (!email || !password || !name) {
-      return NextResponse.json({ error: "Email, password, and name are required" }, { status: 400 })
-    }
+    const validation = signupInput.safeParse(await request.json().catch(() => null));
+    if (!validation.success) return NextResponse.json({ error: 'Invalid signup input' }, { status: 400 });
+    const { email, password, name } = validation.data;
 
     // Check if Firebase is configured
     if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
-      // Use fallback in-memory storage
-      const { fallbackCreateUser } = await import("@/lib/fallback-db")
-      const user = await fallbackCreateUser({ email, password, name })
-      return NextResponse.json({ user: { uid: user.uid, email: user.email, name: user.name } })
+      return NextResponse.json({ error: 'Authentication is unavailable' }, { status: 503 });
     }
 
-    // Use Firebase
-    const user = await signUpWithEmail(email, password, name)
-    return NextResponse.json({ user })
+    // Server requests must not share the browser SDK's mutable auth session.
+    const adminAuth = getFirebaseAdminAuth();
+    const db = getFirebaseAdminDb();
+    if (!adminAuth || !db) return NextResponse.json({ error: 'Authentication is unavailable' }, { status: 503 });
+    const user = await adminAuth.createUser({ email, password, displayName: name });
+    await db.collection('users').doc(user.uid).set({ email, name, displayName: name, createdAt: FieldValue.serverTimestamp() });
+    return NextResponse.json({ user: {uid: user.uid, email, name, emailVerified: user.emailVerified} });
   } catch (error: any) {
     console.error("Signup error:", error)
 

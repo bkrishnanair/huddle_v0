@@ -3,16 +3,18 @@
 import { useEffect, useState } from 'react'
 import { X, Share, PlusSquare, Download } from 'lucide-react'
 import { usePwaInstall } from '@/hooks/use-pwa-install'
+import { readBrowserStorage, writeBrowserStorage } from '@/lib/browser-storage'
+import { InstallDialog } from '@/components/install-dialog'
 
 export function InstallPrompt() {
-  const { isMounted, isInstalled, isIos, promptInstall } = usePwaInstall()
+  const { isMounted, isInstalled, isIos, promptInstall, isDialogOpen, setIsDialogOpen } = usePwaInstall()
   const [showPrompt, setShowPrompt] = useState(false)
 
   useEffect(() => {
     if (!isMounted || isInstalled) return
 
     // Check cooldown (14 days)
-    const dismissedAt = localStorage.getItem('installPromptDismissedAt')
+    const dismissedAt = readBrowserStorage('installPromptDismissedAt')
     if (dismissedAt) {
       const daysSinceDismissed = (Date.now() - parseInt(dismissedAt, 10)) / (1000 * 60 * 60 * 24)
       if (daysSinceDismissed < 14) return
@@ -30,7 +32,7 @@ export function InstallPrompt() {
 
   const handleDismiss = () => {
     setShowPrompt(false)
-    localStorage.setItem('installPromptDismissedAt', Date.now().toString())
+    writeBrowserStorage('installPromptDismissedAt', Date.now().toString())
   }
 
   const handleInstall = async () => {
@@ -41,6 +43,7 @@ export function InstallPrompt() {
     handleDismiss()
   }
 
+  if (isDialogOpen) return <InstallDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
   if (!showPrompt || isInstalled) return null
 
   return (

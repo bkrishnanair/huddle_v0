@@ -27,7 +27,9 @@ import {
 
 import Link from "next/link";
 import { useFollowing } from "@/hooks/use-following";
-import { getCategoryColor } from "@/lib/utils";
+import { getCategoryColor, getAccentTokens, isEventLive } from "@/lib/utils";
+import { getEventStartUTC } from "@/lib/datetime";
+import { useMinuteTick } from "@/hooks/use-minute-tick";
 import { CategoryIcon } from "@/components/category-icon";
 
 interface EventCardProps {
@@ -46,6 +48,7 @@ export const EventCard = React.memo(
     onUnjoin,
     hasNewUpdate,
   }: EventCardProps) => {
+    useMinuteTick();
     const isFull = event.currentPlayers >= event.maxPlayers;
     const { followingSet } = useFollowing();
 
@@ -65,7 +68,7 @@ export const EventCard = React.memo(
       }
 
       try {
-        const eventDateTime = new Date(`${date}T${time || "00:00"}`);
+        const eventDateTime = getEventStartUTC({ ...event, date, time });
         if (isNaN(eventDateTime.getTime())) return "Upcoming";
         return formatDistanceToNow(eventDateTime, { addSuffix: true });
       } catch (error) {
@@ -74,43 +77,21 @@ export const EventCard = React.memo(
       }
     };
 
-    const isEventOngoing = () => {
-      if (!event.date || !event.time) return false;
-      try {
-        const startDateTime = new Date(`${event.date}T${event.time}`);
-        if (isNaN(startDateTime.getTime())) return false;
-
-        const now = new Date();
-        if (now < startDateTime) return false;
-
-        let endDateTime;
-        if (event.endTime) {
-          endDateTime = new Date(`${event.date}T${event.endTime}`);
-        } else {
-          // Default to 2 hours duration
-          endDateTime = new Date(startDateTime.getTime() + 2 * 60 * 60 * 1000);
-        }
-
-        return now <= endDateTime;
-      } catch (error) {
-        return false;
-      }
-    };
-
-    const ongoing = isEventOngoing();
+    const ongoing = isEventLive(event);
     const catColor = getCategoryColor(event.category);
+    const accent = getAccentTokens(catColor);
 
     return (
       <Card 
-        className="group flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-panel shadow-lg transition-all duration-200 hover:border-white/25 hover:shadow-xl relative"
+        className="group flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-panel transition-colors duration-200 hover:border-white/25 relative isolate"
         style={{ 
           borderTop: `3.5px solid ${catColor}`,
-          boxShadow: `0 4px 20px -4px ${catColor}25`
+          boxShadow: `0 3px 12px -4px ${catColor}25`
         }}
       >
-        <CardContent className="relative flex flex-1 flex-col p-5">
+        <CardContent className="relative flex flex-1 flex-col p-5 [contain:layout_paint]">
           <div
-            className="pointer-events-none absolute inset-x-0 top-0 h-40 opacity-90 transition-opacity group-hover:opacity-100"
+            className="pointer-events-none absolute inset-x-0 top-0 h-32 opacity-90"
             style={{
               background: `radial-gradient(ellipse 90% 70% at 20% -10%, ${catColor}38, transparent 70%)`,
             }}
@@ -120,10 +101,10 @@ export const EventCard = React.memo(
               <span
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-transform duration-200 group-hover:scale-105"
                 style={{ 
-                  color: catColor,
-                  backgroundColor: `${catColor}18`,
+                  color: accent.text,
+                  backgroundColor: accent.surface,
                   border: `1.5px solid ${catColor}40`,
-                  boxShadow: `0 0 14px -2px ${catColor}30`
+                  boxShadow: `0 0 8px -2px ${catColor}25`
                 }}
               >
                 {event.icon ? (
@@ -135,8 +116,8 @@ export const EventCard = React.memo(
               <span 
                 className="truncate text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full"
                 style={{ 
-                  color: catColor,
-                  backgroundColor: `${catColor}16`,
+                  color: accent.text,
+                  backgroundColor: accent.surface,
                   border: `1px solid ${catColor}35`
                 }}
               >

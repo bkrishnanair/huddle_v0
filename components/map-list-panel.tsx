@@ -100,7 +100,7 @@ export function MapListPanel({ events, onSelectEvent, onClose, isVisible }: MapL
              }}
              onTouchEnd={handleTouchEnd}
            >
-                {events.length === 0 ? (
+                {!isVisible ? null : events.length === 0 ? (
                     <div className="flex flex-col items-center justify-center text-center text-slate-400 h-full px-4 -mt-10">
                         <SearchX className="w-12 h-12 text-slate-600 mb-4" />
                         <h4 className="text-lg font-bold text-slate-300">No events found</h4>
@@ -108,7 +108,7 @@ export function MapListPanel({ events, onSelectEvent, onClose, isVisible }: MapL
                     </div>
                 ) : (
                     events.map(event => (
-                        <div key={event.id} onClick={() => onSelectEvent(event)} className="cursor-pointer hover:scale-[1.01] transition-transform">
+                        <div key={event.id}>
                             <EventCard event={event} onSelectEvent={onSelectEvent} showMapButton={false} />
                         </div>
                     ))

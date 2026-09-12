@@ -1,3 +1,5 @@
+import "server-only";
+
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerCurrentUser } from "@/lib/auth-server"
 import { toggleFollowUser } from "@/lib/db"

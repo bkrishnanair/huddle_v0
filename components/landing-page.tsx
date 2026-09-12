@@ -366,7 +366,7 @@ export default function LandingPage({
               >
                 <div className="mb-7 flex items-center justify-between">
                   <step.icon className="h-6 w-6 text-orange-400" />
-                  <span className="font-mono text-xs text-slate-500">
+                  <span className="font-mono text-xs text-slate-400">
                     0{i + 1}
                   </span>
                 </div>
@@ -470,7 +470,7 @@ export default function LandingPage({
               <Link
                 key={link.href}
                 href={link.href}
-                className="inline-flex min-h-11 items-center text-xs text-slate-400 hover:text-white"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center text-xs text-slate-400 hover:text-white"
               >
                 {link.label}
               </Link>

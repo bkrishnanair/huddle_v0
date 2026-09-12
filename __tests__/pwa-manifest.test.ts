@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import manifest from '@/app/manifest';
+import { readFileSync } from 'node:fs';
 
 describe('PWA Web App Manifest Configuration', () => {
   it('returns valid Dark/Vibrant design tokens and standalone display mode', () => {
@@ -35,5 +36,10 @@ describe('PWA Web App Manifest Configuration', () => {
     expect(icon512?.src).toBe('/icons/icon-512x512.png');
     expect(maskable).toBeDefined();
     expect(maskable?.src).toBe('/icons/icon-maskable-512x512.png');
+    for (const icon of icons) {
+      const png = readFileSync(`public${icon.src}`);
+      expect(png.subarray(1, 4).toString()).toBe('PNG');
+      expect(`${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`).toBe(icon.sizes);
+    }
   });
 });

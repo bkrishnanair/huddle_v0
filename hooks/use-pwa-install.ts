@@ -15,6 +15,7 @@ export type PwaPlatform = "ios" | "mac-safari" | "chromium" | "android" | "other
 
 // Module-level cache so the captured event persists across component remounts
 let cachedDeferredPrompt: BeforeInstallPromptEvent | null = null
+let installationConfirmed = false
 const stateListeners = new Set<() => void>()
 
 function notifyListeners() {
@@ -29,6 +30,7 @@ if (typeof window !== "undefined") {
   })
 
   window.addEventListener("appinstalled", () => {
+    installationConfirmed = true
     cachedDeferredPrompt = null
     notifyListeners()
   })
@@ -48,11 +50,11 @@ export function usePwaInstall() {
     const standaloneMode =
       window.matchMedia("(display-mode: standalone)").matches ||
       (window.navigator as unknown as { standalone?: boolean }).standalone === true
-    setIsInstalled(Boolean(standaloneMode))
+    setIsInstalled(Boolean(standaloneMode || installationConfirmed))
 
     // 2. Platform identification
     const ua = window.navigator.userAgent
-    const isIosDevice = /iPad|iPhone|iPod/.test(ua) && !(window as unknown as { MSStream?: unknown }).MSStream
+    const isIosDevice = (/iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) && !(window as unknown as { MSStream?: unknown }).MSStream
     const isMacSafariDevice =
       /Macintosh/.test(ua) && /Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR|Firefox/.test(ua)
     const isAndroidDevice = /Android/.test(ua)
@@ -105,6 +107,9 @@ export function usePwaInstall() {
 
     if (cachedDeferredPrompt) {
       const promptEvent = cachedDeferredPrompt
+      // Native install events are single-use, even when dismissed or rejected.
+      cachedDeferredPrompt = null
+      notifyListeners()
       try {
         await promptEvent.prompt()
         const { outcome } = await promptEvent.userChoice

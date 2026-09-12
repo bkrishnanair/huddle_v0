@@ -5,14 +5,24 @@ import { resolve, dirname } from 'path';
 let testEnv;
 
 const PROJECT_ID = "huddlev0git-test";
-const OUTPUT_FILE = resolve("Documentation/testing/2026-08-rules-verification.txt");
+const OUTPUT_FILE = resolve(".artifacts/rules-verification.txt");
+let passed = 0;
+let failed = 0;
 
 function log(msg) {
+  if (msg.includes('PASS:')) passed++;
+  if (msg.includes('FAIL:') || msg.startsWith('ERROR:')) {
+    failed++;
+    process.exitCode = 1;
+  }
   console.log(msg);
   writeFileSync(OUTPUT_FILE, msg + "\n", { flag: 'a' });
 }
 
 async function runTests() {
+  if (!process.env.FIRESTORE_EMULATOR_HOST) {
+    throw new Error('FIRESTORE_EMULATOR_HOST is required; never run this harness against live data.');
+  }
   // Ensure directory exists
   mkdirSync(dirname(OUTPUT_FILE), { recursive: true });
   writeFileSync(OUTPUT_FILE, "=== Firebase Rules Verification ===\n\n");
@@ -149,7 +159,8 @@ async function runTests() {
       log("❌ FAIL: participant CANNOT write a roster entry - " + e.message);
     }
 
-    log("\nAll assertions complete.");
+    log(`\n${passed} passed, ${failed} failed.`);
+    if (passed !== 11 || failed > 0) process.exitCode = 1;
   } catch (error) {
     console.error(error);
     log("ERROR: " + error.message);
@@ -160,4 +171,7 @@ async function runTests() {
   }
 }
 
-runTests();
+runTests().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

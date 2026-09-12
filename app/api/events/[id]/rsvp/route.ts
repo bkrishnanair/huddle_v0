@@ -1,3 +1,5 @@
+import "server-only";
+
 export const dynamic = "force-dynamic";
 
 import { type NextRequest, NextResponse } from "next/server"
@@ -6,6 +8,8 @@ import { getFirebaseAdminDb } from "@/lib/firebase-admin"
 import { z } from "zod"
 import { FieldValue } from "firebase-admin/firestore"
 import { checkRateLimit } from '@/lib/rate-limit';
+import { getEventEndUTC } from '@/lib/datetime';
+import { pickPublicFields } from '@/lib/types';
 
 // Helper function to fan-out notifications in the background using Serendipity Logic
 async function notifyFollowersOfJoin(userId: string, eventId: string, eventName: string, eventCategory: string, eventGeopoint: any) {
@@ -25,8 +29,8 @@ async function notifyFollowersOfJoin(userId: string, eventId: string, eventName:
 
     const followerIds = followersSnap.docs.map(doc => doc.id)
 
-    // Chunk array by 500 (Firestore batch limit)
-    const chunkSize = 500;
+    // Limit each profile lookup to Firestore's 'in' operand budget.
+    const chunkSize = 30; // Firestore 'in' queries allow at most 30 operands.
     const { Timestamp } = await import("firebase-admin/firestore");
     const geofire = await import("geofire-common");
 
@@ -88,11 +92,13 @@ async function notifyFollowersOfJoin(userId: string, eventId: string, eventName:
 
 const rsvpSchema = z.object({
   action: z.enum(["join", "leave", "remove"]),
-  note: z.string().optional(),
-  targetUserId: z.string().optional(),
-  answers: z.record(z.string()).optional(),
-  pickupPointId: z.string().optional(),
-})
+  note: z.string().max(2000).optional(),
+  targetUserId: z.string().min(1).max(128).refine(value => !value.includes('/')).optional(),
+  answers: z.record(z.string().max(500), z.string().max(2000)).refine(value => Object.keys(value).length <= 30).optional(),
+  pickupPointId: z.string().max(256).optional(),
+  guestContactEmail: z.string().email().max(320).optional(),
+  guestContactShared: z.boolean().optional(),
+}).strict()
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -108,14 +114,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'Rate limit exceeded. Please try again later.' }, { status: 429 });
     }
 
-    const body = await request.json()
+    const body = await request.json().catch(() => null)
     const validationResult = rsvpSchema.safeParse(body)
 
     if (!validationResult.success) {
       return NextResponse.json({ error: validationResult.error.flatten().fieldErrors }, { status: 400 })
     }
 
-    const { action, note, targetUserId, answers, pickupPointId } = validationResult.data
+    const { action, note, targetUserId, answers, pickupPointId, guestContactEmail, guestContactShared } = validationResult.data
 
     if (action === "remove" && !targetUserId) {
       return NextResponse.json({ error: "targetUserId is required for remove action" }, { status: 400 })
@@ -129,8 +135,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const eventRef = adminDb.collection("events").doc(id)
     let updatedEventData: any;
     let joinedPlayers = false; // to determine if we should issue achievement
+    let promotedUserId: string | null = null;
 
     await adminDb.runTransaction(async (transaction) => {
+      // Firestore can retry this callback. Never retain effects from a failed attempt.
+      joinedPlayers = false;
+      promotedUserId = null;
       const eventDoc = await transaction.get(eventRef)
 
       if (!eventDoc.exists) {
@@ -149,8 +159,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
       if (action === "join") {
         if (players.includes(user.uid) || waitlist.includes(user.uid)) {
-          throw new Error("ALREADY_JOINED")
+          updatedEventData = eventData;
+          return; // Safe retry after the response was lost on an unreliable network.
         }
+        if (eventData.isPrivate && eventData.createdBy !== user.uid && !eventData.admins?.includes(user.uid)) throw new Error('PRIVATE_EVENT');
+        if (['past', 'archived', 'cancelled'].includes(eventData.status) || getEventEndUTC(eventData).getTime() < Date.now()) throw new Error('EVENT_CLOSED');
 
         // Check if user is blocked by the organizer
         const organizerId = eventData.createdBy;
@@ -176,6 +189,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           transaction.set(rosterRef(user.uid), rosterEntry, { merge: true })
         }
 
+        if (guestContactShared && guestContactEmail) {
+          transaction.set(eventRef.collection('guestContacts').doc(user.uid), {
+            email: guestContactEmail, sharedAt: FieldValue.serverTimestamp(),
+          });
+        }
+
         if (players.length >= maxPlayers) {
           // Join waitlist
           transaction.update(eventRef, {
@@ -186,7 +205,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           // Join players
           transaction.update(eventRef, {
             players: FieldValue.arrayUnion(user.uid),
-            currentPlayers: players.length + 1,
+            currentPlayers: FieldValue.increment(1),
           })
           updatedEventData = { ...eventData, players: [...players, user.uid], currentPlayers: players.length + 1 }
           joinedPlayers = true;
@@ -199,12 +218,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         }
 
         if (!players.includes(actingUserId) && !waitlist.includes(actingUserId)) {
-          throw new Error("NOT_JOINED")
+          updatedEventData = eventData;
+          return; // Leaving an already-left event is idempotent too.
         }
 
         // Drop their roster entry. Deleting a document that does not exist is a
         // no-op, so this is safe for attendees who never left a note.
         transaction.delete(rosterRef(actingUserId))
+        transaction.delete(eventRef.collection('guestContacts').doc(actingUserId))
 
         if (waitlist.includes(actingUserId)) {
           // Leave waitlist
@@ -219,23 +240,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
           if (newWaitlist.length > 0) {
             // Pop the first user from waitlist and push to players
-            const promotedUserId = newWaitlist.shift()
+            promotedUserId = newWaitlist.shift() ?? null;
 
             if (promotedUserId) {
               newPlayers.push(promotedUserId)
 
-              // Emit notification for waitlist promotion
-              try {
-                const { createNotification } = await import("@/lib/db")
-                await createNotification({
-                  userId: promotedUserId,
-                  type: "waitlist_promo",
-                  message: `You've been promoted from the waitlist for "${eventData.title || eventData.name}"!`,
-                  eventId: id
-                })
-              } catch (e) {
-                console.error("Failed to emit waitlist promo notification", e)
-              }
+              // Notification is emitted only after this transaction commits.
             }
 
             // Overwrite arrays because we are doing both remove and push on different lists
@@ -249,7 +259,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             // Just normal leave
             transaction.update(eventRef, {
               players: FieldValue.arrayRemove(actingUserId),
-              currentPlayers: newPlayers.length,
+              currentPlayers: FieldValue.increment(-1),
             })
             updatedEventData = { ...eventData, players: newPlayers, currentPlayers: newPlayers.length }
           }
@@ -257,10 +267,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
     })
 
+    if (promotedUserId) {
+      try {
+        const { createNotification } = await import('@/lib/db');
+        await createNotification({userId: promotedUserId, type: 'waitlist_promo',
+          message: `You've been promoted from the waitlist for "${updatedEventData.title || updatedEventData.name}"!`, eventId: id});
+      } catch (error) { console.error('Failed to send waitlist promotion notification', error); }
+    }
+
     // Gamification: Check for first game achievement (only if joined players list, not waitlist)
     if (joinedPlayers && updatedEventData) {
       try {
-        const userEventsQuery = await adminDb.collection("events").where("players", "array-contains", user.uid).get()
+        const userEventsQuery = await adminDb.collection("events").where("players", "array-contains", user.uid).limit(2).get()
         if (userEventsQuery.size === 1) { // 1 because they just joined
           const userRef = adminDb.collection("users").doc(user.uid)
           await userRef.update({
@@ -282,7 +300,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // so this response cannot leak them before the migration has run.
     const { attendeeNotes: _n, attendeeAnswers: _a, attendeePickup: _p, ...safeEventData } = updatedEventData || {}
 
-    return NextResponse.json({ event: { id, ...safeEventData } })
+    const canManage = safeEventData.createdBy === user.uid || safeEventData.admins?.includes(user.uid);
+    return NextResponse.json({ event: { id, ...pickPublicFields(safeEventData),
+      waitlist: canManage ? (safeEventData.waitlist || []) : (safeEventData.waitlist || []).filter((uid: string) => uid === user.uid),
+    } })
   } catch (error: any) {
     console.error("RSVP error:", error)
     if (error.message === "EVENT_NOT_FOUND") {
@@ -293,6 +314,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: "You are not currently joined to this event" }, { status: 400 })
     } else if (error.message === "UNAUTHORIZED_BLOCK") {
       return NextResponse.json({ error: "You are not permitted to join this event." }, { status: 403 })
+    } else if (error.message === 'UNAUTHORIZED_REMOVE' || error.message === 'PRIVATE_EVENT') {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    } else if (error.message === 'EVENT_CLOSED') {
+      return NextResponse.json({ error: 'This event is no longer accepting RSVPs' }, { status: 409 });
     }
 
     if (error instanceof z.ZodError) {

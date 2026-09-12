@@ -61,7 +61,11 @@ export function getEventEndUTC(event: GameEvent): Date {
           endUTC.getTime() <= startUTC.getTime() &&
           (!event.endDate || event.endDate.trim() === '' || event.endDate.trim() === event.date?.trim())
         ) {
-          return new Date(endUTC.getTime() + 24 * 60 * 60 * 1000);
+          // Advance the calendar date, then resolve in the event timezone.
+          // Adding 24 elapsed hours is wrong on 23/25-hour DST transition days.
+          const nextDay = new Date(`${endDateStr}T12:00:00Z`);
+          nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+          return fromZonedTime(`${nextDay.toISOString().slice(0, 10)}T${normalizedEndTime}`, tz);
         }
         return endUTC;
       }

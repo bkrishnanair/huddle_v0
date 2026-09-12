@@ -147,14 +147,15 @@ export default function AdminDashboardPage() {
     if (!user) return;
     setAgentRunning(true);
     try {
-      const res = await fetch('/api/cron/serendipity?secret=' + (process.env.NEXT_PUBLIC_CRON_SECRET || 'dev'), {
-        method: 'GET',
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/admin/serendipity', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${idToken}` },
       });
       const data = await res.json();
 
-      if (data.status === 'success' || data.status === 'no_action') {
+      if (res.ok && data.ok) {
         // Refresh logs
-        const idToken = await user.getIdToken();
         const logsRes = await fetch('/api/admin/serendipity-logs', {
           headers: { Authorization: `Bearer ${idToken}` },
         });
@@ -166,6 +167,8 @@ export default function AdminDashboardPage() {
             setExpandedLog(logsData.logs[0].runId);
           }
         }
+      } else {
+        alert(data.error || data.errors?.join(', ') || 'Agent run failed');
       }
     } catch (e) {
       console.error('Agent run failed:', e);

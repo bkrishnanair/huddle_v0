@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { CategoryIcon } from '@/components/category-icon'
-import { getCategoryColor } from "@/lib/utils"
+import { getCategoryColor, getAccentTokens } from "@/lib/utils"
 import { GameEvent } from "@/lib/types"
 import { Users, Calendar, Clock, MapPin, Loader2, Share, Trash2, Download, Copy, MessageCircle, AlertTriangle, Info, CalendarPlus, CheckCircle2, Video, Monitor, ExternalLink, Crown, Mail, BadgeCheck, X } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -530,12 +530,13 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
           "Content-Type": "application/json",
           "Authorization": `Bearer ${idToken}`
         },
-        body: JSON.stringify({ action, note, answers: rsvpAnswers, pickupPointId: rsvpPickupId, guestContactEmail: shareContact ? guestEmail : undefined, guestContactShared: shareContact }),
+        body: JSON.stringify({ action, note, answers: rsvpAnswers, pickupPointId: rsvpPickupId, guestContactEmail: shareContact ? guestEmail.trim() : undefined, guestContactShared: shareContact }),
         credentials: "include"
       })
 
       if (response.ok) {
         const data = await response.json()
+        setEvent(previous => previous ? { ...previous, ...data.event } : data.event)
         onEventUpdated(data.event)
 
         trackFunnelEvent({
@@ -552,7 +553,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
 
         let msg = "Success!";
         if (action === "join") {
-          msg = isFull ? "You've joined the waitlist!" : "You've joined the game!";
+          msg = data.event.players?.includes(activeUser.uid) ? "You've joined the event" : "You've joined the waitlist";
         } else {
           msg = isWaitlisted ? "You left the waitlist" : "You've unjoined the game";
         }
@@ -560,10 +561,12 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
       } else {
         const errorData = await response.json()
         toast.error(errorData.error || "Failed to update RSVP")
+        if (action === "join") setShowRsvpPrompt(true)
       }
     } catch (error: any) {
       console.error("RSVP error:", error)
       toast.error(error?.message || "An unexpected error occurred")
+      if (action === "join") setShowRsvpPrompt(true)
     } finally {
       setIsLoading(false)
     }
@@ -591,11 +594,12 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
   }
 
   const catColor = getCategoryColor(event.category || event.sport || "default");
+  const accent = getAccentTokens(catColor);
 
   return (
     <Drawer open={isOpen} onOpenChange={onClose}>
       <DrawerContent 
-        className="border-white/10 bg-panel/95 text-foreground max-w-2xl mx-auto rounded-t-[2rem] max-h-[92dvh] flex flex-col focus:outline-none backdrop-blur-xl relative overflow-hidden"
+        className="border-white/10 bg-panel/95 text-foreground max-w-2xl mx-auto rounded-t-[2rem] max-h-[92dvh] flex flex-col focus:outline-none backdrop-blur-md isolate overflow-hidden"
         style={{
           borderTop: `3.5px solid ${catColor}`,
           boxShadow: `0 -8px 30px -4px ${catColor}25`
@@ -607,15 +611,15 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
             background: `radial-gradient(ellipse 90% 70% at 20% 0%, ${catColor}30, transparent 70%)`,
           }}
         />
-        <DrawerHeader className="px-5 pb-5 pt-3 sm:px-6 shrink-0 text-left relative">
+        <DrawerHeader className="px-5 pb-5 pt-3 sm:px-6 shrink-0 text-left relative [@media(max-height:700px)]:py-2">
           <div className="flex justify-between items-start gap-4">
             <div className="flex-1">
-              <DrawerTitle className="font-display text-2xl sm:text-3xl font-bold text-white tracking-tight leading-tight flex flex-wrap items-center gap-2">
+              <DrawerTitle className="font-display text-2xl sm:text-3xl font-bold text-white tracking-tight leading-tight flex flex-wrap items-center gap-2 [@media(max-height:700px)]:text-xl">
                 <span 
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl [@media(max-height:700px)]:hidden"
                   style={{
-                    color: catColor,
-                    backgroundColor: `${catColor}18`,
+                    color: accent.text,
+                    backgroundColor: accent.surface,
                     border: `1.5px solid ${catColor}40`,
                     boxShadow: `0 0 14px -2px ${catColor}30`
                   }}
@@ -624,7 +628,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                 </span>
                 {event.title || event.name}
                 {event.maxPlayers - event.currentPlayers > 0 && event.maxPlayers - event.currentPlayers <= 3 && (
-                  <span className="bg-red-500 text-white px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(239,68,68,0.5)]">
+                  <span className="bg-red-400 text-canvas px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(239,68,68,0.5)]">
                     <AlertTriangle className="w-3 h-3" />
                     Filling up
                   </span>
@@ -634,8 +638,8 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                 <span 
                   className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
                   style={{
-                    color: catColor,
-                    backgroundColor: `${catColor}18`,
+                    color: accent.text,
+                    backgroundColor: accent.surface,
                     border: `1px solid ${catColor}35`
                   }}
                 >
@@ -649,7 +653,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                     {event.eventType === 'virtual' ? '🖥️ Virtual' : '📡 Hybrid'}
                   </span>
                 )}
-                <span className="text-slate-500 text-xs font-medium flex items-center gap-1">by {event.organizerName}{event.isOrganizerVerified && <BadgeCheck className="w-3.5 h-3.5 text-blue-400 shrink-0" />}</span>
+                <span className="text-slate-400 text-xs font-medium flex items-center gap-1">by {event.organizerName}{event.isOrganizerVerified && <BadgeCheck className="w-3.5 h-3.5 text-blue-400 shrink-0" />}</span>
               </DrawerDescription>
             </div>
             <DrawerClose asChild><Button variant="ghost" size="icon" aria-label="Close event details" className="shrink-0 rounded-full border border-white/10 text-slate-400"><X /></Button></DrawerClose>
@@ -1059,7 +1063,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
             </div>
           </TabsContent>
         </Tabs>
-        <DrawerFooter className="flex flex-col gap-3 p-5 pt-4 bg-canvas/70 backdrop-blur-xl border-t border-white/10 shrink-0">
+        <DrawerFooter className="flex flex-col gap-3 p-5 pt-4 bg-canvas/95 border-t border-white/10 shrink-0">
           {/* Main Action Button */}
           {!isOrganizer && (
             <div className="flex flex-col gap-2">
@@ -1088,7 +1092,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {getButtonText()}
               </Button>
-              {!user && <p className="text-center text-xs text-slate-400">Sign in to save your spot. Browsing is always free.</p>}
+              {!user && <p className="text-center text-xs text-slate-400">No account? Join as a guest.</p>}
             </div>
           )}
 
@@ -1280,22 +1284,28 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                   </Label>
                   <button
                     type="button"
+                    role="switch"
+                    aria-checked={shareContact}
+                    aria-label="Share my email with the organizer"
                     onClick={() => setShareContact(!shareContact)}
-                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${shareContact ? 'bg-primary' : 'bg-slate-700'}`}
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
-                    <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform ${shareContact ? 'translate-x-4' : 'translate-x-0'}`} />
+                    <span className={`pointer-events-none flex h-6 w-11 items-center rounded-full p-0.5 transition-colors ${shareContact ? 'bg-primary' : 'bg-slate-700'}`}>
+                      <span className={`h-5 w-5 rounded-full bg-white transition-transform ${shareContact ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </span>
                   </button>
                 </div>
                 {shareContact && (
                   <Input
                     type="email"
+                    aria-label="Email to share with the organizer"
                     value={guestEmail}
                     onChange={(e) => setGuestEmail(e.target.value)}
                     placeholder="your@email.com"
                     className="bg-slate-900/50 border-white/10 text-white placeholder:text-slate-500 h-9 text-sm"
                   />
                 )}
-                <p className="text-[10px] text-slate-600">Off by default. The organizer can reach out if you opt in.</p>
+                <p className="text-xs text-slate-400">Off by default. The organizer can reach out if you opt in.</p>
               </div>
             )}
           </div>
@@ -1309,6 +1319,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
               disabled={
                 isLoading ||
                 (!user && !guestName.trim()) ||
+                (shareContact && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail.trim())) ||
                 (!!event.questions?.length && Object.keys(rsvpAnswers).length !== event.questions.length) ||
                 (!!event.pickupPoints?.length && !rsvpPickupId)
               }

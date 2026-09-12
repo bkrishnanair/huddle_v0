@@ -3,7 +3,7 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 
-import { cn } from "@/lib/utils"
+import { cn, getAccentTokens } from "@/lib/utils"
 
 const chipVariants = cva(
   "inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-full text-sm font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
@@ -39,26 +39,28 @@ const Chip = React.forwardRef<HTMLButtonElement, ChipProps>(
   ({ className, variant, size, isActive, color, style, ...props }, ref) => {
 
     let inlineStyle: React.CSSProperties = { ...style };
-    if (color && isActive) {
+    const tokens = color ? getAccentTokens(color) : undefined;
+    if (tokens && isActive) {
       inlineStyle.backgroundColor = color;
-      inlineStyle.color = "#ffffff";
+      inlineStyle.color = tokens.foreground;
       inlineStyle.borderColor = color;
-      inlineStyle.boxShadow = `0 0 16px -1px ${color}80`;
-    } else if (color && !isActive) {
+      inlineStyle.boxShadow = `0 0 10px -2px ${color}50`;
+    } else if (tokens && !isActive) {
       // Distinct category border, tinted backdrop, and colored text for high vibrancy
       inlineStyle.borderColor = `${color}55`;
-      inlineStyle.backgroundColor = `${color}12`;
-      inlineStyle.color = color;
+      inlineStyle.backgroundColor = tokens.surface;
+      inlineStyle.color = tokens.text;
     }
 
     return (
       <button
         className={cn(
-          chipVariants({ variant: isActive ? "primary" : "default", size }),
+          chipVariants({ variant: isActive ? "primary" : (variant ?? "default"), size }),
           className
         )}
         style={inlineStyle}
         ref={ref}
+        aria-pressed={isActive}
         {...props}
       />
     )

@@ -2,6 +2,7 @@ import { defineConfig, configDefaults } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
+  oxc: { jsx: { runtime: 'automatic' } },
   // Mirror the `@/*` path alias from tsconfig.json so tests import modules the
   // same way the app does.
   resolve: {
@@ -19,10 +20,9 @@ export default defineConfig({
     },
   },
   test: {
-    // No vitest suites exist yet. CI must stay green until the first one lands.
-    passWithNoTests: true,
+    passWithNoTests: false,
     // scripts/test-rules.mjs is a standalone Firestore-emulator harness, not a
     // vitest suite — it needs a running emulator and must not gate the build.
-    exclude: [...configDefaults.exclude, 'scripts/**'],
+    exclude: [...configDefaults.exclude, 'scripts/**', '__tests__/integration/**'],
   },
 });

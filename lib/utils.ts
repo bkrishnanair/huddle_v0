@@ -24,8 +24,7 @@ export function formatTime(time24: string) {
   }).format(date);
 }
 
-export const getCategoryColor = (category: string): string => {
-  const colors: { [key: string]: string } = {
+export const CATEGORY_COLORS: Readonly<Record<string, string>> = {
     Sports: "#FF4D4D", // Electric Crimson / Coral Red
     Music: "#A855F7", // Neon Purple
     Community: "#F43F5E", // Radiant Hot Pink / Rose
@@ -34,12 +33,34 @@ export const getCategoryColor = (category: string): string => {
     Tech: "#06B6D4", // Electric Cyan
     "Arts & Culture": "#FB7185", // Electric Coral / Salmon
     Outdoors: "#10B981", // Vivid Emerald Green
-    "🖥️ Virtual": "#8B5CF6", // Electric Violet
+    "🖥️ Virtual": "#A78BFA", // Violet with AA contrast against canvas foreground
     Recommended: "#F59E0B", // Amber
     Joined: "#3B82F6", // Electric Blue
     default: "#94A3B8", // Bright Slate
-  }
-  return colors[category] || colors.default
+};
+
+export const getCategoryColor = (category: string): string => {
+  return CATEGORY_COLORS[category] || CATEGORY_COLORS.default
+}
+
+function mixHex(color: string, ground: string, amount: number): string {
+  const channels = [1, 3, 5].map((offset) => {
+    const accent = parseInt(color.slice(offset, offset + 2), 16);
+    const base = parseInt(ground.slice(offset, offset + 2), 16);
+    return Math.round(accent * amount + base * (1 - amount)).toString(16).padStart(2, '0');
+  });
+  return `#${channels.join('')}`;
+}
+
+/** Opaque surfaces keep contrast predictable over either light or dark maps. */
+export function getAccentTokens(color: string) {
+  const accent = /^#[\da-f]{6}$/i.test(color) ? color : CATEGORY_COLORS.default;
+  return {
+    accent,
+    foreground: '#0B101B',
+    text: mixHex(accent, '#FFFFFF', 0.65),
+    surface: mixHex(accent, '#121B2B', 0.12),
+  };
 }
 
 /**
