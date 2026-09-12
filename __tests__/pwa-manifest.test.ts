@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import manifest from '@/app/manifest';
 
 describe('PWA Web App Manifest Configuration', () => {
-  it('returns valid Instrument design tokens and standalone display mode', () => {
+  it('returns valid Dark/Vibrant design tokens and standalone display mode', () => {
     const config = manifest();
 
     expect(config.name).toBe('Huddle — The Live Campus Event Map');
@@ -14,9 +14,9 @@ describe('PWA Web App Manifest Configuration', () => {
     expect(config.display_override).toContain('standalone');
     expect(config.orientation).toBe('portrait');
 
-    // Instrument light-first paper token (#FCFBF9)
-    expect(config.background_color).toBe('#FCFBF9');
-    expect(config.theme_color).toBe('#FCFBF9');
+    // Dark/Vibrant V2 background token (#0B101B)
+    expect(config.background_color).toBe('#0B101B');
+    expect(config.theme_color).toBe('#0B101B');
   });
 
   it('includes required 192px, 512px, and maskable icons', () => {
