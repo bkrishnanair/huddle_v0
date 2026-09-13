@@ -17,7 +17,7 @@ export function AuthGateModal({ isOpen, onClose, triggerContext }: AuthGateModal
   const headlines = {
     events: "Sign in to manage your events",
     profile: "Create an account for your profile",
-    general: "Join Huddle to unlock full access"
+    general: "Make room for a good plan"
   }
 
   const headline = headlines[triggerContext] || headlines.general
@@ -32,11 +32,11 @@ export function AuthGateModal({ isOpen, onClose, triggerContext }: AuthGateModal
           <div className="w-16 h-16 rounded-full bg-primary/20 text-primary flex items-center justify-center mx-auto mb-5 border border-primary/30 shadow-[0_0_25px_rgba(249,115,22,0.3)]">
             <Sparkles className="w-8 h-8" />
           </div>
-          <DialogTitle className="text-2xl font-black text-white tracking-tight leading-tight uppercase">
+          <DialogTitle className="font-display text-2xl font-bold text-white tracking-tight leading-tight">
             {headline}
           </DialogTitle>
-          <p className="text-xs text-slate-400 mt-2 font-medium tracking-wide uppercase">
-            Free forever · Takes 10 seconds with Google
+          <p className="text-sm text-slate-400 mt-3 leading-relaxed">
+            Free to join. Your campus, a little closer.
           </p>
         </div>
 
@@ -46,7 +46,7 @@ export function AuthGateModal({ isOpen, onClose, triggerContext }: AuthGateModal
               <CalendarRange className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-sm font-bold text-slate-100 uppercase tracking-widest">Save your RSVPs</p>
+              <p className="text-sm font-semibold text-slate-100">Save your RSVPs</p>
               <p className="text-xs text-slate-400 mt-1 leading-relaxed">Never lose track of upcoming games and campus meetups.</p>
             </div>
           </div>
@@ -56,7 +56,7 @@ export function AuthGateModal({ isOpen, onClose, triggerContext }: AuthGateModal
               <Users className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-sm font-bold text-slate-100 uppercase tracking-widest">Follow organizers & friends</p>
+              <p className="text-sm font-semibold text-slate-100">Follow organizers & friends</p>
               <p className="text-xs text-slate-400 mt-1 leading-relaxed">Get automatic alerts when your crew joins an event.</p>
             </div>
           </div>
@@ -66,8 +66,8 @@ export function AuthGateModal({ isOpen, onClose, triggerContext }: AuthGateModal
               <Trophy className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-sm font-bold text-slate-100 uppercase tracking-widest">Build attendance reliability</p>
-              <p className="text-xs text-slate-400 mt-1 leading-relaxed">Unlock organizer badges and priority waitlist spots.</p>
+              <p className="text-sm font-semibold text-slate-100">Build attendance reliability</p>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">Keep track of the events you attend and the people you meet.</p>
             </div>
           </div>
         </div>
@@ -78,9 +78,9 @@ export function AuthGateModal({ isOpen, onClose, triggerContext }: AuthGateModal
               onClose()
               router.push("/login")
             }}
-            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-widest text-sm rounded-xl shadow-[0_0_20px_rgba(249,115,22,0.4)] transition-all active:scale-[0.98]"
+            className="w-full h-12 bg-primary hover:bg-orange-400 text-canvas font-semibold text-sm rounded-2xl shadow-glow transition-all active:scale-[0.98]"
           >
-            Continue to Sign In
+            Let’s get you in
           </Button>
           <Button
             onClick={() => {
@@ -90,9 +90,9 @@ export function AuthGateModal({ isOpen, onClose, triggerContext }: AuthGateModal
               }
             }}
             variant="ghost"
-            className="w-full h-10 text-slate-500 hover:text-white hover:bg-white/5 text-xs font-bold uppercase tracking-widest rounded-xl transition-colors"
+            className="w-full h-11 text-slate-400 hover:text-white hover:bg-white/5 text-sm font-medium rounded-2xl transition-colors"
           >
-            Continue browsing without account
+            Keep exploring
           </Button>
         </div>
       </DialogContent>

@@ -12,8 +12,7 @@ import { Chip } from "@/components/ui/chip"
 import { Search, SlidersHorizontal, PlusCircle, Star, LogOut, Calendar, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { GameEvent } from "@/lib/types"
-import { signOut } from "firebase/auth"
-import { auth } from "@/lib/firebase"
+import { logOut } from "@/lib/auth"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -26,10 +25,10 @@ const TIME_FILTERS = ["All", "Live", "Today", "This Week", "This Weekend"];
 const ActionableEmptyState = ({ onOpenCreateModal }: { onOpenCreateModal: () => void }) => (
     <div className="text-center glass-surface border-white/15 rounded-2xl p-8 mt-8">
         <PlusCircle className="w-16 h-16 text-primary mx-auto mb-4" />
-        <h3 className="text-2xl font-bold text-slate-50 mb-2">No Events Nearby</h3>
-        <p className="text-slate-300 mb-6">Your area is waiting for a leader. Be the one to get things started.</p>
+        <h2 className="font-display text-2xl font-bold text-slate-50 mb-2">No events nearby yet</h2>
+        <p className="text-slate-300 mb-6">Check back later, or invite people to something you're planning.</p>
         <Button size="lg" onClick={onOpenCreateModal} className="h-12 px-8 text-lg">
-            Create the First Event
+            Create an event
         </Button>
     </div>
 );
@@ -41,6 +40,9 @@ export default function DiscoverPage() {
     const [userProfile, setUserProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+    const [loadError, setLoadError] = useState(false);
+    const [retryCount, setRetryCount] = useState(0);
+    const [usingDefaultLocation, setUsingDefaultLocation] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -63,40 +65,51 @@ export default function DiscoverPage() {
     const [isOrgSearching, setIsOrgSearching] = useState(false);
 
     useEffect(() => {
+        let cancelled = false;
+        const fallback = () => {
+            if (cancelled) return;
+            setUsingDefaultLocation(true);
+            setUserLocation({ lat: 38.9897, lng: -76.9378 });
+        };
+        if (!navigator.geolocation) {
+            fallback();
+            return;
+        }
         navigator.geolocation.getCurrentPosition(
             (position) => {
+                if (cancelled) return;
                 const newLat = position.coords.latitude;
                 const newLng = position.coords.longitude;
                 setUserLocation(prev =>
                     prev?.lat === newLat && prev?.lng === newLng ? prev : { lat: newLat, lng: newLng }
                 );
             },
-            () => {
-                const defaultLat = 37.7749;
-                const defaultLng = -122.4194;
-                setUserLocation(prev =>
-                    prev?.lat === defaultLat && prev?.lng === defaultLng ? prev : { lat: defaultLat, lng: defaultLng }
-                );
-            }
+            fallback,
+            { timeout: 8000, maximumAge: 300000 }
         );
+        return () => { cancelled = true; };
     }, []);
 
     useEffect(() => {
+        const controller = new AbortController();
         const fetchInitialData = async () => {
             if (!userLocation) return;
             setLoading(true);
+            setLoadError(false);
+            setUserProfile(null);
             try {
                 // Fetch events globally if 'All' is possible (huge radius)
                 const radius = 5000000;
 
                 const fetchPromises: Promise<Response>[] = [
-                    fetch(`/api/events?lat=${userLocation.lat}&lon=${userLocation.lng}&radius=${radius}&groupRecurring=true`)
+                    fetch(`/api/events?lat=${userLocation.lat}&lon=${userLocation.lng}&radius=${radius}&groupRecurring=true`, { signal: controller.signal })
                 ];
 
                 if (user?.uid) {
                     const token = await user.getIdToken();
                     fetchPromises.push(
                         fetch(`/api/users/${user.uid}/profile`, {
+                            signal: controller.signal,
                             headers: { "Authorization": `Bearer ${token}` }
                         })
                     );
@@ -104,21 +117,30 @@ export default function DiscoverPage() {
 
                 const responses = await Promise.all(fetchPromises);
                 const eventsRes = responses[0];
-                if (eventsRes.ok) setAllNearbyEvents((await eventsRes.json()).events || []);
+                if (!eventsRes.ok) throw new Error("Event request failed");
+                const eventsData = await eventsRes.json();
+                if (controller.signal.aborted) return;
+                setAllNearbyEvents(eventsData.events || []);
 
                 if (responses.length > 1 && responses[1].ok) {
-                    setUserProfile((await responses[1].json()).profile);
+                    const profileData = await responses[1].json();
+                    if (!controller.signal.aborted) setUserProfile(profileData.profile);
                 }
             } catch (error) {
+                if (controller.signal.aborted) return;
+                setLoadError(true);
                 console.error("Failed to fetch initial data:", error);
             } finally {
-                setLoading(false);
-                setInitialLoadComplete(true);
+                if (!controller.signal.aborted) {
+                    setLoading(false);
+                    setInitialLoadComplete(true);
+                }
             }
         };
 
         fetchInitialData();
-    }, [user?.uid, userLocation]);
+        return () => controller.abort();
+    }, [user?.uid, userLocation, retryCount]);
 
     const handleAiSearch = async (query: string) => {
       setIsAiSearching(true);
@@ -152,9 +174,9 @@ export default function DiscoverPage() {
           setAiKeywords(filters.keywords);
         }
         
-        toast.success(`AI Search: Filtered for "${query}" ✨`);
+        toast.success(`Showing matches for "${query}"`);
       } catch (e) {
-        toast.error('AI Search failed. Try a regular search.');
+        toast.error('Couldn\'t find matches. Try a simpler search.');
       } finally {
         setIsAiSearching(false);
       }
@@ -181,7 +203,7 @@ export default function DiscoverPage() {
 
     const handleLogout = async () => {
         try {
-            await signOut(auth)
+            await logOut()
             toast.success("Logged out successfully")
             router.push("/")
         } catch (error) {
@@ -352,6 +374,13 @@ export default function DiscoverPage() {
     }, [allNearbyEvents, searchQuery, aiKeywords, activeCategory, activeTime, activeRange, sourceFilter, userLocation, userProfile, sortBy, filterStartDate, filterEndDate]);
 
     const renderContent = () => {
+        if (loadError) {
+            return <section role="alert" className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
+                <h2 className="font-display text-xl text-white">Couldn't load events</h2>
+                <p className="my-3 text-slate-300">Check your connection and try again.</p>
+                <Button disabled={loading} onClick={() => setRetryCount(count => count + 1)}>Try again</Button>
+            </section>;
+        }
         if (!initialLoadComplete) {
             return (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -403,7 +432,7 @@ export default function DiscoverPage() {
                 )}
                 {hasRecommended && (
                     <section className="mb-8">
-                        <h2 className="text-2xl font-bold text-slate-50 mb-4 flex items-center gap-2"><Star className="w-6 h-6 text-yellow-400" /> Recommended For You</h2>
+                        <h2 className="font-display text-2xl font-bold text-slate-50 mb-4 flex items-center gap-2"><Star className="w-6 h-6 text-yellow-400" /> Picked for you</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {recommendedEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} showMapButton={true} />)}
                         </div>
@@ -412,7 +441,7 @@ export default function DiscoverPage() {
                 
                 {communityEvents.length > 0 && (
                     <section className="mb-8">
-                        <h2 className="text-2xl font-bold text-slate-50 mb-4">Community Events</h2>
+                        <h2 className="font-display text-2xl font-bold text-slate-50 mb-4">Campus community</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {communityEvents.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} showMapButton={true} />)}
                         </div>
@@ -422,7 +451,7 @@ export default function DiscoverPage() {
                 {terplinkEvents.length > 0 && (
                     <section className="mb-8">
                         <div className="flex items-center gap-3 mb-4">
-                            <h2 className="text-2xl font-bold text-slate-50">From TerpLink</h2>
+                            <h2 className="font-display text-2xl font-bold text-slate-50">From TerpLink</h2>
                             <span className="text-[10px] font-bold bg-white/10 text-slate-300 px-2 py-0.5 rounded border border-white/5 uppercase tracking-wider">
                                 Sourced
                             </span>
@@ -437,16 +466,16 @@ export default function DiscoverPage() {
     }
 
     return (
-        <div className="min-h-screen w-full liquid-gradient p-4 pb-[var(--safe-bottom)] md:p-8 md:pb-[var(--safe-bottom)] overflow-x-hidden">
+        <div className="min-h-screen w-full bg-canvas p-5 pb-[calc(var(--safe-bottom)+2rem)] sm:p-8 sm:pb-[calc(var(--safe-bottom)+2rem)] overflow-x-hidden [&>header]:max-w-7xl [&>header]:mx-auto [&>div]:max-w-7xl [&>div]:mx-auto">
             <header className="flex justify-between items-start mb-10">
                 <div className="space-y-1">
-                    <h1 className="text-4xl font-extrabold text-slate-50 tracking-tight">Discover</h1>
-                    <p className="text-slate-400 font-medium text-lg">Find events happening around you.</p>
+                    <h1 className="font-display text-4xl sm:text-5xl font-bold text-white tracking-tight">Discover</h1>
+                    <p className="text-slate-400 text-base">{usingDefaultLocation ? 'Browsing from College Park. Location is unavailable.' : 'Find your next campus plan.'}</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl glass-surface border border-rose-500/20 shadow-xl hover:bg-rose-500/10 text-rose-400" onClick={handleLogout}>
+                    {user && <Button variant="ghost" size="icon" aria-label="Sign out" className="h-11 w-11 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 text-slate-400" onClick={handleLogout}>
                         <LogOut className="w-5 h-5" />
-                    </Button>
+                    </Button>}
                 </div>
             </header>
 
@@ -456,7 +485,8 @@ export default function DiscoverPage() {
                     <div className="relative flex-1 w-full group">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors z-10" />
                         <Input
-                            placeholder="Search by name, category, or event vibe..."
+                            aria-label="Search campus events"
+                            placeholder="What are you in the mood for?"
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                             onKeyDown={e => {
@@ -464,7 +494,7 @@ export default function DiscoverPage() {
                                     handleAiSearch(searchQuery);
                                 }
                             }}
-                            className="pl-12 pr-12 glass-surface border-white/10 h-14 rounded-2xl shadow-2xl text-lg focus:ring-primary/20"
+                            className="pl-12 pr-12 bg-white/5 border-white/10 h-14 rounded-2xl text-base focus:ring-primary/20"
                         />
                         {isAiSearching && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-teal-400 animate-spin" />}
                     </div>
@@ -487,7 +517,7 @@ export default function DiscoverPage() {
                 {/* Filter Cluster */}
                 <div className="flex flex-col gap-3 w-full">
                     {/* Category Group - always visible */}
-                    <div className="flex items-center gap-2 p-1.5 glass-surface border border-white/10 rounded-full shadow-2xl max-w-max overflow-x-auto no-scrollbar">
+                    <div className="flex items-center gap-2 p-1.5 bg-white/[0.025] border border-white/10 rounded-3xl max-w-full overflow-x-auto no-scrollbar">
                         {CATEGORY_FILTERS.map(category => (
                             <div key={category} className="shrink-0">
                                 <Chip
@@ -503,7 +533,7 @@ export default function DiscoverPage() {
 
                     {/* Compact filter row: Time chips + More Filters toggle */}
                     <div className="flex items-center gap-3 flex-wrap">
-                        <div className="flex items-center gap-1.5 p-1 glass-surface border border-white/10 rounded-full shadow-xl overflow-x-auto no-scrollbar">
+                        <div className="flex items-center gap-1.5 p-1 bg-white/[0.025] border border-white/10 rounded-3xl max-w-full overflow-x-auto no-scrollbar">
                             {TIME_FILTERS.map(time => (
                                 <div key={time} className="shrink-0">
                                     <Chip

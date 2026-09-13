@@ -9,7 +9,7 @@
 
   /* Refined Glassmorphism */
   .glass-surface {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(18, 27, 43, 0.88);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.15);
@@ -30,9 +30,7 @@
   }
 
   .liquid-gradient {
-    background: linear-gradient(-45deg, hsl(260, 50%, 12%), hsl(220, 60%, 15%), hsl(260, 50%, 12%));
-    background-size: 200% 200%;
-    animation: liquid-gradient-animation 20s ease infinite;
+    background: radial-gradient(ellipse at top right, rgb(45 212 191 / 6%), transparent 50%), #0B101B;
   }
 
   .no-scrollbar::-webkit-scrollbar {
@@ -103,7 +101,7 @@
     /* 96px — matches bottom-4 offset (16px) + navbar height (~80px) */
     --safe-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom));
 
-    --background: 240 55% 14%;
+    --background: 221 42% 7.5%;
     /* A new, richer dark base */
     --foreground: 210 40% 98%;
 
@@ -113,9 +111,9 @@
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 31 94% 52%;
+    --primary: 25 95% 53%;
     /* Sunny Orange */
-    --primary-foreground: 210 40% 98%;
+    --primary-foreground: 221 42% 7.5%;
 
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
@@ -123,7 +121,7 @@
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 31 94% 52%;
+    --accent: 25 95% 53%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 62.8% 30.6%;
@@ -131,14 +129,14 @@
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 31 94% 52%;
+    --ring: 25 95% 53%;
 
     --radius: 1rem;
   }
 
   .dark {
     /* Keeping dark mode consistent with the primary theme */
-    --background: 240 55% 14%;
+    --background: 221 42% 7.5%;
     --foreground: 210 40% 98%;
 
     --card: 222.2 84% 4.9%;
@@ -147,8 +145,8 @@
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 31 94% 52%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 25 95% 53%;
+    --primary-foreground: 221 42% 7.5%;
 
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
@@ -156,7 +154,7 @@
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 31 94% 52%;
+    --accent: 25 95% 53%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 62.8% 30.6%;
@@ -164,7 +162,7 @@
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 31 94% 52%;
+    --ring: 25 95% 53%;
   }
 }
 
@@ -175,7 +173,7 @@
 
   body {
     @apply bg-background text-foreground;
-    font-size: 1.05rem;
+    font-size: 1rem;
   }
 }
 
@@ -183,7 +181,7 @@
 .pac-container {
   z-index: 10000 !important;
   pointer-events: auto !important;
-  touch-action: interpolation !important;
+  touch-action: manipulation !important;
   border-radius: 12px !important;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
   margin-top: 4px !important;
@@ -237,34 +235,34 @@
 @layer base {
   :root {
     /* --- Ground & surface (paper) --------------------------------------- */
-    --ins-paper:            #FCFBF9;  /* page ground, bottom nav */
-    --ins-surface:          #F4F2EE;  /* recessed surface, map canvas */
-    --ins-surface-sunk:     #E9E6E0;  /* borders, muted fills, buildings */
-    --ins-surface-sunk-2:   #E0DCD4;  /* deepest paper fill */
-    --ins-card:             #FFFFFF;  /* elevated card, sheet, drawer */
+    --ins-paper:            #0B101B;  /* page ground, bottom nav */
+    --ins-surface:          #162133;  /* recessed surface, map canvas */
+    --ins-surface-sunk:     #293548;  /* borders, muted fills, buildings */
+    --ins-surface-sunk-2:   #253449;  /* deepest paper fill */
+    --ins-card:             #121B2B;  /* elevated card, sheet, drawer */
 
     /* --- Ink (text) ------------------------------------------------------ */
-    --ins-ink:              #191C1E;  /* primary text, active chip fill */
-    --ins-ink-2:            #43484D;  /* body copy, inactive chip label */
-    --ins-ink-3:            #767D85;  /* meta, mono labels, icon stroke */
-    --ins-ink-4:            #A8AEB5;  /* placeholder, disabled, dimmed pin */
+    --ins-ink:              #F8FAFC;  /* primary text, active chip fill */
+    --ins-ink-2:            #CBD5E1;  /* body copy, inactive chip label */
+    --ins-ink-3:            #94A3B8;  /* meta, mono labels, icon stroke */
+    --ins-ink-4:            #8191A8;  /* placeholder, disabled, dimmed pin */
 
     /* --- Lines ----------------------------------------------------------- */
-    --ins-line:             #E9E6E0;  /* hairline divider, input border */
-    --ins-line-strong:      #DAD6CE;  /* emphasised building outline */
+    --ins-line:             #293548;  /* hairline divider, input border */
+    --ins-line-strong:      #43516A;  /* emphasised building outline */
 
     /* --- Accent: action -------------------------------------------------- */
-    --ins-accent:           #1D4FD7;  /* primary CTA, links, active nav */
-    --ins-accent-hover:     #173FB0;
-    --ins-accent-tint:      #E4EBFC;  /* selected category, avatar ground */
+    --ins-accent:           #F97316;  /* primary CTA, links, active nav */
+    --ins-accent-hover:     #FB923C;
+    --ins-accent-tint:      #362319;  /* selected category, avatar ground */
 
     /* --- Accent: live ---------------------------------------------------- */
-    --ins-live:             #0BA95B;  /* live pin, RadarPing, live dot */
-    --ins-live-tint:        #DCF5E8;  /* live badge ground, park fill */
-    --ins-live-ink:         #8AAE97;  /* muted green label on map */
+    --ins-live:             #34D399;  /* live pin, RadarPing, live dot */
+    --ins-live-tint:        #11352F;  /* live badge ground, park fill */
+    --ins-live-ink:         #6EE7B7;  /* muted green label on map */
 
     /* --- Status ---------------------------------------------------------- */
-    --ins-warn:             #B45309;  /* scarcity: <= 5 spots left */
+    --ins-warn:             #FBBF24;  /* scarcity: <= 5 spots left */
 
     /* --- Elevation ------------------------------------------------------- */
     --ins-shadow-raised:  0 1px 2px rgba(25,28,30,.06), 0 4px 12px rgba(25,28,30,.06);
@@ -272,8 +270,8 @@
 
     /* --- Radius ---------------------------------------------------------- */
     --ins-radius-sm:        8px;      /* chips, inputs, toasts, badges */
-    --ins-radius-md:        12px;     /* buttons, cards, search bar */
-    --ins-radius-lg:        20px;     /* sheets, drawers, screen shell */
+    --ins-radius-md:        16px;     /* buttons, cards, search bar */
+    --ins-radius-lg:        24px;     /* sheets, drawers, screen shell */
 
     /* --- Motion ---------------------------------------------------------- */
     --ins-ease:             cubic-bezier(.2, 0, 0, 1);
@@ -318,6 +316,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
   .ins-radarping {
     animation: none !important;
     transform: scale(1.6);

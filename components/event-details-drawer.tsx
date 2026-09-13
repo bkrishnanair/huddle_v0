@@ -22,8 +22,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
+import { CategoryIcon } from '@/components/category-icon'
+import { getCategoryColor, getAccentTokens } from "@/lib/utils"
 import { GameEvent } from "@/lib/types"
-import { Users, Calendar, Clock, MapPin, Loader2, Share, Trash2, Download, Copy, MessageCircle, AlertTriangle, Info, CalendarPlus, CheckCircle2, Video, Monitor, ExternalLink, Crown, Mail, BadgeCheck } from "lucide-react"
+import { Users, Calendar, Clock, MapPin, Loader2, Share, Trash2, Download, Copy, MessageCircle, AlertTriangle, Info, CalendarPlus, CheckCircle2, Video, Monitor, ExternalLink, Crown, Mail, BadgeCheck, X } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import EventChat from "./event-chat"
@@ -528,12 +530,13 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
           "Content-Type": "application/json",
           "Authorization": `Bearer ${idToken}`
         },
-        body: JSON.stringify({ action, note, answers: rsvpAnswers, pickupPointId: rsvpPickupId, guestContactEmail: shareContact ? guestEmail : undefined, guestContactShared: shareContact }),
+        body: JSON.stringify({ action, note, answers: rsvpAnswers, pickupPointId: rsvpPickupId, guestContactEmail: shareContact ? guestEmail.trim() : undefined, guestContactShared: shareContact }),
         credentials: "include"
       })
 
       if (response.ok) {
         const data = await response.json()
+        setEvent(previous => previous ? { ...previous, ...data.event } : data.event)
         onEventUpdated(data.event)
 
         trackFunnelEvent({
@@ -550,7 +553,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
 
         let msg = "Success!";
         if (action === "join") {
-          msg = isFull ? "You've joined the waitlist!" : "You've joined the game!";
+          msg = data.event.players?.includes(activeUser.uid) ? "You've joined the event" : "You've joined the waitlist";
         } else {
           msg = isWaitlisted ? "You left the waitlist" : "You've unjoined the game";
         }
@@ -558,10 +561,12 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
       } else {
         const errorData = await response.json()
         toast.error(errorData.error || "Failed to update RSVP")
+        if (action === "join") setShowRsvpPrompt(true)
       }
     } catch (error: any) {
       console.error("RSVP error:", error)
       toast.error(error?.message || "An unexpected error occurred")
+      if (action === "join") setShowRsvpPrompt(true)
     } finally {
       setIsLoading(false)
     }
@@ -574,11 +579,11 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
       if (isFull) return "Joining Waitlist..."
       return "Joining..."
     }
-    if (!user) return "Join Event"
+    if (!user) return "Join event"
     if (hasJoined) return "Unjoin"
     if (isWaitlisted) return "Leave Waitlist"
-    if (isFull) return "Join Waitlist"
-    return "Join Event"
+    if (isFull) return "Join waitlist"
+    return "Join event"
   }
 
   const getButtonVariant = () => {
@@ -588,25 +593,58 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
     return "default" as const
   }
 
+  const catColor = getCategoryColor(event.category || event.sport || "default");
+  const accent = getAccentTokens(catColor);
+
   return (
     <Drawer open={isOpen} onOpenChange={onClose}>
-      <DrawerContent className="glass-surface border-white/15 text-foreground max-w-2xl mx-auto rounded-t-[2rem] max-h-[80vh] flex flex-col focus:outline-none">
-        <div className="mx-auto mt-4 h-1.5 w-12 rounded-full bg-white/20 shrink-0" />
-        <DrawerHeader className="pb-2 pt-2 shrink-0">
+      <DrawerContent 
+        className="border-white/10 bg-panel/95 text-foreground max-w-2xl mx-auto rounded-t-[2rem] max-h-[92dvh] flex flex-col focus:outline-none backdrop-blur-md isolate overflow-hidden"
+        style={{
+          borderTop: `3.5px solid ${catColor}`,
+          boxShadow: `0 -8px 30px -4px ${catColor}25`
+        }}
+      >
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-36 opacity-75"
+          style={{
+            background: `radial-gradient(ellipse 90% 70% at 20% 0%, ${catColor}30, transparent 70%)`,
+          }}
+        />
+        <DrawerHeader className="px-5 pb-5 pt-3 sm:px-6 shrink-0 text-left relative [@media(max-height:700px)]:py-2">
           <div className="flex justify-between items-start gap-4">
             <div className="flex-1">
-              <DrawerTitle className="text-2xl font-black text-white tracking-tight leading-tight flex items-center gap-2">
-                <span>{event.icon || getCategoryIcon(event.sport || event.category)}</span>
-                {event.title}
+              <DrawerTitle className="font-display text-2xl sm:text-3xl font-bold text-white tracking-tight leading-tight flex flex-wrap items-center gap-2 [@media(max-height:700px)]:text-xl">
+                <span 
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl [@media(max-height:700px)]:hidden"
+                  style={{
+                    color: accent.text,
+                    backgroundColor: accent.surface,
+                    border: `1.5px solid ${catColor}40`,
+                    boxShadow: `0 0 14px -2px ${catColor}30`
+                  }}
+                >
+                  {event.icon || <CategoryIcon category={event.sport || event.category} />}
+                </span>
+                {event.title || event.name}
                 {event.maxPlayers - event.currentPlayers > 0 && event.maxPlayers - event.currentPlayers <= 3 && (
-                  <span className="bg-red-500 text-white px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(239,68,68,0.5)]">
+                  <span className="bg-red-400 text-canvas px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(239,68,68,0.5)]">
                     <AlertTriangle className="w-3 h-3" />
-                    Limited Seating!
+                    Filling up
                   </span>
                 )}
               </DrawerTitle>
-              <DrawerDescription className="flex items-center gap-2 mt-1">
-                <span className="bg-primary/20 text-primary px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider">{event.sport}</span>
+              <DrawerDescription className="flex flex-wrap items-center gap-2 mt-3">
+                <span 
+                  className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
+                  style={{
+                    color: accent.text,
+                    backgroundColor: accent.surface,
+                    border: `1px solid ${catColor}35`
+                  }}
+                >
+                  {event.category || event.sport}
+                </span>
                 {(event.eventType === 'virtual' || event.eventType === 'hybrid') && (
                   <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border ${event.eventType === 'virtual'
                     ? 'bg-blue-500/20 text-blue-400 border-blue-500/20'
@@ -615,27 +653,28 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                     {event.eventType === 'virtual' ? '🖥️ Virtual' : '📡 Hybrid'}
                   </span>
                 )}
-                <span className="text-slate-500 text-xs font-medium flex items-center gap-1">by {event.organizerName}{event.isOrganizerVerified && <BadgeCheck className="w-3.5 h-3.5 text-blue-400 shrink-0" />}</span>
+                <span className="text-slate-400 text-xs font-medium flex items-center gap-1">by {event.organizerName}{event.isOrganizerVerified && <BadgeCheck className="w-3.5 h-3.5 text-blue-400 shrink-0" />}</span>
               </DrawerDescription>
             </div>
+            <DrawerClose asChild><Button variant="ghost" size="icon" aria-label="Close event details" className="shrink-0 rounded-full border border-white/10 text-slate-400"><X /></Button></DrawerClose>
           </div>
         </DrawerHeader>
 
         <Tabs defaultValue="details" className="flex-1 w-full h-full flex flex-col min-h-0 overflow-hidden">
           <div className="px-5 mb-3">
-            <TabsList className="grid w-full grid-cols-3 bg-slate-900/50 border border-white/5 rounded-xl p-1 h-10">
-              <TabsTrigger value="details" className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white text-xs font-bold transition-all rounded-lg">Details</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3 bg-canvas/60 border border-white/5 rounded-2xl p-1 h-auto">
+              <TabsTrigger value="details" className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white min-h-11 text-sm font-semibold transition-all rounded-xl">Details</TabsTrigger>
               <TabsTrigger
                 value="chat"
                 disabled={!user || (!hasJoined && !isOrganizer)}
-                className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white text-xs font-bold transition-all rounded-lg flex items-center gap-2"
+                className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white min-h-11 text-sm font-semibold transition-all rounded-xl flex items-center gap-2"
               >
                 <MessageCircle className="w-3.5 h-3.5" />
                 Chat
               </TabsTrigger>
               <TabsTrigger
                 value="gallery"
-                className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white text-xs font-bold transition-all rounded-lg flex items-center gap-2"
+                className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white min-h-11 text-sm font-semibold transition-all rounded-xl flex items-center gap-2"
               >
                 <ImageIcon className="w-3.5 h-3.5" />
                 Gallery
@@ -646,7 +685,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
           <TabsContent value="details" className="flex-1 h-full overflow-y-auto outline-none pb-4 mt-0 data-[state=inactive]:hidden">
             <div className="px-5 space-y-4">
               {/* Info Grid - Modern Compact */}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 {[
                   { icon: Users, label: "Capacity", value: `${event.currentPlayers} / ${event.maxPlayers}` },
                   { icon: Calendar, label: "Date", value: (() => {
@@ -661,16 +700,16 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                     : [{ icon: MapPin, label: "Location", value: typeof event.location === 'string' ? event.location : 'Unavailable' }]
                   )
                 ].map((item, i) => (
-                  <div key={i} className="bg-white/5 border border-white/5 p-3 rounded-xl flex items-center gap-3">
+                  <div key={i} className="bg-gradient-to-br from-white/[0.06] to-white/[0.02] border border-white/10 p-4 rounded-2xl flex flex-col items-start gap-3 min-h-28">
                     <item.icon className="w-4 h-4 text-primary shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest leading-none mb-1">{item.label}</p>
+                      <p className="text-[10px] text-slate-400 uppercase font-medium tracking-widest leading-none mb-2">{item.label}</p>
                       {item.label === "Location" && event.eventType !== 'virtual' ? (
-                        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.value)}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-emerald-400 hover:text-emerald-300 truncate block hover:underline">
+                        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.value)}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm font-semibold text-teal-300 hover:text-teal-200 break-words hover:underline">
                           {item.value} ↗
                         </a>
                       ) : (
-                        <p className="text-xs font-bold text-slate-200 truncate">{item.value}</p>
+                        <p className="text-sm font-mono font-medium text-slate-100 break-words">{item.value}</p>
                       )}
                     </div>
                   </div>
@@ -1024,7 +1063,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
             </div>
           </TabsContent>
         </Tabs>
-        <DrawerFooter className="flex flex-col gap-2 p-5 pt-3 pb-6 bg-slate-950/20 border-t border-white/5 shrink-0">
+        <DrawerFooter className="flex flex-col gap-3 p-5 pt-4 bg-canvas/95 border-t border-white/10 shrink-0">
           {/* Main Action Button */}
           {!isOrganizer && (
             <div className="flex flex-col gap-2">
@@ -1048,18 +1087,19 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                 onClick={handleRSVPClick}
                 disabled={isLoading || loading}
                 variant={getButtonVariant()}
-                className="h-12 rounded-xl text-sm font-black uppercase tracking-widest shadow-lg transition-all active:scale-95"
+                className={`h-14 rounded-2xl text-base font-bold transition-all active:scale-[0.98] ${hasJoined || isWaitlisted ? 'border border-white/10 bg-white/5 text-rose-300 shadow-none hover:bg-rose-500/10' : 'bg-primary text-canvas shadow-glow hover:bg-orange-400'}`}
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {getButtonText()}
               </Button>
+              {!user && <p className="text-center text-xs text-slate-400">No account? Join as a guest.</p>}
             </div>
           )}
 
           {/* Organizer Secondary Actions */}
           {isOrganizer && (
             <div className="flex flex-col gap-2">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <Button
                   variant="outline"
                   onClick={() => setIsEditing(true)}
@@ -1102,7 +1142,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
               variant="outline"
               onClick={handleShare}
               className="col-span-2 h-10 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold"
-              title="Share Event"
+              title="Share event"
             >
               <Share className="w-3.5 h-3.5 mr-2" />
               Share
@@ -1150,7 +1190,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
       <Dialog open={showRsvpPrompt} onOpenChange={setShowRsvpPrompt}>
         <DialogContent className="glass-surface border-white/10 sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle className="text-xl font-black uppercase tracking-widest text-white">Join Event</DialogTitle>
+            <DialogTitle className="text-xl font-display font-bold text-white">Join event</DialogTitle>
             <DialogDescription className="text-slate-400">
               {isWaitlisted || isFull
                 ? "This event is currently full. Join the waitlist and we will automatically add you if a spot opens up."
@@ -1244,22 +1284,28 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                   </Label>
                   <button
                     type="button"
+                    role="switch"
+                    aria-checked={shareContact}
+                    aria-label="Share my email with the organizer"
                     onClick={() => setShareContact(!shareContact)}
-                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${shareContact ? 'bg-primary' : 'bg-slate-700'}`}
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
-                    <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform ${shareContact ? 'translate-x-4' : 'translate-x-0'}`} />
+                    <span className={`pointer-events-none flex h-6 w-11 items-center rounded-full p-0.5 transition-colors ${shareContact ? 'bg-primary' : 'bg-slate-700'}`}>
+                      <span className={`h-5 w-5 rounded-full bg-white transition-transform ${shareContact ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </span>
                   </button>
                 </div>
                 {shareContact && (
                   <Input
                     type="email"
+                    aria-label="Email to share with the organizer"
                     value={guestEmail}
                     onChange={(e) => setGuestEmail(e.target.value)}
                     placeholder="your@email.com"
                     className="bg-slate-900/50 border-white/10 text-white placeholder:text-slate-500 h-9 text-sm"
                   />
                 )}
-                <p className="text-[10px] text-slate-600">Off by default. The organizer can reach out if you opt in.</p>
+                <p className="text-xs text-slate-400">Off by default. The organizer can reach out if you opt in.</p>
               </div>
             )}
           </div>
@@ -1273,13 +1319,14 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
               disabled={
                 isLoading ||
                 (!user && !guestName.trim()) ||
+                (shareContact && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail.trim())) ||
                 (!!event.questions?.length && Object.keys(rsvpAnswers).length !== event.questions.length) ||
                 (!!event.pickupPoints?.length && !rsvpPickupId)
               }
               className="bg-primary text-primary-foreground font-bold"
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isFull ? "Join Waitlist" : "Confirm RSVP"}
+              {isFull ? "Join waitlist" : "Confirm RSVP"}
             </Button>
           </DialogFooter>
         </DialogContent>

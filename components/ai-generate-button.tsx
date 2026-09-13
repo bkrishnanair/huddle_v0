@@ -26,7 +26,7 @@ const AIGenerateButton: React.FC<AIGenerateButtonProps> = ({ onClick, isLoading 
       ) : (
         <>
           <Sparkles className="h-4 w-4" />
-          <span>Generate with AI ✨</span>
+          <span>Draft with AI</span>
         </>
       )}
     </Button>

@@ -11,8 +11,8 @@ export default function manifest(): MetadataRoute.Manifest {
     display: 'standalone',
     display_override: ['standalone', 'window-controls-overlay'],
     orientation: 'portrait',
-    background_color: '#FCFBF9', // Instrument --ins-paper
-    theme_color: '#FCFBF9', // Instrument --ins-paper
+    background_color: '#0B101B', // V2 canvas
+    theme_color: '#0B101B', // V2 canvas
     icons: [
       {
         src: '/icons/icon-192x192.png',

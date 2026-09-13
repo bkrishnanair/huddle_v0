@@ -1,8 +1,11 @@
+import "server-only";
+
 export const dynamic = "force-dynamic";
 
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerCurrentUser } from "@/lib/auth-server"
 import { checkInPlayer } from "@/lib/db"
+import { checkinInput } from '@/lib/request-schemas'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -13,14 +16,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: "Authentication required" }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { playerId } = body
-
-    if (!playerId) {
+    const validation = checkinInput.safeParse(await request.json().catch(() => null));
+    if (!validation.success) {
       return NextResponse.json({ error: "Player ID is required" }, { status: 400 })
     }
-
-    const { status = true } = body
+    const { playerId, status } = validation.data;
     const updatedEvent = await checkInPlayer(id, playerId, user.uid, status)
 
     return NextResponse.json({ event: updatedEvent })

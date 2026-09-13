@@ -37,7 +37,7 @@ export function EventList({ userId, eventType, searchQuery = "", filterStartDate
       },
       () => {
         // Default to SF if location denied
-        setUserLocation({ lat: 37.7749, lng: -122.4194 })
+        setUserLocation(null)
       }
     )
   }, [])

@@ -31,3 +31,6 @@ next-env.d.ts
 # macOS Finder metadata
 .DS_Store
 **/.DS_Store
+
+# Local launch verification output
+.artifacts/

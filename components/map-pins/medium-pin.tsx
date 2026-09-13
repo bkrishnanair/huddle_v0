@@ -22,8 +22,9 @@ export default function MediumPin({ category, icon, size = 32 }: MediumPinProps)
   const emoji = icon || getCategoryIcon(category)
 
   return (
+    <div className="flex min-h-11 min-w-11 items-center justify-center" title={category}>
     <div
-      className="rounded-full flex items-center justify-center text-white font-bold transition-transform duration-200 hover:scale-125 cursor-pointer border-2 border-white/20"
+      className="rounded-xl flex items-center justify-center text-white font-bold transition-transform duration-200 hover:scale-110 cursor-pointer border-2 border-white/30"
       style={{
         width: size,
         height: size,
@@ -33,6 +34,7 @@ export default function MediumPin({ category, icon, size = 32 }: MediumPinProps)
       }}
     >
       {emoji}
+    </div>
     </div>
   )
 }

@@ -1,3 +1,5 @@
+import "server-only";
+
 // app/api/cron/dispatch/route.ts
 // Single consolidated Vercel cron dispatcher.
 //
@@ -13,8 +15,8 @@
 // --------------------------------------------------------------------------------------
 //
 // Mode Support:
-// - CRON_MODE='hourly' (default): Runs handlers based on current UTC hour schedule above.
-// - CRON_MODE='daily': Runs all 5 handlers on every invocation (fallback for daily crons).
+// - CRON_MODE='hourly': Runs handlers based on current UTC hour schedule above.
+// - CRON_MODE='daily' (default): Runs all 5 handlers on every invocation (daily crons).
 //
 // ============================================================================
 // PLAN COMPATIBILITY — READ BEFORE CHANGING vercel.json
@@ -36,15 +38,13 @@
 // CRON_PLAN defaults to 'hobby' so the code half fails safe; the vercel.json
 // half is on you.
 //
-// On Hobby you MUST also set CRON_MODE='daily'. A daily schedule in 'hourly'
+// On Hobby leave CRON_MODE unset or set it to 'daily'. A daily schedule in 'hourly'
 // mode fires once at 14:00 UTC and silently skips cleanup (6 UTC) and
 // post-event-prompt (2 UTC) forever — they would never run at all.
 //
 // TODO: Once push delivery is verified working in production, move serendipity
 // to its own dedicated schedule "*/15 8-23 * * *" so at-risk detection happens
 // inside the 45-minute window the product pitch claims.
-
-import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdminDb } from '@/lib/firebase-admin';
@@ -56,6 +56,7 @@ import { runScheduledMessages } from '@/lib/cron/scheduled-messages';
 import {
   selectHandlers,
   resolveCronPlan,
+  resolveCronMode,
   MAX_DURATION_BY_PLAN,
   type CronHandlerName,
 } from '@/lib/cron/schedule';
@@ -99,7 +100,7 @@ if (CRON_PLAN === 'pro' && maxDuration < MAX_DURATION_BY_PLAN.pro) {
   );
 }
 
-if (CRON_PLAN === 'hobby' && (process.env.CRON_MODE || 'hourly').toLowerCase() !== 'daily') {
+if (CRON_PLAN === 'hobby' && resolveCronMode(process.env.CRON_MODE) !== 'daily') {
   console.warn(
     '[Cron Dispatch] CRON_PLAN=hobby without CRON_MODE=daily. Hobby allows one ' +
       'cron per day, so cleanup (6 UTC) and post-event-prompt (2 UTC) will never ' +
@@ -120,7 +121,7 @@ export async function GET(req: NextRequest) {
   // 2. Determine Mode & Handlers for Current Invocation
   const now = new Date();
   const currentHour = now.getUTCHours();
-  const cronMode = (process.env.CRON_MODE || 'hourly').toLowerCase();
+  const cronMode = resolveCronMode(process.env.CRON_MODE);
   const isDailyMode = cronMode === 'daily';
 
   const HANDLER_FNS: Record<CronHandlerName, () => Promise<CronResult>> = {

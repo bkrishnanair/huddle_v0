@@ -4,10 +4,10 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Chip } from "@/components/ui/chip"
-import { Plus, MapPin, LocateFixed, AlertCircle, Loader2, Star, Calendar, Clock, Map as MapIcon, List, Search } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Plus, MapPin, LocateFixed, AlertCircle, Loader2, Star, Calendar, Clock, Map as MapIcon, List, Search, CircleHelp } from "lucide-react"
 import { useTheme } from "next-themes"
-import EventDetailsDrawer from "./event-details-drawer"
-import CreateEventModal from "./create-event-modal"
+import dynamic from "next/dynamic"
 import OnboardingTooltip from "./onboarding-tooltip"
 import { EventCard } from "@/components/events/event-card"
 import { Map, AdvancedMarker, Pin, useMap, InfoWindow } from "@vis.gl/react-google-maps"
@@ -16,11 +16,18 @@ import LocationSearchInput from "./location-search"
 import { isToday, isWeekend, isBefore, addHours, isFuture, addDays, endOfWeek, startOfDay } from "date-fns"
 import { toast } from "sonner"
 import { formatTime, getCategoryColor, isEventLive } from "@/lib/utils"
+import { getEventStartUTC } from "@/lib/datetime"
+import { reconcileEvents } from "@/lib/event-reconciliation"
+import { useMinuteTick } from "@/hooks/use-minute-tick"
+import { readBrowserStorage, writeBrowserStorage } from "@/lib/browser-storage"
 import DotPin from "./map-pins/dot-pin"
 import MediumPin from "./map-pins/medium-pin"
 import LivePin from "./map-pins/live-pin"
 import { MapListPanel } from "@/components/map-list-panel"
 import { trackFunnelEvent } from "@/lib/analytics"
+
+const EventDetailsDrawer = dynamic(() => import("./event-details-drawer"))
+const CreateEventModal = dynamic(() => import("./create-event-modal"))
 
 interface MapViewProps {
   user: any
@@ -44,31 +51,6 @@ const MapRenderer = ({ onMapLoad, children, isDarkMode }: { onMapLoad: (map: goo
   }, [map, onMapLoad, isDarkMode]);
 
 
-  useEffect(() => {
-    if (!map) return;
-
-    const mapDiv = map.getDiv();
-    let trackpadPanActive = false;
-    let panTimeout: ReturnType<typeof setTimeout>;
-
-    const handleWheel = (e: WheelEvent) => {
-      // ctrlKey means pinch-to-zoom on trackpad. Let Google handle it (zoom).
-      if (e.ctrlKey || e.metaKey) return;
-
-      // If we detect horizontal movement, lock into pan mode for this scroll session.
-      // This prevents accidental zooming when a diagonal swipe briefly becomes vertical.
-      if (Math.abs(e.deltaX) > 0.5 || trackpadPanActive) {
-        trackpadPanActive = true;
-        clearTimeout(panTimeout);
-        panTimeout = setTimeout(() => { trackpadPanActive = false; }, 150);
-
-        e.preventDefault();
-        e.stopPropagation();
-        map.panBy(e.deltaX, e.deltaY);
-      }
-    };
-  }, [map]);
-
   return <>{children}</>;
 };
 
@@ -86,10 +68,13 @@ const getCategoryIcon = (category: string): string => {
 }
 
 export default function MapView({ user, eventId, initialCenter, intent }: MapViewProps) {
+  const minuteTick = useMinuteTick();
   const router = useRouter()
   const isProcessingDeepLink = useRef(!!eventId)
   const deepLinkProcessed = useRef(false)
   const profileFetchAttempted = useRef(false)
+  const eventsRequest = useRef<AbortController | null>(null)
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [events, setEvents] = useState<GameEvent[]>([])
   const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null)
   const [hoveredEvent, setHoveredEvent] = useState<GameEvent | null>(null)
@@ -111,11 +96,17 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isAiSearching, setIsAiSearching] = useState(false);
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
+  const [eventsLoadFailed, setEventsLoadFailed] = useState(false);
   const [aiKeywords, setAiKeywords] = useState<string[]>([]);
   const [eventSearchQuery, setEventSearchQuery] = useState("");
 
   // Session-level deduplication for view tracking (also fires in event-details-drawer as backup)
   const viewedEventIds = useRef<Set<string>>(new Set());
+  const handleEventUpdated = useCallback((updated: GameEvent) => {
+    setEvents(previous => reconcileEvents(previous, previous.map(event =>
+      event.id === updated.id ? { ...event, ...updated } : event)));
+    setSelectedEvent(previous => previous?.id === updated.id ? { ...previous, ...updated } : previous);
+  }, []);
 
   const trackEventView = useCallback((eventId: string) => {
     if (!viewedEventIds.current.has(eventId)) {
@@ -174,13 +165,16 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
       }
     }
 
-    // Unauthenticated Host Flow
+  }, [eventId])
+
+  useEffect(() => {
     if (intent === 'create' && !user) {
       toast.error("Please sign in or create an account to host an event.");
       // We delay the redirect slightly to allow the toast to be seen
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         router.push('/login?return_to=/map?intent=create');
       }, 1500)
+      return () => clearTimeout(timer);
     } else if (intent === 'create' && user) {
       setShowCreateModal(true)
     }
@@ -191,18 +185,23 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
     const bounds = map.getBounds();
     if (!bounds) return;
 
-    setIsLoadingEvents(true);
+    eventsRequest.current?.abort();
+    const controller = new AbortController();
+    eventsRequest.current = controller;
 
-    if (user?.uid && !userProfile && !profileFetchAttempted.current) {
+    setIsLoadingEvents(true);
+    setEventsLoadFailed(false);
+
+    if (user?.uid && !profileFetchAttempted.current) {
       profileFetchAttempted.current = true;
       try {
         const token = await user.getIdToken();
         const res = await fetch(`/api/users/${user.uid}/profile`, {
-          headers: { "Authorization": `Bearer ${token}` }
+          headers: { "Authorization": `Bearer ${token}` }, signal: controller.signal
         });
         if (res.ok) {
           const data = await res.json();
-          if (data.profile) setUserProfile(data.profile);
+          if (data.profile && !controller.signal.aborted) setUserProfile(data.profile);
         }
       } catch (err) {
         console.error("Error fetching user profile for map", err);
@@ -220,40 +219,50 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
     const center = bounds.getCenter();
     try {
-      const fetchOptions: RequestInit = user ? { credentials: 'include' } : {};
+      if (controller.signal.aborted) return;
+      const fetchOptions: RequestInit = { credentials: 'include', signal: controller.signal };
       const response = await fetch(`/api/events?lat=${center.lat()}&lon=${center.lng()}&radius=${radius}`, fetchOptions);
+      if (!response.ok) throw new Error("Event request failed");
       if (response.ok) {
         const data = await response.json();
 
-        // Only update state if the events actually changed to prevent re-render loops
-        setEvents(prev => {
-          const newEventsIds = new Set(data.events.map((e: GameEvent) => e.id));
-          const oldEventsIds = new Set(prev.map(e => e.id as string));
-          if (newEventsIds.size !== oldEventsIds.size) return data.events || [];
-          let changed = false;
-          for (const id of newEventsIds as Set<string>) {
-            if (!oldEventsIds.has(id)) { changed = true; break; }
-          }
-          return changed ? data.events || [] : prev;
-        });
+        if (!controller.signal.aborted && Array.isArray(data.events)) {
+          setEvents(prev => reconcileEvents(prev, data.events));
+        }
       }
     } catch (error) {
-      console.error("Failed to load events:", error);
+      if (!controller.signal.aborted) {
+        setEventsLoadFailed(true);
+        console.error("Failed to load events:", error);
+      }
     } finally {
-      setIsLoadingEvents(false);
+      if (eventsRequest.current === controller && !controller.signal.aborted) setIsLoadingEvents(false);
     }
-  }, [map]);
+  }, [map, user]);
+
+  useEffect(() => {
+    profileFetchAttempted.current = false;
+    setUserProfile(null);
+    return () => {
+      eventsRequest.current?.abort();
+      if (idleTimer.current) clearTimeout(idleTimer.current);
+    };
+  }, [map, user?.uid]);
 
   useEffect(() => {
     if (map && !hasCenteredDefault && !userLocation && !eventId) {
-      const savedCenterStr = sessionStorage.getItem('huddleMapCenter');
-      const savedZoomStr = sessionStorage.getItem('huddleMapZoom');
+      const savedCenterStr = readBrowserStorage('huddleMapCenter', 'session');
+      const savedZoomStr = readBrowserStorage('huddleMapZoom', 'session');
 
       if (savedCenterStr && savedZoomStr) {
         try {
           const savedCenter = JSON.parse(savedCenterStr);
+          const savedZoom = Number(savedZoomStr);
+          if (!Number.isFinite(savedCenter?.lat) || Math.abs(savedCenter.lat) > 90 ||
+              !Number.isFinite(savedCenter?.lng) || Math.abs(savedCenter.lng) > 180 ||
+              !Number.isFinite(savedZoom) || savedZoom < 0 || savedZoom > 22) throw new Error('Invalid saved viewport');
           map.setCenter(savedCenter);
-          map.setZoom(Number(savedZoomStr));
+          map.setZoom(savedZoom);
         } catch (e) {
           map.setCenter({ lat: 38.9897, lng: -76.9378 });
           map.setZoom(15);
@@ -287,7 +296,12 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             }
           } catch (e) { }
 
-          const response = await fetch(`/api/events/${eventId}/details`, fetchOptions);
+          const response = await fetch(`/api/events/${encodeURIComponent(eventId)}/details`, fetchOptions);
+          if (!response.ok) {
+            deepLinkProcessed.current = true;
+            toast.error(response.status === 404 ? "This event is unavailable or private." : "Couldn't open this event. Please reload to try again.");
+            return;
+          }
           if (response.ok) {
             const event: GameEvent = await response.json();
             if (event.geopoint && typeof event.geopoint.latitude === 'number' && isFinite(event.geopoint.latitude) && typeof event.geopoint.longitude === 'number' && isFinite(event.geopoint.longitude)) {
@@ -295,7 +309,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
               map.panTo({ lat: event.geopoint.latitude, lng: event.geopoint.longitude });
               map.setZoom(16);
               // Store the deep link center so handleRecenter knows not to override it initially
-              sessionStorage.setItem('huddleMapCenter', JSON.stringify({ lat: event.geopoint.latitude, lng: event.geopoint.longitude }));
+              writeBrowserStorage('huddleMapCenter', JSON.stringify({ lat: event.geopoint.latitude, lng: event.geopoint.longitude }), 'session');
               // Only open drawer if not coming from a 'locate' intent (e.g. map button on event cards)
               if (intent !== 'locate') {
                 setSelectedEvent(event);
@@ -305,8 +319,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
               // Prevent default center from re-running (but don't set user physical location)
               setHasCenteredDefault(true);
 
-              // Fetch events in the new viewport after a brief delay for map to settle
-              setTimeout(() => fetchEventsInView(), 800);
+              // The map's idle handler refreshes pins after the pan settles.
             } else {
               // Virtual event or no geopoint — still open the drawer
               setSelectedEvent(event);
@@ -333,20 +346,11 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
     }
   }, [map, fetchEventsInView]);
 
-  // Show onboarding for first-time visitors after map loads
-  useEffect(() => {
-    if (map && !localStorage.getItem('huddle_onboarding_complete')) {
-      const timer = setTimeout(() => setShowOnboarding(true), 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [map]);
-
   // Debounce the map idle event to prevent spamming the API when dragging/zooming rapidly
   const debouncedFetchEventsInView = useMemo(() => {
-    let timeout: ReturnType<typeof setTimeout>;
     return () => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => {
+      if (idleTimer.current) clearTimeout(idleTimer.current);
+      idleTimer.current = setTimeout(() => {
         if (map) {
           const z = map.getZoom() || 15;
           setCurrentZoom(z);
@@ -359,14 +363,20 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
           const c = map.getCenter();
           if (c) {
+            try {
             sessionStorage.setItem('huddleMapCenter', JSON.stringify({ lat: c.lat(), lng: c.lng() }));
             sessionStorage.setItem('huddleMapZoom', z.toString());
+            } catch { /* Storage restrictions must not disable map queries. */ }
           }
         }
         fetchEventsInView();
       }, 500); // Wait 500ms after the map stops moving before fetching
     };
   }, [fetchEventsInView, map]);
+
+  useEffect(() => () => {
+    if (idleTimer.current) clearTimeout(idleTimer.current);
+  }, [debouncedFetchEventsInView]);
 
   const handleGlobalSearchSelect = useCallback(
     (place: google.maps.places.PlaceResult | null) => {
@@ -413,9 +423,9 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
         setAiKeywords(filters.keywords);
       }
 
-      toast.success(`AI Search: Filtered for "${query}" ✨`);
+      toast.success(`Showing matches for "${query}"`);
     } catch (e) {
-      toast.error('AI Search failed. Try a regular search.');
+      toast.error('Couldn\'t find matches. Try a simpler search.');
     } finally {
       setIsAiSearching(false);
     }
@@ -478,7 +488,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                   body: JSON.stringify(loc)
                 }).then(res => {
                   if (res.ok) {
-                    localStorage.setItem(`lastLocationSync_${user.uid}`, JSON.stringify(loc));
+                    writeBrowserStorage(`lastLocationSync_${user.uid}`, JSON.stringify(loc));
                   }
                 }).catch((e: any) => console.error("Failed to sync location anchor", e));
               }).catch((e: any) => console.error("Failed to get token for location sync", e));
@@ -499,7 +509,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
     } else {
       toast.error("Geolocation is not supported by your browser.");
     }
-  }, [map, dismissPrompt]);
+  }, [map, dismissPrompt, user]);
 
   // Shared Helper — wraps the canonical isEventLive() from lib/utils.
   // Kept as a local function since it's referenced widely in pin rendering. 
@@ -551,7 +561,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
       result = result.filter(event => {
         if (!event.date || event.date.includes('/')) return true;
         try {
-          const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
+          const eventDateTime = getEventStartUTC(event);
           if (isNaN(eventDateTime.getTime())) return true;
 
           if (activeTime === 'Live') {
@@ -574,7 +584,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
       result = result.filter(event => {
         if (!event.date || event.date.includes('/')) return true;
         try {
-          const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
+          const eventDateTime = getEventStartUTC(event);
           if (isNaN(eventDateTime.getTime())) return true;
           return isBefore(eventDateTime, addDays(now, 30));
         } catch (e) { }
@@ -586,7 +596,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
       if (event.status === 'past') return false;
       if (!event.date || event.date.includes('/')) return true;
       try {
-        const startDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
+        const startDateTime = getEventStartUTC(event);
         if (!isNaN(startDateTime.getTime())) {
           let endDateTime;
           if (event.endTime) {
@@ -620,6 +630,57 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
       return dateStr;
     }
   }
+
+  const visibleClusters = useMemo(() => {
+    // --- Task 5: Venue-based clustering ---
+    // Group nearby events (within ~50m) into clusters
+    const mappableEvents = filteredEvents
+      .filter((event: GameEvent) => event.eventType !== 'virtual' && event.geopoint);
+
+    // At zoom >= 16, show pins unclustered EXCEPT for exact overlapping duplicates. Below that, cluster normally.
+    const CLUSTER_RADIUS = currentZoom >= 16 ? 0.0000001 : 0.0005; // ~50m for normal, identical for high zoom
+    type Cluster = { events: GameEvent[]; lat: number; lng: number };
+    const clusters: Cluster[] = [];
+
+    for (const event of mappableEvents) {
+      const lat = event.geopoint.latitude;
+      const lng = event.geopoint.longitude;
+      let added = false;
+      if (CLUSTER_RADIUS > 0) {
+        for (const cluster of clusters) {
+          if (Math.abs(cluster.lat - lat) < CLUSTER_RADIUS && Math.abs(cluster.lng - lng) < CLUSTER_RADIUS) {
+            cluster.events.push(event);
+            // Recalculate centroid
+            cluster.lat = cluster.events.reduce((s, e) => s + e.geopoint.latitude, 0) / cluster.events.length;
+            cluster.lng = cluster.events.reduce((s, e) => s + e.geopoint.longitude, 0) / cluster.events.length;
+            added = true;
+            break;
+          }
+        }
+      }
+      if (!added) {
+        clusters.push({ events: [event], lat, lng });
+      }
+    }
+
+    // --- Task 6: Limit to next 10 soonest (individual pins from single-event clusters) ---
+    // Sort clusters: live first, then soonest start time
+    const sortedClusters = [...clusters].sort((a, b) => {
+      const aLive = a.events.some(e => isEventOngoing(e));
+      const bLive = b.events.some(e => isEventOngoing(e));
+      if (aLive && !bLive) return -1;
+      if (!aLive && bLive) return 1;
+      const aTime = Math.min(...a.events.map(e => getEventStartUTC({ ...e, time: e.time || '23:59' }).getTime()));
+      const bTime = Math.min(...b.events.map(e => getEventStartUTC({ ...e, time: e.time || '23:59' }).getTime()));
+      return aTime - bTime;
+    });
+
+    // Limit total visible clusters/pins for performance
+    const MAX_PINS = currentZoom >= 16 ? 30 : 10;
+    const visibleClusters = sortedClusters.slice(0, MAX_PINS);
+
+    return visibleClusters;
+  }, [filteredEvents, currentZoom, minuteTick]);
 
   if (!mapsApiKey) {
     return (
@@ -663,7 +724,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                   {!userLocation && (
                     <AdvancedMarker position={{ lat: 38.9897, lng: -76.9378 }}>
                       <div className="flex flex-col items-center">
-                        <div className="bg-primary/20 backdrop-blur-sm border border-primary/50 text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-full mb-1">
+                        <div className="bg-primary/20 backdrop-blur-sm border border-primary/50 text-orange-200 text-[10px] font-bold px-2 py-0.5 rounded-full mb-1">
                           College Park
                         </div>
                         <div className="w-3 h-3 bg-primary rounded-full border-2 border-white shadow-lg animate-pulse" />
@@ -671,53 +732,6 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                     </AdvancedMarker>
                   )}
                   {(() => {
-                    // --- Task 5: Venue-based clustering ---
-                    // Group nearby events (within ~50m) into clusters
-                    const mappableEvents = filteredEvents
-                      .filter((event: GameEvent) => event.eventType !== 'virtual' && event.geopoint);
-
-                    // At zoom >= 16, show pins unclustered EXCEPT for exact overlapping duplicates. Below that, cluster normally.
-                    const CLUSTER_RADIUS = currentZoom >= 16 ? 0.0000001 : 0.0005; // ~50m for normal, identical for high zoom
-                    type Cluster = { events: GameEvent[]; lat: number; lng: number };
-                    const clusters: Cluster[] = [];
-
-                    for (const event of mappableEvents) {
-                      const lat = event.geopoint.latitude;
-                      const lng = event.geopoint.longitude;
-                      let added = false;
-                      if (CLUSTER_RADIUS > 0) {
-                        for (const cluster of clusters) {
-                          if (Math.abs(cluster.lat - lat) < CLUSTER_RADIUS && Math.abs(cluster.lng - lng) < CLUSTER_RADIUS) {
-                            cluster.events.push(event);
-                            // Recalculate centroid
-                            cluster.lat = cluster.events.reduce((s, e) => s + e.geopoint.latitude, 0) / cluster.events.length;
-                            cluster.lng = cluster.events.reduce((s, e) => s + e.geopoint.longitude, 0) / cluster.events.length;
-                            added = true;
-                            break;
-                          }
-                        }
-                      }
-                      if (!added) {
-                        clusters.push({ events: [event], lat, lng });
-                      }
-                    }
-
-                    // --- Task 6: Limit to next 10 soonest (individual pins from single-event clusters) ---
-                    // Sort clusters: live first, then soonest start time
-                    const sortedClusters = [...clusters].sort((a, b) => {
-                      const aLive = a.events.some(e => isEventOngoing(e));
-                      const bLive = b.events.some(e => isEventOngoing(e));
-                      if (aLive && !bLive) return -1;
-                      if (!aLive && bLive) return 1;
-                      const aTime = Math.min(...a.events.map(e => new Date(`${e.date}T${e.time || '23:59'}`).getTime()));
-                      const bTime = Math.min(...b.events.map(e => new Date(`${e.date}T${e.time || '23:59'}`).getTime()));
-                      return aTime - bTime;
-                    });
-
-                    // Limit total visible clusters/pins for performance
-                    const MAX_PINS = currentZoom >= 16 ? 30 : 10;
-                    const visibleClusters = sortedClusters.slice(0, MAX_PINS);
-
                     return visibleClusters.map((cluster, clusterIdx) => {
                       // --- Cluster Pin (multiple events at same venue) ---
                       if (cluster.events.length > 1) {
@@ -742,7 +756,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                             <div className="flex flex-col items-center cursor-pointer group">
                               <div className={`
                                   relative flex items-center justify-center
-                                  ${currentZoom <= 14 ? 'w-10 h-10' : 'w-12 h-12'}
+                                  ${currentZoom <= 14 ? 'w-11 h-11' : 'w-12 h-12'}
                                   rounded-full border-2 shadow-xl
                                   ${liveCount > 0 ? 'border-emerald-400 bg-emerald-500/90' : 'border-white/60 bg-slate-800/90'}
                                   backdrop-blur-sm transition-transform group-hover:scale-110
@@ -750,7 +764,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                                 {liveCount > 0 && (
                                   <div className="absolute inset-0 rounded-full bg-emerald-400/30 animate-ping" />
                                 )}
-                                <span className="relative text-white font-black text-sm">
+                                <span className="relative text-white font-mono font-bold text-sm">
                                   {cluster.events.length}
                                 </span>
                               </div>
@@ -787,7 +801,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                         isFutureEvent = false;
                       } else {
                         try {
-                          const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
+                          const eventDateTime = getEventStartUTC(event);
                           const now = new Date();
                           if (isEventOngoing(event)) {
                             pinTier = 'live';
@@ -858,14 +872,14 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                           onMouseLeave={() => setHoveredEvent(null)}
                           style={{ zIndex: isHovered ? 50 : (showDetails ? 10 : 0) }}
                         >
-                          <div className={`flex flex-col items-center transition-all duration-500 transform origin-bottom ${isHovered ? 'scale-110 -translate-y-1' : 'scale-100'}`}>
+                          <div className={`flex flex-col items-center transition-transform duration-200 transform origin-bottom ${isHovered ? 'scale-110 -translate-y-1' : 'scale-100'}`}>
                             {/* Floating Info Bubble */}
                             <div className={`
-                              mb-2 px-3 py-1.5 rounded-2xl bg-slate-900/95 backdrop-blur-md border border-slate-700 shadow-[0_4px_20px_rgba(0,0,0,0.5)]
-                              transition-all duration-300 ease-out flex flex-col items-center
+                              mb-2 px-3 py-1.5 rounded-2xl bg-panel border border-slate-700 shadow-[0_4px_20px_rgba(0,0,0,0.5)]
+                              transition-[opacity,transform] duration-200 ease-out flex flex-col items-center
                               ${showDetails ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
                             `}>
-                              <span className="text-[11px] font-black text-white whitespace-nowrap leading-none mb-1">{event.name}</span>
+                              <span className="text-[11px] font-black text-white max-w-52 truncate leading-none mb-1">{event.name}</span>
                               <div className="flex items-center gap-2">
                                 <span className="text-[9px] text-slate-300 font-bold leading-none">
                                   {getDisplayDate(event.date)}{event.endDate && event.endDate !== event.date ? ` - ${getDisplayDate(event.endDate)}` : ''} • {formatTime(event.time)}{event.endTime ? ` - ${formatTime(event.endTime)}` : ''}
@@ -888,7 +902,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                               {/* Pulse effect for hovered OR ongoing pins */}
                               {(isHovered || isEventOngoing(event)) && (
                                 <div
-                                  className={`absolute ${isEventOngoing(event) && !isHovered ? '-inset-1 live-glow-ring opacity-60' : 'inset-0 animate-ping opacity-40'} rounded-full`}
+                                  className={`absolute ${isEventOngoing(event) && !isHovered ? '-inset-1 motion-safe:animate-ping opacity-20' : 'inset-0 opacity-30'} rounded-full`}
                                   style={{ backgroundColor: isEventOngoing(event) && !isHovered ? '#10b981' : categoryColor }}
                                 />
                               )}
@@ -898,12 +912,12 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                                 let animClass = "";
                                 if (!isHovered) {
                                   if (isEventOngoing(event)) {
-                                    animClass = "live-glow-ring border-emerald-400";
+                                    animClass = "border-emerald-400";
                                   } else {
                                     let isWithin6h = false;
                                     if (event.date && event.time) {
                                       try {
-                                        const d = new Date(`${event.date}T${event.time}`);
+                                        const d = getEventStartUTC(event);
                                         isWithin6h = isBefore(d, addHours(new Date(), 6)) && isFuture(d);
                                       } catch (e) { }
                                     }
@@ -911,15 +925,15 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                                       const isSoonest = filteredEvents.find(e => {
                                         if (!e.date || !e.time) return false;
                                         try {
-                                          const ed = new Date(`${e.date}T${e.time}`);
+                                          const ed = getEventStartUTC(e);
                                           return isBefore(ed, addHours(new Date(), 6)) && isFuture(ed);
                                         } catch (e) { }
                                         return false;
                                       })?.id === event.id; // true since filteredEvents is sorted
                                       if (isSoonest) {
-                                        animClass = "soonest-bounce animate-yellow-pulse border-yellow-400";
+                                        animClass = "border-yellow-400";
                                       } else {
-                                        animClass = "animate-yellow-pulse border-yellow-400";
+                                        animClass = "border-yellow-400";
                                       }
                                     } else {
                                       animClass = "border-white";
@@ -931,14 +945,14 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                                 return (
                                   <div
                                     className={`
-                                      relative ${pinSize} flex items-center justify-center
+                                      relative ${pinSize} min-h-11 min-w-11 flex items-center justify-center
                                       rounded-full rounded-br-none rotate-45
-                                      border-2 ${animClass} transition-all duration-300
+                                      border-2 ${animClass}
                                       ${isFutureEvent ? 'opacity-70 saturate-50' : 'opacity-100'}
                                     `}
                                     style={{
                                       background: `linear-gradient(135deg, ${categoryColor}, ${categoryColor}dd)`,
-                                      boxShadow: isHovered ? `0 0 25px ${categoryColor}aa` : (isEventOngoing(event) ? `0 4px 10px rgba(0,0,0,0.4)` : `0 4px 10px rgba(0,0,0,0.4)`)
+                                      boxShadow: `0 3px 8px ${categoryColor}50`
                                     }}
                                   >
                                     <div className={`-rotate-45 ${emojiSize} filter drop-shadow-sm brightness-110`}>
@@ -973,21 +987,22 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           </Map >
         </div >
 
-        <div className="absolute top-[92px] inset-x-4 max-w-[1800px] mx-auto z-20 flex flex-col gap-2 pointer-events-none">
+        <div className="absolute top-[calc(max(0.75rem,env(safe-area-inset-top))+4.75rem)] inset-x-3 sm:inset-x-4 max-w-[1800px] mx-auto z-20 flex flex-col gap-2 pointer-events-none">
           {/* Filter Chips & View Toggle Container */}
           <div className="pointer-events-auto flex justify-between gap-2 h-auto w-full">
             {/* Filters Pill */}
-            <div className="w-fit max-w-full glass-surface rounded-[24px] p-2 flex flex-col gap-1.5 shadow-2xl border border-white/15 overflow-hidden backdrop-blur-xl">
+            <div className="min-w-0 flex-1 max-w-full bg-canvas/85 rounded-3xl p-2 flex flex-col gap-1.5 shadow-2xl border border-white/10 overflow-hidden backdrop-blur-xl">
               {/* Category Row */}
               <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar w-full pb-0.5">
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter mr-1 pl-1">What</span>
+                <span className="hidden sm:block shrink-0 text-[10px] font-medium text-slate-400 uppercase tracking-widest mr-1 pl-2">What</span>
                 {CATEGORIES.map(category => (
                   <Chip
                     key={category}
                     size="sm"
                     isActive={activeCategory === category}
                     onClick={() => setActiveCategory(category)}
-                    className="shrink-0 text-[11px] px-2.5 py-0.5 rounded-full whitespace-nowrap h-6"
+                    color={category !== 'All' ? getCategoryColor(category) : undefined}
+                    className="shrink-0 text-xs px-3 py-2 rounded-full whitespace-nowrap h-11"
                   >
                     {category}
                   </Chip>
@@ -998,7 +1013,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
               {/* Time Row */}
               <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar w-full pt-0.5">
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter mr-1 pl-1">When</span>
+                <span className="hidden sm:block shrink-0 text-[10px] font-medium text-slate-400 uppercase tracking-widest mr-1 pl-2">When</span>
                 {TIMES.map(time => (
                   <Chip
                     key={time}
@@ -1010,7 +1025,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                       setFilterStartDate("");
                       setFilterEndDate("");
                     }}
-                    className={`shrink-0 transition-all font-bold ${activeTime === time ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]' : 'bg-slate-900/50 border-white/5 text-slate-400 hover:text-white'}`}
+                    className={`shrink-0 transition-all font-bold ${activeTime === time ? 'bg-orange-500/15 text-orange-300 border-orange-400/30' : 'bg-slate-900/50 border-white/5 text-slate-400 hover:text-white'}`}
                   >
                     {time}
                   </Chip>
@@ -1018,47 +1033,41 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                 
                 <div className="h-4 w-px bg-white/10 shrink-0 mx-1" />
                 
-                {/* Custom Date Filters */}
-                <div className="flex items-center gap-1 shrink-0 bg-slate-900/50 rounded-full border border-white/5 px-2 py-0.5">
+                <Popover>
+                  <PopoverTrigger asChild><Button variant="outline" size="sm" className="shrink-0 rounded-full text-xs"><Calendar className="h-4 w-4" />{filterStartDate ? "Dates selected" : "Choose dates"}</Button></PopoverTrigger>
+                  <PopoverContent align="end" className="w-72 border-white/10 bg-panel p-4 text-white shadow-2xl">
+                    <p className="mb-3 text-sm font-semibold">Make time for a plan</p>
+<div className="grid gap-3">
                   <input
                     type="date"
-                    value={filterStartDate}
+                    aria-label="Start date" value={filterStartDate}
                     onChange={(e) => {
                       setFilterStartDate(e.target.value);
                       setActiveTime("Custom");
                       if (filterEndDate && e.target.value > filterEndDate) setFilterEndDate("");
                     }}
-                    className="bg-transparent border-none text-slate-300 h-6 text-[10px] font-bold p-0 focus:ring-0 w-[85px] [color-scheme:dark] outline-none"
+                    className="w-full min-h-12 rounded-xl border border-white/10 bg-white/5 px-3 text-base font-mono text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-orange-400"
                   />
                   <span className="text-slate-500 text-[10px] font-black leading-none">→</span>
                   <input
                     type="date"
-                    value={filterEndDate}
+                    aria-label="End date" value={filterEndDate}
                     onChange={(e) => {
                       setFilterEndDate(e.target.value);
                       setActiveTime("Custom");
                     }}
                     min={filterStartDate}
-                    className="bg-transparent border-none text-slate-300 h-6 text-[10px] font-bold p-0 focus:ring-0 w-[85px] [color-scheme:dark] outline-none"
+                    className="w-full min-h-12 rounded-xl border border-white/10 bg-white/5 px-3 text-base font-mono text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-orange-400"
                   />
                 </div>
                 
-                {/* Prevent mapping original TIMES twice */}
-                {false && TIMES.map(time => (
-                  <Chip
-                    key={time}
-                    size="sm"
-                    isActive={activeTime === time}
-                    onClick={() => setActiveTime(time)}
-                    className="shrink-0 text-[11px] px-2.5 py-0.5 rounded-full whitespace-nowrap h-6"
-                  >
-                    {time === 'All' ? 'Any time' : time}
-                  </Chip>
-                ))}
+
+                  </PopoverContent>
+                </Popover>
                 {/* Active filter indicator */}
                 {(activeCategory !== 'All' || activeTime !== 'All' || eventSearchQuery) && (
                   <button
-                    onClick={() => { setActiveCategory('All'); setActiveTime('All'); setEventSearchQuery(''); setAiKeywords([]); }}
+                    onClick={() => { setActiveCategory('All'); setActiveTime('All'); setFilterStartDate(''); setFilterEndDate(''); setEventSearchQuery(''); setAiKeywords([]); }}
                     className="shrink-0 text-[9px] text-rose-400 font-black px-2 py-1 bg-rose-400/10 rounded-full border border-rose-400/20 hover:bg-rose-400/20 transition-colors uppercase tracking-tight ml-auto"
                   >
                     Clear
@@ -1068,20 +1077,28 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             </div>
 
             {/* View Toggle Pill */}
-            <div className="glass-surface rounded-[24px] p-1 flex flex-col gap-1 items-center justify-center shadow-2xl border border-white/15 shrink-0 w-12 h-auto backdrop-blur-xl">
+            <div className="bg-canvas/85 rounded-3xl p-1 flex flex-col gap-1 items-center justify-center shadow-2xl border border-white/15 shrink-0 w-14 h-auto backdrop-blur-xl">
               <button
-                className={`rounded-xl h-10 w-10 flex items-center justify-center transition-all duration-300 ${!showListPanel ? 'bg-primary text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                className={`rounded-2xl h-11 w-11 flex items-center justify-center transition-all duration-300 ${!showListPanel ? 'bg-orange-500/15 text-orange-300' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
                 onClick={() => setShowListPanel(false)}
-                title="Map View"
+                aria-label="Show map" aria-pressed={!showListPanel} title="Map view"
               >
                 <MapIcon className="w-4 h-4" />
               </button>
               <button
-                className={`rounded-xl h-10 w-10 flex items-center justify-center transition-all duration-300 ${showListPanel ? 'bg-primary text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                className={`rounded-2xl h-11 w-11 flex items-center justify-center transition-all duration-300 ${showListPanel ? 'bg-orange-500/15 text-orange-300' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
                 onClick={() => setShowListPanel(true)}
-                title="List View"
+                aria-label="Show event list" aria-pressed={showListPanel} title="List view"
               >
                 <List className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="How to use the map"
+                onClick={() => setShowOnboarding(true)}
+                className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-300 hover:bg-white/10 hover:text-white"
+              >
+                <CircleHelp className="h-4 w-4" />
               </button>
             </div>
           </div>
@@ -1094,16 +1111,22 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             </div>
           )}
 
-          {/* Radar Scanning Pill */}
+          {/* Event loading status */}
           {isLoadingEvents && !isAiSearching && (
             <div className="pointer-events-auto mx-auto mt-1 px-3.5 py-1.5 bg-slate-950/80 backdrop-blur-xl rounded-full border border-teal-500/30 flex items-center gap-2 text-xs font-semibold text-teal-300 shadow-xl animate-pulse">
               <div className="w-2 h-2 rounded-full bg-teal-400 animate-ping" />
-              Scanning campus radar...
+              Loading events…
             </div>
           )}
 
           {/* Empty State Banner — Non-intrusive floating guide instead of a blank dark void */}
-          {!isLoadingEvents && !showListPanel && filteredEvents.length === 0 && (
+          {eventsLoadFailed && !isLoadingEvents && (
+            <div role="alert" className="pointer-events-auto absolute top-32 inset-x-4 z-30 mx-auto max-w-sm rounded-2xl border border-white/15 bg-panel p-4 text-center text-sm text-white">
+              <p>Couldn't refresh events. Check your connection.</p>
+              <Button className="mt-3" onClick={() => void fetchEventsInView()}>Try again</Button>
+            </div>
+          )}
+          {!isLoadingEvents && !eventsLoadFailed && !showListPanel && filteredEvents.length === 0 && (
             <div className="pointer-events-auto mx-auto mt-3 max-w-sm w-full px-4">
               <div className="bg-slate-950/90 backdrop-blur-2xl border border-white/15 p-4 rounded-2xl shadow-2xl text-center animate-in fade-in slide-in-from-top-2 duration-300">
                 <div className="w-10 h-10 rounded-full bg-teal-500/15 text-teal-400 mx-auto flex items-center justify-center mb-2">
@@ -1111,15 +1134,15 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                 </div>
                 <h4 className="text-white font-bold text-sm">No events in this area</h4>
                 <p className="text-slate-400 text-xs mt-1 leading-relaxed">
-                  Pan or zoom out to discover what&apos;s happening on campus, or be the first to start a huddle!
+                  Try a wider area or clear your filters. You can also create an event.
                 </p>
                 <div className="flex items-center justify-center gap-2.5 mt-3.5">
                   {(activeCategory !== 'All' || activeTime !== 'All' || eventSearchQuery) && (
                     <button
-                      onClick={() => { setActiveCategory('All'); setActiveTime('All'); setEventSearchQuery(''); setAiKeywords([]); }}
+                      onClick={() => { setActiveCategory('All'); setActiveTime('All'); setFilterStartDate(''); setFilterEndDate(''); setEventSearchQuery(''); setAiKeywords([]); }}
                       className="px-3 py-1.5 bg-white/10 hover:bg-white/15 text-slate-200 text-xs font-bold rounded-xl transition-colors"
                     >
-                      Reset Filters
+                      Reset filters
                     </button>
                   )}
                   <button
@@ -1143,7 +1166,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
         {/* Mobile Floating Search Bar ("Where to?") - Stays visible even when list is hidden */}
         {!showListPanel && (
-          <div className="md:hidden absolute bottom-[92px] inset-x-4 z-30 animate-in fade-in slide-in-from-bottom-4 duration-500 pointer-events-none">
+          <div className="md:hidden absolute bottom-[calc(var(--safe-bottom)+0.5rem)] inset-x-4 z-30 animate-in fade-in slide-in-from-bottom-4 duration-500 pointer-events-none">
             <div className="pointer-events-auto relative h-[48px] bg-slate-950/80 backdrop-blur-3xl rounded-2xl border border-primary/40 p-[1px] flex items-center focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20 transition-all shadow-[0_8px_32px_rgba(0,0,0,0.4),0_0_15px_rgba(245,158,11,0.15)]">
               <Search className="w-4 h-4 ml-4 text-primary/80 shrink-0" />
               <div className="flex-1 h-full flex items-center pr-3">
@@ -1157,9 +1180,9 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
         )}
 
         {/* Location Permission Toast/Prompt */}
-        {showLocationPrompt && !userLocation && (
-          <div className="pointer-events-auto mx-auto mt-4 w-[90%] max-w-sm">
-            <div className="bg-slate-950/80 backdrop-blur-xl border border-primary/30 p-4 rounded-2xl shadow-[0_0_30px_rgba(245,158,11,0.15)] animate-in fade-in slide-in-from-top-4 duration-500">
+        {showLocationPrompt && !showOnboarding && !userLocation && (
+          <div className="absolute inset-x-4 bottom-[calc(var(--safe-bottom)+4.5rem)] z-50 mx-auto max-w-sm pointer-events-auto" role="region" aria-label="Location preference">
+            <div className="bg-panel/95 backdrop-blur-xl border border-white/15 p-4 rounded-3xl shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
                   <MapPin className="w-5 h-5 text-primary" />
@@ -1174,9 +1197,9 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                       size="sm"
                       variant="default"
                       onClick={handleRecenter}
-                      className="bg-primary hover:bg-orange-600 text-white text-xs font-bold rounded-full px-4"
+                      className="bg-primary hover:bg-orange-400 text-canvas text-xs font-semibold rounded-xl px-4"
                     >
-                      Share Location
+                      Share location
                     </Button>
                     <Button
                       size="sm"
@@ -1207,18 +1230,20 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
         {
           !showListPanel && (
-            <div className="absolute bottom-[156px] md:bottom-12 right-4 z-40 flex flex-col gap-4 pointer-events-none">
+            <div className="absolute bottom-[calc(var(--safe-bottom)+4.5rem)] md:bottom-[calc(var(--safe-bottom)+1rem)] right-4 z-40 flex flex-col gap-4 pointer-events-none">
               <Button
                 onClick={handleRecenter}
+                aria-label="Find my location"
                 onTouchEnd={(e) => { e.preventDefault(); handleRecenter(); }}
                 variant="default"
                 size="icon"
-                className="h-12 w-12 md:h-14 md:w-14 rounded-full glass-surface text-slate-700 dark:text-white border border-white/20 shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:bg-white/10 hover:scale-110 transition-all pointer-events-auto cursor-pointer"
+                className="h-12 w-12 md:h-14 md:w-14 rounded-full glass-surface text-white border border-white/20 shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:bg-white/10 hover:scale-110 transition-all pointer-events-auto cursor-pointer"
               >
                 <LocateFixed className="w-5 h-5 md:w-6 md:h-6" />
               </Button>
               <Button
                 id="create-event-button"
+                aria-label="Create an event"
                 onClick={() => {
                   if (!user) {
                     toast.error("Please sign in to host an event.");
@@ -1252,15 +1277,15 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
       </div >
 
-      {selectedEvent && <EventDetailsDrawer event={selectedEvent} isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} onEventUpdated={() => { }} />
+      {selectedEvent && <EventDetailsDrawer event={selectedEvent} isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} onEventUpdated={handleEventUpdated} />
       }
       {showCreateModal && <CreateEventModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onEventCreated={() => { }} userLocation={userLocation || mapCenter} />}
 
-      {/* First-visit onboarding */}
+      {/* Optional walkthrough; never interrupt browsing automatically. */}
       {showOnboarding && (
         <OnboardingTooltip onComplete={() => {
           setShowOnboarding(false);
-          localStorage.setItem('huddle_onboarding_complete', 'true');
+          writeBrowserStorage('huddle_onboarding_complete', 'true');
         }} />
       )}
     </div>

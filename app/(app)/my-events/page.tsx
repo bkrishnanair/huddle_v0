@@ -64,20 +64,20 @@ export default function MyEventsPage() {
   };
 
   return (
-    <div className="min-h-screen liquid-gradient p-4 pb-[var(--safe-bottom)] md:p-8 md:pb-[var(--safe-bottom)]">
+    <div className="min-h-screen bg-canvas p-5 pb-[calc(var(--safe-bottom)+2rem)] md:p-8 md:pb-[calc(var(--safe-bottom)+2rem)] [&>header]:mx-auto [&>header]:max-w-7xl [&>div]:mx-auto [&>div]:max-w-7xl">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
         <div className="space-y-1">
-          <h1 className="text-4xl font-extrabold text-slate-50 tracking-tight">My Events</h1>
-          <p className="text-slate-400 font-medium text-lg">Manage your joined and hosted events.</p>
+          <h1 className="font-display text-3xl md:text-4xl font-bold text-slate-50 tracking-tight">My events</h1>
+          <p className="text-slate-400 text-base">Manage your joined and hosted events.</p>
         </div>
         <div className="flex flex-row items-center flex-wrap gap-3 w-full md:w-auto">
-          <Button onClick={() => setShowDashboard(!showDashboard)} variant={showDashboard ? "secondary" : "outline"} size="lg" className="h-12 px-5 md:px-6 rounded-2xl border-white/10 shadow-xl transition-all font-bold bg-slate-900/50 hover:bg-slate-800 text-white">
+          <Button onClick={() => setShowDashboard(!showDashboard)} aria-label="Toggle organizer dashboard" aria-pressed={showDashboard} variant={showDashboard ? "secondary" : "outline"} size="lg" className="h-12 px-5 md:px-6 rounded-2xl border-white/10 shadow-xl transition-all font-bold bg-slate-900/50 hover:bg-slate-800 text-white">
             <BarChart3 className="w-5 h-5 md:mr-2" />
             <span className="hidden md:inline">Dashboard</span>
           </Button>
           <Button onClick={() => setShowCreateModal(true)} size="lg" className="h-12 flex-1 md:flex-none px-6 rounded-2xl bg-primary text-primary-foreground shadow-2xl hover:scale-105 transition-all font-bold">
             <Plus className="w-5 h-5 mr-2" />
-            <span className="hidden sm:inline">Create Event</span>
+            <span className="hidden sm:inline">Create event</span>
             <span className="sm:hidden">Create</span>
           </Button>
         </div>
@@ -92,16 +92,16 @@ export default function MyEventsPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab} key={refreshKey} className="space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="max-w-max">
-            <TabsList className="h-12 p-1 glass-surface border border-white/10 rounded-2xl shadow-2xl flex items-center bg-transparent">
+            <TabsList className="h-auto min-h-14 p-1 glass-surface border border-white/10 rounded-2xl shadow-2xl flex items-center bg-transparent">
               <TabsTrigger
                 value="joined"
-                className="px-8 h-10 rounded-xl font-bold text-slate-400 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all"
+                className="px-8 h-11 rounded-xl font-bold text-slate-400 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all"
               >
                 Joined
               </TabsTrigger>
               <TabsTrigger
                 value="organized"
-                className="px-8 h-10 rounded-xl font-bold text-slate-400 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all"
+                className="px-8 h-11 rounded-xl font-bold text-slate-400 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all"
               >
                 Hosted
               </TabsTrigger>
@@ -113,7 +113,7 @@ export default function MyEventsPage() {
             <div className="relative w-full md:w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
-                placeholder="Search your events..."
+                aria-label="Search your events" placeholder="Search your events..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-9 bg-slate-900/50 border-white/10 text-slate-200 placeholder:text-slate-500 rounded-xl h-10"
@@ -128,8 +128,8 @@ export default function MyEventsPage() {
                   setFilterStartDate(e.target.value);
                   if (filterEndDate && e.target.value > filterEndDate) setFilterEndDate("");
                 }}
-                className="w-full md:w-40 bg-slate-900/50 border-white/10 text-slate-200 rounded-xl h-10 [color-scheme:dark] text-xs"
-                placeholder="Start date"
+                className="w-full md:w-40 bg-slate-900/50 border-white/10 text-slate-200 rounded-xl h-12 [color-scheme:dark] text-base font-mono"
+                aria-label="Start date" placeholder="Start date"
               />
               <span className="text-slate-500 text-xs shrink-0">to</span>
               <Input
@@ -137,8 +137,8 @@ export default function MyEventsPage() {
                 value={filterEndDate}
                 onChange={(e) => setFilterEndDate(e.target.value)}
                 min={filterStartDate}
-                className="w-full md:w-40 bg-slate-900/50 border-white/10 text-slate-200 rounded-xl h-10 [color-scheme:dark] text-xs"
-                placeholder="End date"
+                className="w-full md:w-40 bg-slate-900/50 border-white/10 text-slate-200 rounded-xl h-12 [color-scheme:dark] text-base font-mono"
+                aria-label="End date" placeholder="End date"
               />
               {(filterStartDate || filterEndDate) && (
                 <button

@@ -1,8 +1,11 @@
+import "server-only";
+
 export const dynamic = "force-dynamic";
 
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerCurrentUser } from "@/lib/auth-server"
 import { getFirebaseAdminDb } from "@/lib/firebase-admin"
+import { notificationInput } from '@/lib/request-schemas'
 
 export async function GET(
     request: NextRequest,
@@ -48,12 +51,11 @@ export async function PATCH(
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
-        const body = await request.json()
-        const { notificationId } = body
-
-        if (!notificationId) {
+        const validation = notificationInput.safeParse(await request.json().catch(() => null));
+        if (!validation.success) {
             return NextResponse.json({ error: "Notification ID is required" }, { status: 400 })
         }
+        const { notificationId } = validation.data;
 
         const adminDb = getFirebaseAdminDb()
         if (!adminDb) {

@@ -119,6 +119,18 @@ for (const c of CHECKS) {
   console.log(`      ${DIM}${c.breaks}${RST}`);
 }
 
+// A daily deployment in hourly mode silently skips cleanup and scheduled jobs.
+const config = JSON.parse(readFileSync('vercel.json', 'utf8'));
+const dispatchSchedule = config.crons?.find(cron => cron.path === '/api/cron/dispatch')?.schedule;
+const cronMode = env.CRON_MODE === 'hourly' ? 'hourly' : 'daily';
+const expectedSchedule = cronMode === 'hourly' ? '0 * * * *' : '0 14 * * *';
+if (dispatchSchedule !== expectedSchedule) {
+  criticalMissing++;
+  console.log(`  ${RED}✗ Cron schedule/mode mismatch.${RST} ${cronMode} mode requires vercel.json schedule ${expectedSchedule}.`);
+} else {
+  console.log(`  ${GRN}✓${RST} Cron schedule matches ${cronMode} mode`);
+}
+
 console.log('');
 if (criticalMissing === 0 && degradedMissing === 0) {
   console.log(`${GRN}All checks passed.${RST}\n`);

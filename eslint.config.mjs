@@ -4,10 +4,9 @@ import hooksPlugin from "eslint-plugin-react-hooks";
 import tsParser from "@typescript-eslint/parser";
 
 const eslintConfig = [
-  nextPlugin.configs["recommended"],
-  nextPlugin.configs["core-web-vitals"],
+  { ignores: [".next/**", "out/**", "node_modules/**", ".artifacts/**", "next-env.d.ts"] },
   {
-    files: ["**/*.{js,jsx,ts,tsx}"],
+    files: ["**/*.{js,jsx,mjs,ts,tsx}"],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
@@ -19,10 +18,13 @@ const eslintConfig = [
       },
     },
     plugins: {
+      "@next/next": nextPlugin,
       "react": reactPlugin,
       "react-hooks": hooksPlugin,
     },
     rules: {
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs["core-web-vitals"].rules,
       "@next/next/no-html-link-for-pages": "off",
       "@next/next/no-img-element": "off",
     },

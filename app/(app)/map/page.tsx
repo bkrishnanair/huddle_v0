@@ -1,3 +1,5 @@
+import 'server-only'
+
 import type { Metadata } from 'next'
 import MapClient from './map-client'
 import { getEvent } from '@/lib/db'
@@ -11,18 +13,18 @@ export async function generateMetadata(
   { searchParams }: Props
 ): Promise<Metadata> {
   const resolvedParams = await searchParams;
-  const eventId = resolvedParams.eventId as string;
+  const eventId = typeof resolvedParams.eventId === 'string' ? resolvedParams.eventId : undefined;
 
   if (eventId) {
     try {
       const event = await getEvent(eventId) as GameEvent;
-      if (event) {
+      if (event && (event.isPrivate === undefined || event.isPrivate === false)) {
         return {
-          title: `${event.name} | Huddle`,
-          description: `Join this ${event.category} event on Huddle! Scheduled for ${event.date} at ${event.time}.`,
+          title: event.name,
+          description: `Explore this ${event.category} event on Huddle. Scheduled for ${event.date} at ${event.time}.`,
           openGraph: {
             title: `${event.name} on Huddle`,
-            description: `Join this ${event.category} event on Huddle! Scheduled for ${event.date} at ${event.time}.`,
+            description: `Explore this ${event.category} event on Huddle. Scheduled for ${event.date} at ${event.time}.`,
             type: 'website',
           },
         }
@@ -33,21 +35,21 @@ export async function generateMetadata(
   }
 
   return {
-    title: 'Map | Huddle',
+    title: 'Map',
     description: 'Find local pickup games, activities, and events happening around you on Huddle.',
   }
 }
 
 export default async function MapPage({ searchParams }: Props) {
   const resolvedParams = await searchParams;
-  const eventId = resolvedParams.eventId as string;
-  const intent = resolvedParams.intent as string;
+  const eventId = typeof resolvedParams.eventId === 'string' ? resolvedParams.eventId : undefined;
+  const intent = typeof resolvedParams.intent === 'string' ? resolvedParams.intent : undefined;
   let initialCenter = undefined;
 
   if (eventId) {
     try {
       const event = await getEvent(eventId) as GameEvent;
-      if (event && event.geopoint) {
+      if (event && (event.isPrivate === undefined || event.isPrivate === false) && event.geopoint) {
         initialCenter = {
           lat: event.geopoint.latitude,
           lng: event.geopoint.longitude

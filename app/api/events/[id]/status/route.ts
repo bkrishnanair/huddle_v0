@@ -1,6 +1,9 @@
+import "server-only";
+
 import { type NextRequest, NextResponse } from "next/server";
 import { getServerCurrentUser } from "@/lib/auth-server";
 import { getFirebaseAdminDb } from "@/lib/firebase-admin";
+import { statusInput } from '@/lib/request-schemas';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -11,11 +14,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             return NextResponse.json({ error: "Authentication required" }, { status: 401 });
         }
 
-        const { status } = await request.json();
-
-        if (!status || !['active', 'past'].includes(status)) {
+        const validation = statusInput.safeParse(await request.json().catch(() => null));
+        if (!validation.success) {
             return NextResponse.json({ error: "Invalid status" }, { status: 400 });
         }
+        const { status } = validation.data;
 
         const adminDb = getFirebaseAdminDb();
         if (!adminDb) throw new Error("Firebase Admin not initialized");

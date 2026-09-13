@@ -16,36 +16,36 @@ export function SummaryHeader({
 }: SummaryHeaderProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-      <Card className="glass-card p-4">
+      <Card className="rounded-3xl border border-white/10 bg-panel p-5">
         <CardContent className="flex items-center p-0">
           <div className="bg-blue-500/20 p-3 rounded-full mr-4">
             <Calendar className="w-6 h-6 text-blue-300" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-white">{totalEvents}</div>
-            <p className="text-sm text-white/80">Total Events</p>
+            <div className="text-2xl font-mono font-semibold text-white">{totalEvents}</div>
+            <p className="text-sm text-white/80">Events around you</p>
           </div>
         </CardContent>
       </Card>
-      <Card className="glass-card p-4">
+      <Card className="rounded-3xl border border-white/10 bg-panel p-5">
         <CardContent className="flex items-center p-0">
           <div className="bg-green-500/20 p-3 rounded-full mr-4">
             <Sun className="w-6 h-6 text-green-300" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-white">{eventsToday}</div>
-            <p className="text-sm text-white/80">Happening Today</p>
+            <div className="text-2xl font-mono font-semibold text-white">{eventsToday}</div>
+            <p className="text-sm text-white/80">Happening today</p>
           </div>
         </CardContent>
       </Card>
-      <Card className="glass-card p-4">
+      <Card className="rounded-3xl border border-white/10 bg-panel p-5">
         <CardContent className="flex items-center p-0">
           <div className="bg-purple-500/20 p-3 rounded-full mr-4">
             <Users className="w-6 h-6 text-purple-300" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-white">{yourUpcomingEvents}</div>
-            <p className="text-sm text-white/80">Your Upcoming</p>
+            <div className="text-2xl font-mono font-semibold text-white">{yourUpcomingEvents}</div>
+            <p className="text-sm text-white/80">Your upcoming plans</p>
           </div>
         </CardContent>
       </Card>
@@ -56,7 +56,7 @@ export function SummaryHeader({
 export function SummaryHeaderSkeleton() {
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 animate-pulse">
-            <Card className="glass-card p-4">
+            <Card className="rounded-3xl border border-white/10 bg-panel p-5">
                 <CardContent className="flex items-center p-0">
                     <div className="bg-white/20 p-3 rounded-full mr-4 h-12 w-12"></div>
                     <div className="space-y-2">
@@ -65,7 +65,7 @@ export function SummaryHeaderSkeleton() {
                     </div>
                 </CardContent>
             </Card>
-            <Card className="glass-card p-4">
+            <Card className="rounded-3xl border border-white/10 bg-panel p-5">
                 <CardContent className="flex items-center p-0">
                     <div className="bg-white/20 p-3 rounded-full mr-4 h-12 w-12"></div>
                     <div className="space-y-2">
@@ -74,7 +74,7 @@ export function SummaryHeaderSkeleton() {
                     </div>
                 </CardContent>
             </Card>
-            <Card className="glass-card p-4">
+            <Card className="rounded-3xl border border-white/10 bg-panel p-5">
                 <CardContent className="flex items-center p-0">
                     <div className="bg-white/20 p-3 rounded-full mr-4 h-12 w-12"></div>
                     <div className="space-y-2">

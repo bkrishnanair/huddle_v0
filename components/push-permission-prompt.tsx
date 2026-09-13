@@ -2,21 +2,23 @@
 
 import { useEffect, useState } from 'react'
 import { Bell, X } from 'lucide-react'
-import { getAndRegisterPushToken } from '@/lib/push-client'
+import { getAndRegisterPushToken, requestPushPermission } from '@/lib/push-client'
+import { readBrowserStorage, writeBrowserStorage } from '@/lib/browser-storage'
 import { useFirebase } from '@/lib/firebase-context'
 
 export function PushPermissionPrompt() {
   const [showPrompt, setShowPrompt] = useState(false)
   const [isRequesting, setIsRequesting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const { user } = useFirebase()
 
   useEffect(() => {
     const handleRsvpAction = () => {
       // Don't show if unauthenticated
-      if (!user) return
+      if (!user || !('Notification' in window) || !('serviceWorker' in navigator)) return
 
       // Don't show if we've asked within 30 days
-      const askedAt = localStorage.getItem('pushPermissionAskedAt')
+      const askedAt = readBrowserStorage('pushPermissionAskedAt')
       if (askedAt) {
         const daysSinceAsked = (Date.now() - parseInt(askedAt)) / (1000 * 60 * 60 * 24)
         if (daysSinceAsked < 30) return
@@ -37,55 +39,62 @@ export function PushPermissionPrompt() {
   }, [user])
 
   const markAsked = () => {
-    localStorage.setItem('pushPermissionAskedAt', Date.now().toString())
+    writeBrowserStorage('pushPermissionAskedAt', Date.now().toString())
     setShowPrompt(false)
   }
 
   const handleEnable = async () => {
     setIsRequesting(true)
+    setError(null)
     try {
-      await getAndRegisterPushToken()
+      // The native permission request must originate from this user gesture.
+      const granted = await requestPushPermission()
+      if (!granted) { markAsked(); return }
+      const token = await getAndRegisterPushToken()
+      if (!token) { setError('Reminders could not be enabled. Please try again.'); return }
+      markAsked()
     } catch (error) {
       console.error("Error enabling push:", error)
+      setError('Reminders could not be enabled. Please try again.')
     } finally {
       setIsRequesting(false)
-      markAsked()
     }
   }
 
-  if (!showPrompt) return null
+  if (!showPrompt || !user) return null
 
   return (
-    <div className="fixed top-20 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-3xl p-5 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-50 flex items-start gap-3.5">
+    <div className="fixed top-[calc(env(safe-area-inset-top)+5.5rem)] left-3 right-3 md:left-auto md:right-4 md:w-96 bg-panel/95 backdrop-blur-xl border border-white/15 rounded-3xl p-5 pr-14 shadow-2xl z-[60] flex items-start gap-3.5">
       <div className="bg-primary/20 p-2 rounded-xl text-primary shrink-0 mt-0.5 border border-white/10">
         <Bell className="w-5 h-5" />
       </div>
       <div className="flex-1">
         <h3 className="font-display font-bold text-slate-50 text-base mb-1">Get a reminder before this event?</h3>
         <p className="text-xs text-slate-400 mb-3.5 leading-relaxed">
-          We'll send you a push notification 24 hours before your event starts so you don't miss out.
+          Get event reminders and updates on this device.
         </p>
+        {error && <p role="alert" className="mb-3 text-sm text-rose-300">{error}</p>}
         
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button 
             onClick={handleEnable}
             disabled={isRequesting}
-            className="bg-primary hover:bg-primary/90 text-white text-xs font-medium py-2 px-3.5 rounded-xl transition-all shadow-sm active:scale-[0.99] disabled:opacity-50"
+            className="bg-primary hover:bg-primary/90 text-canvas text-sm font-semibold py-2 px-3.5 rounded-2xl transition-all shadow-sm active:scale-[0.99] disabled:opacity-50"
           >
-            {isRequesting ? "Enabling..." : "Enable Notifications"}
+            {isRequesting ? "Enabling..." : "Enable reminders"}
           </button>
           <button 
             onClick={markAsked}
             className="bg-slate-800/50 hover:bg-white/10 text-slate-400 text-xs font-medium py-2 px-3.5 rounded-xl transition-colors border border-white/10"
           >
-            Not Now
+            Not now
           </button>
         </div>
       </div>
       
       <button 
         onClick={markAsked}
-        className="text-slate-500 hover:text-slate-50 transition-colors p-1 absolute top-3.5 right-3.5"
+        className="flex h-11 w-11 items-center justify-center rounded-full text-slate-400 hover:text-white hover:bg-white/5 transition-colors absolute top-2 right-2"
         aria-label="Dismiss"
       >
         <X className="w-4 h-4" />

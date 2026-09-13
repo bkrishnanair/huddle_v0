@@ -1,9 +1,12 @@
+import "server-only";
+
 export const dynamic = "force-dynamic";
 
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerCurrentUser } from "@/lib/auth-server"
 import { adminDb } from "@/lib/firebase-admin"
 import { getEventCountsForUser, getUserJoinedEvents } from "@/lib/db"
+import { profileUpdateInput } from '@/lib/request-schemas'
 
 export const runtime = 'nodejs'
 
@@ -130,7 +133,9 @@ export async function PUT(
       return NextResponse.json({ error: "Database service unavailable" }, { status: 503 })
     }
 
-    const body = await request.json();
+    const validation = profileUpdateInput.safeParse(await request.json().catch(() => null));
+    if (!validation.success) return NextResponse.json({ error: validation.error.flatten().fieldErrors }, { status: 400 });
+    const body = validation.data;
 
     // Whitelist allowed fields for update.
     //

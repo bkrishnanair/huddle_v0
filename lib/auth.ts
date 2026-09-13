@@ -94,5 +94,7 @@ export const signInAsGuest = async (name: string) => {
 
 export const logOut = async () => {
   if (!auth) throw new Error("Firebase Auth is not initialized on the client.");
+  const response = await fetch("/api/auth/logout", { method: "POST" });
+  if (!response.ok) throw new Error("Couldn't clear your session. Please try again.");
   await signOut(auth);
 };
