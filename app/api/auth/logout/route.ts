@@ -2,15 +2,13 @@ import "server-only";
 
 export const dynamic = "force-dynamic";
 
-import { type NextRequest, NextResponse } from "next/server"
-import { logOut } from "@/lib/auth"
+import { NextResponse } from "next/server"
+import { cookies } from "next/headers"
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
-    await logOut()
-
     // Clear the server-side session cookie
-    const cookieStore = await import("next/headers").then(mod => mod.cookies())
+    const cookieStore = await cookies()
     cookieStore.delete("session")
 
     return NextResponse.json({ success: true })

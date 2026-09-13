@@ -61,7 +61,7 @@ export default function ScheduleImportModal({ isOpen, onClose, onEventsCreated }
 
       const data = await res.json();
       setParsedEvents(data.events || []);
-      toast.success(`Parsed ${data.count} events from your schedule ✨`);
+      toast.success(`Found ${data.count} events in your schedule`);
     } catch {
       toast.error("Failed to parse schedule. Try reformatting the text.");
     } finally {

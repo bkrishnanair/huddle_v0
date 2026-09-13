@@ -1,56 +1,27 @@
-import { MetadataRoute } from 'next';
-import { getFirebaseAdminDb } from '@/lib/firebase-admin';
+import 'server-only';
 
+import type { MetadataRoute } from 'next';
+import { DIRECTORY_CATEGORIES } from '@/lib/seo/categories';
+import { getSeoEvents, eventUrl, SEO_ORIGIN } from '@/lib/seo/events';
+
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const adminDb = getFirebaseAdminDb();
-  if (!adminDb) return [];
-
+  const routes: MetadataRoute.Sitemap = [
+    {url: SEO_ORIGIN, changeFrequency: 'weekly', priority: 1},
+    {url: `${SEO_ORIGIN}/directory`, changeFrequency: 'weekly', priority: 0.9},
+    ...DIRECTORY_CATEGORIES.map(category => ({
+      url: `${SEO_ORIGIN}/directory/${category.slug}`, changeFrequency: 'daily' as const, priority: 0.7,
+    })),
+  ];
   try {
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Fetch active, future/today events
-    const snapshot = await adminDb.collection('events')
-      .where('date', '>=', today)
-      .limit(1000)
-      .get();
-
-    const baseUrl = 'https://huddlemap.live';
-
-    const events: MetadataRoute.Sitemap = snapshot.docs
-      .filter((doc) => !doc.data().isPrivate) // Don't index private events
-      .map((doc) => {
-        const data = doc.data();
-        let lastMod = new Date();
-        try {
-            if (data.createdAt) {
-                lastMod = data.createdAt.toDate();
-            }
-        } catch { } // fallback to now if not a Timestamp
-
-        return {
-          url: `${baseUrl}/event/${doc.id}`,
-          lastModified: lastMod,
-          changeFrequency: 'daily' as const,
-          priority: 0.8,
-        };
-      });
-
-    // Add static routes
-    const routes: MetadataRoute.Sitemap = [
-      {
-        url: baseUrl,
-        lastModified: new Date(),
-        changeFrequency: 'daily',
-        priority: 1.0,
-      },
-      ...events,
-    ];
-
-    return routes;
+    const {events} = await getSeoEvents();
+    return [...routes, ...events.map(event => ({
+      url: eventUrl(event.id), changeFrequency: 'daily' as const, priority: 0.8,
+    }))];
   } catch (error) {
-    console.error('Error generating sitemap:', error);
-    return [];
+    console.error('Event sitemap unavailable; retaining static discovery URLs', error);
+    return routes;
   }
 }

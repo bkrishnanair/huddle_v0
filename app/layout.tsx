@@ -10,25 +10,15 @@ import { PWARegister } from "@/components/pwa-register"
 import { InstallPrompt } from "@/components/install-prompt"
 import { PushPermissionPrompt } from "@/components/push-permission-prompt"
 
-// Body voice. `variable` exposes --font-inter to the Instrument token layer;
-// `className` is kept so existing surfaces render exactly as before.
+// Shared body, numeral, and display fonts for landing and app surfaces.
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 
-// Numeral voice — times, distances, counts, show rates (CLAUDE.md). Loaded as
-// a variable only: nothing applies it globally, so no existing surface changes.
-// Bricolage Grotesque is deliberately NOT loaded here. It is display type used
-// only by the marketing landing page, and the app routes already sit near
-// 400 kB First Load JS. It is declared at the landing route instead.
 const plexMono = IBM_Plex_Mono({
   subsets: ["latin"],
   weight: ["500", "600"],
   variable: "--font-mono",
 })
 
-// Display voice — marketing headlines only (landing page). Declared here because
-// next/font cannot be called from a "use client" module and app/page.tsx is one.
-// Declaring it costs nothing on app routes: next/font emits an @font-face rule,
-// and a browser never downloads a face no rendered element actually uses.
 const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
   weight: ["700"],

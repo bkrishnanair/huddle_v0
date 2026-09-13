@@ -17,6 +17,31 @@ import type { GameEvent } from '@/lib/types';
 
 const DEFAULT_TIMEZONE = 'America/New_York';
 
+/** Bounded SEO discovery window, including recent overnight/multi-day starts. */
+export function getDirectoryDateWindow(now = new Date()) {
+  const from = new Date(now);
+  const until = new Date(now);
+  from.setUTCDate(from.getUTCDate() - 7);
+  until.setUTCDate(until.getUTCDate() + 90);
+  return { from: from.toISOString().slice(0, 10), until: until.toISOString().slice(0, 10) };
+}
+
+/** Stable public-page display in the event's timezone, not the server's locale. */
+export function formatEventDateForSEO(event: GameEvent): string {
+  const timezone = event.timezone || DEFAULT_TIMEZONE;
+  return format(toZonedTime(getEventStartUTC(event), timezone), 'EEEE, MMMM d, yyyy', { timeZone: timezone });
+}
+
+export function formatEventTimeForSEO(event: GameEvent): string {
+  const timezone = event.timezone || DEFAULT_TIMEZONE;
+  return format(toZonedTime(getEventStartUTC(event), timezone), 'h:mm a zzz', { timeZone: timezone });
+}
+
+export function formatEventEndForSEO(event: GameEvent): string {
+  const timezone = event.timezone || DEFAULT_TIMEZONE;
+  return format(toZonedTime(getEventEndUTC(event), timezone), 'MMMM d, yyyy · h:mm a zzz', { timeZone: timezone });
+}
+
 /**
  * Get the UTC Date when the event starts.
  *

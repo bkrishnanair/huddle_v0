@@ -105,7 +105,7 @@ export default function HomePage() {
             className="flex min-h-14 w-full items-center gap-3 bg-white/5 border border-white/10 hover:border-orange-400/30 transition-all rounded-2xl px-4 py-3 cursor-pointer text-left"
           >
             <Search className="w-5 h-5 text-slate-400" />
-            <span className="text-slate-400 text-sm font-medium flex-1">Search events, keywords, or vibes...</span>
+            <span className="text-slate-400 text-sm font-medium flex-1">Search campus events</span>
             <div className="flex items-center gap-2">
               <ArrowUpRight className="h-4 w-4 text-orange-400" />
             </div>

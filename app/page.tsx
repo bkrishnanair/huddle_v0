@@ -3,10 +3,12 @@
 import { useState } from "react"
 import { useAuth } from "@/lib/firebase-context"
 import LandingPage from "@/components/landing-page"
-import AuthScreen from "@/components/auth-screen"
+import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+
+const AuthScreen = dynamic(() => import("@/components/auth-screen"))
 
 export default function Home() {
   const { user } = useAuth()

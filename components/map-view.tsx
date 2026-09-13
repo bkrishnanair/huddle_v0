@@ -5,10 +5,9 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Chip } from "@/components/ui/chip"
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Plus, MapPin, LocateFixed, AlertCircle, Loader2, Star, Calendar, Clock, Map as MapIcon, List, Search } from "lucide-react"
+import { Plus, MapPin, LocateFixed, AlertCircle, Loader2, Star, Calendar, Clock, Map as MapIcon, List, Search, CircleHelp } from "lucide-react"
 import { useTheme } from "next-themes"
-import EventDetailsDrawer from "./event-details-drawer"
-import CreateEventModal from "./create-event-modal"
+import dynamic from "next/dynamic"
 import OnboardingTooltip from "./onboarding-tooltip"
 import { EventCard } from "@/components/events/event-card"
 import { Map, AdvancedMarker, Pin, useMap, InfoWindow } from "@vis.gl/react-google-maps"
@@ -26,6 +25,9 @@ import MediumPin from "./map-pins/medium-pin"
 import LivePin from "./map-pins/live-pin"
 import { MapListPanel } from "@/components/map-list-panel"
 import { trackFunnelEvent } from "@/lib/analytics"
+
+const EventDetailsDrawer = dynamic(() => import("./event-details-drawer"))
+const CreateEventModal = dynamic(() => import("./create-event-modal"))
 
 interface MapViewProps {
   user: any
@@ -48,31 +50,6 @@ const MapRenderer = ({ onMapLoad, children, isDarkMode }: { onMapLoad: (map: goo
     }
   }, [map, onMapLoad, isDarkMode]);
 
-
-  useEffect(() => {
-    if (!map) return;
-
-    const mapDiv = map.getDiv();
-    let trackpadPanActive = false;
-    let panTimeout: ReturnType<typeof setTimeout>;
-
-    const handleWheel = (e: WheelEvent) => {
-      // ctrlKey means pinch-to-zoom on trackpad. Let Google handle it (zoom).
-      if (e.ctrlKey || e.metaKey) return;
-
-      // If we detect horizontal movement, lock into pan mode for this scroll session.
-      // This prevents accidental zooming when a diagonal swipe briefly becomes vertical.
-      if (Math.abs(e.deltaX) > 0.5 || trackpadPanActive) {
-        trackpadPanActive = true;
-        clearTimeout(panTimeout);
-        panTimeout = setTimeout(() => { trackpadPanActive = false; }, 150);
-
-        e.preventDefault();
-        e.stopPropagation();
-        map.panBy(e.deltaX, e.deltaY);
-      }
-    };
-  }, [map]);
 
   return <>{children}</>;
 };
@@ -119,6 +96,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isAiSearching, setIsAiSearching] = useState(false);
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
+  const [eventsLoadFailed, setEventsLoadFailed] = useState(false);
   const [aiKeywords, setAiKeywords] = useState<string[]>([]);
   const [eventSearchQuery, setEventSearchQuery] = useState("");
 
@@ -187,13 +165,16 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
       }
     }
 
-    // Unauthenticated Host Flow
+  }, [eventId])
+
+  useEffect(() => {
     if (intent === 'create' && !user) {
       toast.error("Please sign in or create an account to host an event.");
       // We delay the redirect slightly to allow the toast to be seen
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         router.push('/login?return_to=/map?intent=create');
       }, 1500)
+      return () => clearTimeout(timer);
     } else if (intent === 'create' && user) {
       setShowCreateModal(true)
     }
@@ -209,6 +190,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
     eventsRequest.current = controller;
 
     setIsLoadingEvents(true);
+    setEventsLoadFailed(false);
 
     if (user?.uid && !profileFetchAttempted.current) {
       profileFetchAttempted.current = true;
@@ -240,6 +222,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
       if (controller.signal.aborted) return;
       const fetchOptions: RequestInit = { credentials: 'include', signal: controller.signal };
       const response = await fetch(`/api/events?lat=${center.lat()}&lon=${center.lng()}&radius=${radius}`, fetchOptions);
+      if (!response.ok) throw new Error("Event request failed");
       if (response.ok) {
         const data = await response.json();
 
@@ -248,7 +231,10 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
         }
       }
     } catch (error) {
-      if (!controller.signal.aborted) console.error("Failed to load events:", error);
+      if (!controller.signal.aborted) {
+        setEventsLoadFailed(true);
+        console.error("Failed to load events:", error);
+      }
     } finally {
       if (eventsRequest.current === controller && !controller.signal.aborted) setIsLoadingEvents(false);
     }
@@ -310,7 +296,12 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             }
           } catch (e) { }
 
-          const response = await fetch(`/api/events/${eventId}/details`, fetchOptions);
+          const response = await fetch(`/api/events/${encodeURIComponent(eventId)}/details`, fetchOptions);
+          if (!response.ok) {
+            deepLinkProcessed.current = true;
+            toast.error(response.status === 404 ? "This event is unavailable or private." : "Couldn't open this event. Please reload to try again.");
+            return;
+          }
           if (response.ok) {
             const event: GameEvent = await response.json();
             if (event.geopoint && typeof event.geopoint.latitude === 'number' && isFinite(event.geopoint.latitude) && typeof event.geopoint.longitude === 'number' && isFinite(event.geopoint.longitude)) {
@@ -328,8 +319,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
               // Prevent default center from re-running (but don't set user physical location)
               setHasCenteredDefault(true);
 
-              // Fetch events in the new viewport after a brief delay for map to settle
-              setTimeout(() => fetchEventsInView(), 800);
+              // The map's idle handler refreshes pins after the pan settles.
             } else {
               // Virtual event or no geopoint — still open the drawer
               setSelectedEvent(event);
@@ -355,14 +345,6 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
       return () => clearTimeout(timer);
     }
   }, [map, fetchEventsInView]);
-
-  // Show onboarding for first-time visitors after map loads
-  useEffect(() => {
-    if (map && !readBrowserStorage('huddle_onboarding_complete')) {
-      const timer = setTimeout(() => setShowOnboarding(true), 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [map]);
 
   // Debounce the map idle event to prevent spamming the API when dragging/zooming rapidly
   const debouncedFetchEventsInView = useMemo(() => {
@@ -441,9 +423,9 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
         setAiKeywords(filters.keywords);
       }
 
-      toast.success(`AI Search: Filtered for "${query}" ✨`);
+      toast.success(`Showing matches for "${query}"`);
     } catch (e) {
-      toast.error('AI Search failed. Try a regular search.');
+      toast.error('Couldn\'t find matches. Try a simpler search.');
     } finally {
       setIsAiSearching(false);
     }
@@ -1082,18 +1064,6 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
                   </PopoverContent>
                 </Popover>
-                {/* Prevent mapping original TIMES twice */}
-                {false && TIMES.map(time => (
-                  <Chip
-                    key={time}
-                    size="sm"
-                    isActive={activeTime === time}
-                    onClick={() => setActiveTime(time)}
-                    className="shrink-0 text-xs px-3 py-2 rounded-full whitespace-nowrap h-11"
-                  >
-                    {time === 'All' ? 'Any time' : time}
-                  </Chip>
-                ))}
                 {/* Active filter indicator */}
                 {(activeCategory !== 'All' || activeTime !== 'All' || eventSearchQuery) && (
                   <button
@@ -1122,6 +1092,14 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
               >
                 <List className="w-4 h-4" />
               </button>
+              <button
+                type="button"
+                aria-label="How to use the map"
+                onClick={() => setShowOnboarding(true)}
+                className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-300 hover:bg-white/10 hover:text-white"
+              >
+                <CircleHelp className="h-4 w-4" />
+              </button>
             </div>
           </div>
 
@@ -1133,16 +1111,22 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             </div>
           )}
 
-          {/* Radar Scanning Pill */}
+          {/* Event loading status */}
           {isLoadingEvents && !isAiSearching && (
             <div className="pointer-events-auto mx-auto mt-1 px-3.5 py-1.5 bg-slate-950/80 backdrop-blur-xl rounded-full border border-teal-500/30 flex items-center gap-2 text-xs font-semibold text-teal-300 shadow-xl animate-pulse">
               <div className="w-2 h-2 rounded-full bg-teal-400 animate-ping" />
-              Scanning campus radar...
+              Loading events…
             </div>
           )}
 
           {/* Empty State Banner — Non-intrusive floating guide instead of a blank dark void */}
-          {!isLoadingEvents && !showListPanel && filteredEvents.length === 0 && (
+          {eventsLoadFailed && !isLoadingEvents && (
+            <div role="alert" className="pointer-events-auto absolute top-32 inset-x-4 z-30 mx-auto max-w-sm rounded-2xl border border-white/15 bg-panel p-4 text-center text-sm text-white">
+              <p>Couldn't refresh events. Check your connection.</p>
+              <Button className="mt-3" onClick={() => void fetchEventsInView()}>Try again</Button>
+            </div>
+          )}
+          {!isLoadingEvents && !eventsLoadFailed && !showListPanel && filteredEvents.length === 0 && (
             <div className="pointer-events-auto mx-auto mt-3 max-w-sm w-full px-4">
               <div className="bg-slate-950/90 backdrop-blur-2xl border border-white/15 p-4 rounded-2xl shadow-2xl text-center animate-in fade-in slide-in-from-top-2 duration-300">
                 <div className="w-10 h-10 rounded-full bg-teal-500/15 text-teal-400 mx-auto flex items-center justify-center mb-2">
@@ -1150,7 +1134,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                 </div>
                 <h4 className="text-white font-bold text-sm">No events in this area</h4>
                 <p className="text-slate-400 text-xs mt-1 leading-relaxed">
-                  Pan or zoom out to discover what&apos;s happening on campus, or be the first to start a huddle!
+                  Try a wider area or clear your filters. You can also create an event.
                 </p>
                 <div className="flex items-center justify-center gap-2.5 mt-3.5">
                   {(activeCategory !== 'All' || activeTime !== 'All' || eventSearchQuery) && (
@@ -1158,7 +1142,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                       onClick={() => { setActiveCategory('All'); setActiveTime('All'); setFilterStartDate(''); setFilterEndDate(''); setEventSearchQuery(''); setAiKeywords([]); }}
                       className="px-3 py-1.5 bg-white/10 hover:bg-white/15 text-slate-200 text-xs font-bold rounded-xl transition-colors"
                     >
-                      Reset Filters
+                      Reset filters
                     </button>
                   )}
                   <button
@@ -1196,7 +1180,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
         )}
 
         {/* Location Permission Toast/Prompt */}
-        {showLocationPrompt && !userLocation && (
+        {showLocationPrompt && !showOnboarding && !userLocation && (
           <div className="absolute inset-x-4 bottom-[calc(var(--safe-bottom)+4.5rem)] z-50 mx-auto max-w-sm pointer-events-auto" role="region" aria-label="Location preference">
             <div className="bg-panel/95 backdrop-blur-xl border border-white/15 p-4 rounded-3xl shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
               <div className="flex items-start gap-4">
@@ -1297,7 +1281,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
       }
       {showCreateModal && <CreateEventModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onEventCreated={() => { }} userLocation={userLocation || mapCenter} />}
 
-      {/* First-visit onboarding */}
+      {/* Optional walkthrough; never interrupt browsing automatically. */}
       {showOnboarding && (
         <OnboardingTooltip onComplete={() => {
           setShowOnboarding(false);

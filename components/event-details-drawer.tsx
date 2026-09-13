@@ -579,11 +579,11 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
       if (isFull) return "Joining Waitlist..."
       return "Joining..."
     }
-    if (!user) return "Join Event"
+    if (!user) return "Join event"
     if (hasJoined) return "Unjoin"
     if (isWaitlisted) return "Leave Waitlist"
-    if (isFull) return "Join Waitlist"
-    return "Join Event"
+    if (isFull) return "Join waitlist"
+    return "Join event"
   }
 
   const getButtonVariant = () => {
@@ -1142,7 +1142,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
               variant="outline"
               onClick={handleShare}
               className="col-span-2 h-10 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold"
-              title="Share Event"
+              title="Share event"
             >
               <Share className="w-3.5 h-3.5 mr-2" />
               Share
@@ -1190,7 +1190,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
       <Dialog open={showRsvpPrompt} onOpenChange={setShowRsvpPrompt}>
         <DialogContent className="glass-surface border-white/10 sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle className="text-xl font-black uppercase tracking-widest text-white">Join Event</DialogTitle>
+            <DialogTitle className="text-xl font-display font-bold text-white">Join event</DialogTitle>
             <DialogDescription className="text-slate-400">
               {isWaitlisted || isFull
                 ? "This event is currently full. Join the waitlist and we will automatically add you if a spot opens up."
@@ -1326,7 +1326,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
               className="bg-primary text-primary-foreground font-bold"
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isFull ? "Join Waitlist" : "Confirm RSVP"}
+              {isFull ? "Join waitlist" : "Confirm RSVP"}
             </Button>
           </DialogFooter>
         </DialogContent>

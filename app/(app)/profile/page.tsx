@@ -10,8 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Trophy, LogOut, UserCircle, Pencil, Zap, Calendar, Star, Info, BarChart3 } from "lucide-react"
 import EditProfileModal from "@/components/profile/edit-profile-modal"
 import HuddleProModal from "@/components/huddle-pro-modal"
-import { signOut } from "firebase/auth"
-import { auth } from "@/lib/firebase"
+import { logOut } from "@/lib/auth"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -151,7 +150,7 @@ export default function ProfilePage() {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth)
+      await logOut()
       toast.success("Logged out successfully")
       router.push("/")
     } catch (error) {

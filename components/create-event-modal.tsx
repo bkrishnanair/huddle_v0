@@ -338,7 +338,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
       if (data.suggestions) {
         setSuggestions(data.suggestions)
       }
-      toast.success('Description enhanced! ✨')
+      toast.success('Draft updated. Review it before publishing.')
     } catch (error) {
       console.error(error)
       toast.error('Failed to enhance description')

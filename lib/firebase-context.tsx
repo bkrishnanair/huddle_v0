@@ -2,7 +2,8 @@
 
 import type React from "react"
 import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react"
-import { type User, onAuthStateChanged, signOut } from "firebase/auth"
+import { type User, onAuthStateChanged } from "firebase/auth"
+import { logOut } from "./auth"
 import { auth, app } from "./firebase"
 import { FirebaseApp } from "firebase/app"
 
@@ -40,15 +41,9 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
   // Define the logout function
   const logout = useCallback(async () => {
-    // FIX: Ensure auth object is not null before using it.
     if (auth) {
-      try {
-        await fetch("/api/auth/logout", { method: "POST" });
-        await signOut(auth);
-        setUser(null);
-      } catch (error) {
-        console.error("Error signing out:", error);
-      }
+      await logOut();
+      setUser(null);
     }
   }, []);
 
