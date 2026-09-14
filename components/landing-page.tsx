@@ -467,6 +467,7 @@ export default function LandingPage({
               { href: "/privacy", label: "Privacy" },
               { href: "/terms", label: "Terms" },
               { href: "/contact", label: "Contact" },
+              { href: "/feedback", label: "Feedback" },
             ].map((link) => (
               <Link
                 key={link.href}

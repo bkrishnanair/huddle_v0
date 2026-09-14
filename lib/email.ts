@@ -1,8 +1,7 @@
-// lib/email.ts
-// Server-only module — wraps Resend SDK for transactional email.
 import 'server-only';
 
 import { Resend } from 'resend';
+import { FEEDBACK_TYPES, type Feedback } from '@/lib/feedback';
 
 const apiKey = process.env.RESEND_API_KEY;
 const fromEmail = process.env.RESEND_FROM_EMAIL || 'Huddle <onboarding@resend.dev>';
@@ -13,6 +12,24 @@ if (apiKey) {
   resend = new Resend(apiKey);
 } else {
   console.warn('⚠️ RESEND_API_KEY is not set — email sending disabled. In-app notifications will still be created.');
+}
+
+/** Send only to the configured team inbox, never to a visitor-controlled recipient. */
+export async function sendFeedbackEmail(feedback: Feedback, idempotencyKey: string): Promise<boolean> {
+  if (!resend) return false;
+  try {
+    const { data, error } = await resend.emails.send({
+      from: fromEmail,
+      to: process.env.FEEDBACK_TO_EMAIL || 'support@huddlemap.live',
+      subject: `Huddle feedback: ${FEEDBACK_TYPES[feedback.type]}`,
+      ...(feedback.email ? { replyTo: feedback.email } : {}),
+      // Plain text keeps student-authored markup inert. No account or location data is attached.
+      text: `${FEEDBACK_TYPES[feedback.type]}\n\n${feedback.message}\n\nReply email: ${feedback.email || 'Not provided'}\n\nSubmitted through the Huddle feedback form.`,
+    }, { idempotencyKey });
+    return !error && Boolean(data?.id);
+  } catch {
+    return false;
+  }
 }
 
 /**

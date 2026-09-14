@@ -1,9 +1,11 @@
+import 'server-only';
 import { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, Mail, MapPin, MessageSquare } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Contact Us | Huddle",
+  title: "Contact",
+  alternates: { canonical: '/contact' },
   description: "Get in touch with the Huddle team for support, feedback, or campus partnerships.",
 };
 
@@ -35,6 +37,11 @@ export default function ContactPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <Link href="/feedback" className="sm:col-span-2 rounded-3xl border border-orange-400/20 bg-orange-400/5 p-6 text-slate-100 hover:bg-orange-400/10">
+            <h2 className="font-display text-xl font-bold">Help improve Huddle</h2>
+            <p className="mt-2 text-sm text-slate-300">Report a problem or share an idea. No account needed.</p>
+            <span className="mt-3 inline-flex min-h-11 items-center font-semibold text-orange-400">Send feedback →</span>
+          </Link>
           <div className="p-6 rounded-3xl bg-slate-900/50 backdrop-blur-md border border-white/10 flex flex-col justify-between">
             <div className="space-y-3">
               <div className="w-10 h-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center border border-white/10">

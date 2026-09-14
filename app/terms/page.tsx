@@ -1,9 +1,11 @@
+import 'server-only';
 import { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Terms of Service | Huddle",
+  title: "Terms of service",
+  alternates: { canonical: '/terms' },
   description: "Terms and conditions for organizing and attending events on Huddle.",
 };
 

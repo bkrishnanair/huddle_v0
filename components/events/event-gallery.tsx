@@ -246,7 +246,11 @@ export default function EventGallery({ eventId, isOrganizer, hasJoined, eventDat
                         <div key={i} className="relative aspect-square rounded-lg overflow-hidden group bg-slate-800">
                             <img
                                 src={photo.url}
-                                alt="Event photo"
+                                alt={`Event photo ${i + 1}`}
+                                loading="lazy"
+                                decoding="async"
+                                width={400}
+                                height={400}
                                 className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
                             />
                             {(isOrganizer || user?.uid === photo.uploaderId) && (

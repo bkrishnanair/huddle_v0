@@ -1,9 +1,11 @@
+import 'server-only';
 import { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | Huddle",
+  title: "Privacy policy",
+  alternates: { canonical: '/privacy' },
   description: "How Huddle protects your data, location, and campus event privacy.",
 };
 
@@ -56,6 +58,9 @@ export default function PrivacyPage() {
               </li>
               <li>
                 <strong className="text-slate-50">Push Notification Tokens:</strong> Web push tokens (FCM) are stored securely and used exclusively for event reminders and attendee updates.
+              </li>
+              <li>
+                <strong className="text-slate-50">Feedback:</strong> If you use the feedback form, we send your message and any email address you choose to provide to the Huddle team through Resend, our email provider. Feedback is not posted publicly. We use hashed network identifiers and submission counts to limit spam. You can leave the email field blank; the form does not attach your account details or location.
               </li>
             </ul>
           </section>

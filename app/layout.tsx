@@ -1,10 +1,10 @@
+import 'server-only'
 import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Inter, IBM_Plex_Mono, Bricolage_Grotesque } from "next/font/google"
 import "./globals.css"
 import { FirebaseProvider } from "@/lib/firebase-context"
-import { Analytics } from "@vercel/analytics/react"
-import { SpeedInsights } from "@vercel/speed-insights/next"
+import { SiteAnalytics } from "@/components/site-analytics"
 import { Toaster } from "@/components/ui/sonner"
 import { PWARegister } from "@/components/pwa-register"
 import { InstallPrompt } from "@/components/install-prompt"
@@ -75,8 +75,7 @@ export default function RootLayout({
           <PushPermissionPrompt />
           {children}
           <Toaster />
-          <Analytics />
-          <SpeedInsights />
+          <SiteAnalytics />
         </FirebaseProvider>
       </body>
     </html>

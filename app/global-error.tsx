@@ -26,21 +26,21 @@ export default function GlobalError({
             Something went wrong
           </h2>
           <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-            Our team has been notified. Please try refreshing or reloading the page.
+            Please try again. If the problem continues, return to the map or contact support.
           </p>
           <div className="flex gap-3 justify-center">
             <Button
               onClick={() => reset()}
-              className="bg-primary hover:bg-primary/90 text-white rounded-xl text-sm font-medium px-5 h-10 shadow-sm"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-medium px-5 min-h-11 shadow-sm"
             >
               Try again
             </Button>
             <Button
               onClick={() => (window.location.href = "/map")}
               variant="outline"
-              className="border-white/10 text-slate-400 hover:bg-slate-800/50 rounded-xl text-sm font-medium px-5 h-10"
+              className="border-white/10 text-slate-300 hover:bg-slate-800/50 rounded-xl text-sm font-medium px-5 min-h-11"
             >
-              Return to Map
+              Return to map
             </Button>
           </div>
         </div>

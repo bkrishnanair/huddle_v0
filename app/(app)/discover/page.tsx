@@ -415,7 +415,7 @@ export default function DiscoverPage() {
                                     className="shrink-0 w-[200px] glass-surface border border-white/10 rounded-xl p-3 hover:bg-white/5 transition-all flex items-center gap-3"
                                 >
                                     {org.photoURL ? (
-                                        <img src={org.photoURL} alt={org.displayName} className="w-10 h-10 rounded-full object-cover" />
+                                        <img src={org.photoURL} alt="" width={40} height={40} loading="lazy" decoding="async" className="w-10 h-10 rounded-full object-cover" />
                                     ) : (
                                         <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
                                             {org.displayName?.charAt(0) || '?'}

@@ -5,7 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { HuddleLogo } from "./huddle-logo"
 import { NotificationBell } from "./notification-bell"
-import { Sun, Moon, Search, Loader2 } from "lucide-react"
+import { Sun, Moon, Search, Loader2, MessageSquare } from "lucide-react"
 import { useTheme } from "next-themes"
 import LocationSearchInput from "./location-search"
 import { Button } from "./ui/button"
@@ -38,11 +38,11 @@ export function TopNavbar() {
 
     return (
         <header className="fixed top-[max(0.75rem,env(safe-area-inset-top))] inset-x-3 max-w-[1800px] mx-auto z-40 h-16 bg-canvas/90 backdrop-blur-xl border border-white/10 rounded-3xl shadow-xl pointer-events-auto transition-colors sm:inset-x-4">
-            <div className="h-full px-4 flex items-center justify-between gap-3">
+            <div className="h-full px-3 sm:px-4 flex items-center justify-between gap-3">
                 {/* Logo Section */}
                 <Link href="/home" className="flex min-h-11 items-center gap-2.5 shrink-0">
                     <HuddleLogo size={32} />
-                    <span className="font-display text-2xl font-bold text-white tracking-tight">huddle<span className="text-orange-400">.</span></span>
+                    <span className="font-display text-xl sm:text-2xl font-bold text-white tracking-tight">huddle<span className="text-orange-400">.</span></span>
                 </Link>
 
                 {/* Search Bar Integration (Cross-Platform) */}
@@ -86,7 +86,8 @@ export function TopNavbar() {
                 </div>
 
                 {/* Action Items */}
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                    <Link href="/feedback" aria-label="Send feedback" title="Send feedback" className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-xl px-2 text-xs font-semibold text-slate-300 hover:bg-white/10 hover:text-white"><MessageSquare className="h-4 w-4" aria-hidden="true" /><span className="hidden sm:inline">Feedback</span></Link>
                     {mounted && (
                         <Button
                             variant="ghost"

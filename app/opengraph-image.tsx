@@ -1,3 +1,4 @@
+import 'server-only';
 import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
@@ -13,7 +14,7 @@ export default async function Image() {
     (
       <div
         style={{
-          background: '#FCFBF9',
+          background: '#0B101B',
           width: '100%',
           height: '100%',
           display: 'flex',
@@ -22,7 +23,7 @@ export default async function Image() {
           justifyContent: 'space-between',
           padding: '80px',
           fontFamily: 'sans-serif',
-          border: '16px solid #E9E6E0',
+          border: '16px solid #1E293B',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -31,8 +32,8 @@ export default async function Image() {
               width: '56px',
               height: '56px',
               borderRadius: '16px',
-              background: '#1D4FD7',
-              color: '#FFFFFF',
+              background: '#2DD4BF',
+              color: '#0B101B',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -42,7 +43,7 @@ export default async function Image() {
           >
             H
           </div>
-          <span style={{ fontSize: '36px', fontWeight: '800', color: '#191C1E', letterSpacing: '-0.03em' }}>
+          <span style={{ fontSize: '36px', fontWeight: '800', color: '#F8FAFC', letterSpacing: '-0.03em' }}>
             Huddle
           </span>
           <div
@@ -50,15 +51,15 @@ export default async function Image() {
               marginLeft: '24px',
               padding: '6px 16px',
               borderRadius: '999px',
-              background: '#DCF5E8',
-              color: '#0BA95B',
+              background: '#1E293B',
+              color: '#CBD5E1',
               fontSize: '18px',
               fontWeight: '700',
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
             }}
           >
-            ● LIVE AT UMD
+            COLLEGE PARK, MD
           </div>
         </div>
 
@@ -67,7 +68,7 @@ export default async function Image() {
             style={{
               fontSize: '64px',
               fontWeight: '900',
-              color: '#191C1E',
+              color: '#F8FAFC',
               lineHeight: 1.08,
               letterSpacing: '-0.04em',
               margin: 0,
@@ -76,8 +77,8 @@ export default async function Image() {
           >
             See what's happening around campus. Right now.
           </h1>
-          <p style={{ fontSize: '28px', color: '#43484D', margin: 0, fontWeight: '500' }}>
-            Live events, pickup games, and student meetups — no app, no account required.
+          <p style={{ fontSize: '28px', color: '#CBD5E1', margin: 0, fontWeight: '500' }}>
+            Events, pickup games, and student meetups. Browse without an account.
           </p>
         </div>
 
@@ -87,15 +88,15 @@ export default async function Image() {
             alignItems: 'center',
             justifyContent: 'space-between',
             width: '100%',
-            borderTop: '2px solid #E9E6E0',
+            borderTop: '2px solid #1E293B',
             paddingTop: '24px',
           }}
         >
-          <span style={{ fontSize: '20px', color: '#767D85', fontWeight: '600', textTransform: 'uppercase' }}>
+          <span style={{ fontSize: '20px', color: '#CBD5E1', fontWeight: '600', textTransform: 'uppercase' }}>
             huddlemap.live
           </span>
-          <span style={{ fontSize: '20px', color: '#1D4FD7', fontWeight: '700' }}>
-            Open the Live Map →
+          <span style={{ fontSize: '20px', color: '#FB923C', fontWeight: '700' }}>
+            Explore the map →
           </span>
         </div>
       </div>
