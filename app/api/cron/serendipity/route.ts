@@ -6,7 +6,7 @@ import { runSerendipity } from '@/lib/cron/serendipity';
 import { authorizeCronRequest } from '@/lib/cron/auth';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function GET(req: NextRequest) {
   const auth = authorizeCronRequest(req);

@@ -83,7 +83,7 @@ export const dynamic = 'force-dynamic';
 //   3. env CRON_PLAN=pro, CRON_MODE=hourly
 // The runtime check below shouts if you do 3 and forget 1.
 // ---------------------------------------------------------------------------
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const CRON_PLAN = resolveCronPlan(process.env.CRON_PLAN);
 
