@@ -561,7 +561,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="bg-panel/95 backdrop-blur-xl border-white/10 rounded-3xl shadow-2xl text-slate-50 p-0 gap-0 sm:max-w-lg max-h-[92dvh] flex flex-col"
+        className="bg-panel/95 backdrop-blur-xl border-white/10 rounded-3xl shadow-2xl text-slate-50 p-0 gap-0 sm:max-w-lg max-h-[92dvh] flex flex-col overflow-hidden"
         onInteractOutside={(e) => {
           const target = e.target as HTMLElement;
           // Prevent Radix from closing the modal or blocking the click 
@@ -617,12 +617,12 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
           </div>
         ) : (
           <>
-            <DialogHeader className="p-6 pb-4">
+            <DialogHeader className="shrink-0 p-4 pb-3 sm:p-6 sm:pb-4">
               <DialogTitle className="font-display text-2xl font-bold pr-12">{isEditMode ? "Edit Event" : "Create an event"}</DialogTitle>
               <DialogDescription>{isEditMode ? "Update your event details." : "Fill in the details to get your event on the map."}</DialogDescription>
             </DialogHeader>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar px-6">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 sm:px-6">
           <form id="event-form" onSubmit={handleSubmit} className="space-y-4">
             {/* Event Type Segmented Toggle */}
             <div>
@@ -1149,7 +1149,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
           </form >
         </div >
 
-        <DialogFooter className="shrink-0 p-6 pt-4 bg-slate-900/90 backdrop-blur-md border-t border-border">
+        <DialogFooter className="shrink-0 p-4 bg-slate-900/90 border-t border-border">
           <Button type="submit" form="event-form" disabled={isLoading} className="w-full" size="lg">
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : isEditMode ? "Save Changes" : "Create Event"}
           </Button>

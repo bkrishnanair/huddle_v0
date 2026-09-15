@@ -28,7 +28,7 @@ import {
 import Link from "next/link";
 import { useFollowing } from "@/hooks/use-following";
 import { getCategoryColor, getAccentTokens, isEventLive } from "@/lib/utils";
-import { getEventStartUTC } from "@/lib/datetime";
+import { getEventStartUTC, formatEventTimeForSEO } from "@/lib/datetime";
 import { useMinuteTick } from "@/hooks/use-minute-tick";
 import { CategoryIcon } from "@/components/category-icon";
 
@@ -49,7 +49,8 @@ export const EventCard = React.memo(
     hasNewUpdate,
   }: EventCardProps) => {
     useMinuteTick();
-    const isFull = event.currentPlayers >= event.maxPlayers;
+    const externalListing = !!event.isScraped && event.source !== 'claimed';
+    const isFull = !externalListing && event.maxPlayers > 0 && event.currentPlayers >= event.maxPlayers;
     const { followingSet } = useFollowing();
 
     // Calculate friends attending
@@ -85,21 +86,21 @@ export const EventCard = React.memo(
       <Card 
         className="group flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-panel transition-colors duration-200 hover:border-white/25 relative isolate"
         style={{ 
-          borderTop: `3.5px solid ${catColor}`,
-          boxShadow: `0 3px 12px -4px ${catColor}25`
+          borderColor: `${catColor}99`,
+          backgroundColor: accent.surface,
         }}
       >
-        <CardContent className="relative flex flex-1 flex-col p-5 [contain:layout_paint]">
+        <CardContent className="relative flex flex-1 flex-col p-3 sm:p-5 [contain:layout_paint]">
           <div
             className="pointer-events-none absolute inset-x-0 top-0 h-32 opacity-90"
             style={{
               background: `radial-gradient(ellipse 90% 70% at 20% -10%, ${catColor}38, transparent 70%)`,
             }}
           />
-          <div className="relative mb-5 flex items-center justify-between gap-2">
+          <div className="relative mb-2 sm:mb-4 flex items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2.5">
               <span
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-transform duration-200 group-hover:scale-105"
+                className="flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl"
                 style={{ 
                   color: accent.text,
                   backgroundColor: accent.surface,
@@ -134,14 +135,14 @@ export const EventCard = React.memo(
                 Waitlist open
               </Badge>
             ) : (
-              event.maxPlayers - event.currentPlayers <= 3 && (
+              !externalListing && event.maxPlayers > 0 && event.maxPlayers - event.currentPlayers <= 3 && (
                 <Badge className="rounded-full border border-orange-400/20 bg-orange-400/10 text-[10px] text-orange-300">
                   Filling up
                 </Badge>
               )
             )}
           </div>
-          <h3 className="relative mb-2 line-clamp-2 min-h-14 font-display text-xl font-bold leading-7 tracking-tight text-white">
+          <h3 className="relative mb-1 line-clamp-2 font-display text-base sm:text-xl font-bold leading-snug tracking-tight text-white">
             {event.name}
             {event.isOrganizerVerified && (
               <BadgeCheck
@@ -150,14 +151,14 @@ export const EventCard = React.memo(
               />
             )}
           </h3>
-          <p className="mb-5 truncate text-xs text-slate-400">
+          <p className="mb-2 sm:mb-4 truncate text-xs text-slate-300">
             Hosted by {event.organizerName || "your campus community"}
           </p>
-          <div className="space-y-3 text-xs text-slate-300">
+          <div className="space-y-2 text-xs text-slate-300">
             <div className="flex items-start gap-2.5">
               <Clock className="h-4 w-4 shrink-0 text-slate-500" />
               <span className="font-mono text-[11px]">
-                {getTimeDifference(event.date, event.time)} · {event.time}
+                {getTimeDifference(event.date, event.time)} · {formatEventTimeForSEO(event)}
               </span>
             </div>
             <div className="flex items-start gap-2.5">
@@ -233,7 +234,7 @@ export const EventCard = React.memo(
           )}
           {!!event.tags?.length && (
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {event.tags.map((tag) => (
+              {event.tags.slice(0, 2).map((tag) => (
                 <span
                   key={tag}
                   className="rounded-md bg-white/5 px-2 py-1 text-[10px] text-slate-400"
@@ -244,16 +245,16 @@ export const EventCard = React.memo(
             </div>
           )}
         </CardContent>
-        <div className="border-t border-white/5 bg-white/[0.025] p-4">
-          <div className="mb-3 flex items-center justify-between gap-2 text-xs text-slate-400">
+        <div className="border-t border-white/10 bg-white/[0.025] p-3 sm:p-4">
+          <div className="mb-2 flex items-center justify-between gap-2 text-xs text-slate-300">
             <span className="inline-flex items-center gap-2">
               <Users className="h-4 w-4" />
-              <span>
+              {externalListing ? <span>External listing · check registration</span> : <span>
                 <span className="font-mono text-slate-200">
                   {event.currentPlayers}
                 </span>{" "}
                 / <span className="font-mono">{event.maxPlayers}</span> going
-              </span>
+              </span>}
             </span>
             {(event.viewCount ?? 0) > 0 && (
               <span className="inline-flex items-center gap-1.5">

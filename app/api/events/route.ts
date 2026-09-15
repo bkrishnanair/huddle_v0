@@ -6,6 +6,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getServerCurrentUser } from "@/lib/auth-server"
 import { getEvents, getNearbyEvents } from "@/lib/db"
 import { pickPublicFields } from "@/lib/types"
+import { getEventStartUTC, matchesEventTimeFilter } from "@/lib/datetime"
 import { getFirebaseAdminDb, GeoPoint, Timestamp } from "@/lib/firebase-admin"
 import { checkRateLimit } from '@/lib/rate-limit';
 import * as geofire from "geofire-common"
@@ -141,18 +142,12 @@ function deduplicateRecurring(events: any[]): any[] {
   }
 
   // For each recurring group, pick the soonest future instance
-  for (const [parentId, group] of recurringGroups) {
-    // Sort by date ascending
-    group.sort((a: any, b: any) => {
-      const dateA = a.date || '';
-      const dateB = b.date || '';
-      return dateA.localeCompare(dateB);
-    });
-
-    // Find the soonest instance that hasn't passed yet
-    const todayStr = now.toISOString().split('T')[0];
-    const futureInstances = group.filter((e: any) => e.date >= todayStr);
-    const chosen = futureInstances.length > 0 ? futureInstances[0] : group[group.length - 1];
+  for (const group of recurringGroups.values()) {
+    // Include ongoing instances, but never let an ended occurrence hide the next one.
+    const futureInstances = group.filter(e => matchesEventTimeFilter(e, 'All', now))
+      .sort((a, b) => getEventStartUTC(a).getTime() - getEventStartUTC(b).getTime());
+    if (!futureInstances.length) continue;
+    const chosen = { ...futureInstances[0] };
 
     // Attach recurring metadata for the UI badge
     const recurrenceType = chosen.recurrence?.type || group[0]?.recurrence?.type || 'weekly';

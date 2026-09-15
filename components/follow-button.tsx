@@ -94,10 +94,10 @@ export function FollowButton({
       size={size}
       onClick={toggleFollow}
       disabled={isUpdating}
-      className={`font-semibold rounded-full ${
+      className={`min-h-11 shrink-0 font-semibold rounded-full ${
         isFollowing
           ? "bg-slate-800 text-slate-300 hover:bg-slate-700"
-          : "bg-primary hover:bg-primary/90 text-white"
+          : "bg-primary hover:bg-primary/90 text-primary-foreground"
       } ${className || ""}`}
     >
       {isUpdating ? (

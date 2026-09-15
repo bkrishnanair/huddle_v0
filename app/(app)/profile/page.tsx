@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Trophy, LogOut, UserCircle, Pencil, Zap, Calendar, Star, Info, BarChart3 } from "lucide-react"
+import { LogOut, UserCircle, Pencil, Zap, Calendar, Star, Info, BarChart3 } from "lucide-react"
 import EditProfileModal from "@/components/profile/edit-profile-modal"
 import HuddleProModal from "@/components/huddle-pro-modal"
 import { logOut } from "@/lib/auth"
@@ -15,7 +15,9 @@ import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { EventCard } from "@/components/events/event-card"
-import EventDetailsDrawer from "@/components/event-details-drawer"
+import dynamic from 'next/dynamic'
+import Link from 'next/link'
+const EventDetailsDrawer = dynamic(() => import('@/components/event-details-drawer'))
 import { GameEvent } from "@/lib/types"
 import { useFollowing } from "@/hooks/use-following"
 import FollowListModal from "@/components/profile/follow-list-modal"
@@ -49,7 +51,7 @@ function ProfileSkeleton() {
 const StatCard = ({ label, value }: { label: string; value: number }) => (
   <Card className="glass-surface border-white/10 text-center shadow-2xl hover:scale-105 transition-transform duration-300">
     <CardContent className="p-3 md:p-6">
-      <div className="text-2xl md:text-3xl font-extrabold text-slate-50 tracking-tight">{value}</div>
+      <div className="font-mono text-2xl md:text-3xl font-extrabold text-slate-50 tracking-tight">{value}</div>
       <div className="text-[10px] md:text-sm font-bold text-slate-500 uppercase tracking-wider md:tracking-widest mt-1 truncate">{label}</div>
     </CardContent>
   </Card>
@@ -74,20 +76,6 @@ export default function ProfilePage() {
   const [followModalOpen, setFollowModalOpen] = useState(false)
   const [followModalType, setFollowModalType] = useState<"followers" | "following">("followers")
 
-  useEffect(() => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setUserLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        })
-      },
-      () => {
-        setUserLocation(null)
-      }
-    )
-  }, [])
-
   const fetchProfileData = useCallback(async () => {
     if (!user) return
     setLoading(true)
@@ -110,39 +98,14 @@ export default function ProfilePage() {
         if (data.followerCount !== undefined) setFollowerCount(data.followerCount)
         if (data.followingCount !== undefined) setFollowingCount(data.followingCount)
 
-        const eventsRes = await fetch(`/api/events/past?userId=${user.uid}`, {
-          headers: {
-            "Authorization": `Bearer ${idToken}`
-          },
-          credentials: 'include'
-        })
-        if (eventsRes.ok) {
-          let events = (await eventsRes.json()).events || []
-
-          if (userLocation) {
-            events = events.map((event: any) => {
-              if (event.geopoint) {
-                const R = 3958.8;
-                const dLat = (event.geopoint.latitude - userLocation.lat) * Math.PI / 180;
-                const dLon = (event.geopoint.longitude - userLocation.lng) * Math.PI / 180;
-                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                  Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(event.geopoint.latitude * Math.PI / 180) *
-                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
-                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                return { ...event, distance: Math.round(R * c * 10) / 10 };
-              }
-              return event;
-            });
-          }
-          setPastEvents(events)
-        }
+        setPastEvents(data.pastEvents || [])
       }
     } catch (error) {
       console.error("Error loading user data:", error)
     } finally {
       setLoading(false)
     }
-  }, [user?.uid, userLocation])
+  }, [user?.uid])
 
   useEffect(() => {
     if (user) fetchProfileData()
@@ -192,6 +155,13 @@ export default function ProfilePage() {
   return (
     <>
       <div className="min-h-screen bg-canvas pb-[calc(var(--safe-bottom)+2rem)]">
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Button variant="outline" asChild><Link href="/discover">Find people and events</Link></Button>
+        <Button variant="outline" onClick={async () => {
+          try { await navigator.clipboard.writeText(window.location.origin + '/profile/' + user?.uid); toast.success('Profile link copied'); }
+          catch { toast.error('Could not copy your profile link'); }
+        }}>Share profile</Button>
+      </div>
         <header className="p-4 flex justify-end items-center gap-3">
           <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl glass-surface border border-rose-500/20 shadow-xl hover:bg-rose-500/10 text-rose-400" onClick={handleLogout} aria-label="Sign out">
             <LogOut className="w-5 h-5" />
@@ -235,8 +205,8 @@ export default function ProfilePage() {
             {followerCount !== null && followerCount < 5 && (
               <div className="mt-4 max-w-sm w-full mx-auto p-3 rounded-2xl border border-blue-500/20 bg-blue-500/10 backdrop-blur-md">
                 <p className="text-sm text-blue-200">
-                  <span className="font-bold text-blue-400 block mb-0.5">Build your network!</span>
-                  Gain followers to unlock social alerts about nearby games.
+                  <span className="font-bold text-blue-400 block mb-0.5">Find your people</span>
+                  Follow people you know, or share your profile so they can find you.
                 </p>
               </div>
             )}
@@ -285,12 +255,16 @@ export default function ProfilePage() {
               <Card className="glass-surface border-white/10 shadow-2xl rounded-3xl min-h-[200px]">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-xl font-bold">
-                    <Trophy className="w-6 h-6 text-yellow-400" />
-                    Achievements
+                    <Calendar className="w-6 h-6 text-teal-400" />
+                    Your next plan
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-slate-400 text-lg">Your trophy case is waiting. Join a game to start collecting!</p>
+                  <p className="text-slate-400 mb-4">See what’s happening this week, or catch up on the events you’ve joined.</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button asChild className="min-h-11"><Link href="/discover">Find an event</Link></Button>
+                    <Button asChild variant="outline" className="min-h-11"><Link href="/my-events">My events</Link></Button>
+                  </div>
                 </CardContent>
               </Card>
 

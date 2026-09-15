@@ -2,13 +2,14 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/firebase-context"
 import { Button } from "@/components/ui/button"
-import CreateEventModal from "@/components/create-event-modal"
+import dynamic from 'next/dynamic'
+const CreateEventModal = dynamic(() => import('@/components/create-event-modal'))
 import { EventList } from "@/components/profile/event-list"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Search, Plus, BarChart3, CalendarDays } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
-import { OrganizerStudio } from "@/components/organizer-studio"
+const OrganizerStudio = dynamic(() => import('@/components/organizer-studio').then(module => module.OrganizerStudio))
 import { doc, getDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { GameEvent } from "@/lib/types"
@@ -65,7 +66,7 @@ export default function MyEventsPage() {
 
   return (
     <div className="min-h-screen bg-canvas p-5 pb-[calc(var(--safe-bottom)+2rem)] md:p-8 md:pb-[calc(var(--safe-bottom)+2rem)] [&>header]:mx-auto [&>header]:max-w-7xl [&>div]:mx-auto [&>div]:max-w-7xl">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-5 md:gap-6 md:mb-10">
         <div className="space-y-1">
           <h1 className="font-display text-3xl md:text-4xl font-bold text-slate-50 tracking-tight">My events</h1>
           <p className="text-slate-400 text-base">Manage your joined and hosted events.</p>
@@ -116,7 +117,7 @@ export default function MyEventsPage() {
                 aria-label="Search your events" placeholder="Search your events..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 bg-slate-900/50 border-white/10 text-slate-200 placeholder:text-slate-500 rounded-xl h-10"
+                className="w-full pl-9 bg-slate-900/50 border-white/10 text-slate-200 placeholder:text-slate-500 rounded-xl h-11 text-base"
               />
             </div>
             {/* Date Range */}

@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { initializeApp, deleteApp } from 'firebase-admin/app';
-import { getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { GeoPoint, getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { NextRequest } from 'next/server';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -27,6 +27,7 @@ beforeEach(async () => {
     name: 'Staging RSVP', createdBy: 'host', date: '2099-01-01', time: '12:00',
     timezone: 'America/New_York', maxPlayers: 1, currentPlayers: 0,
     players: [], waitlist: [], status: 'active', scheduledMessages: [{message: 'private draft'}],
+    geopoint: new GeoPoint(38.9897, -76.9378), orgGeopoint: new GeoPoint(0, 0),
   });
   for (const uid of ['alice', 'bob', 'host']) await db.collection('users').doc(uid).set({name: uid});
 });
@@ -54,6 +55,16 @@ describe('RSVP route with real emulator transactions', () => {
     expect((await event()).currentPlayers).toBe(1);
     for (let i = 0; i < 2; i++) expect((await rsvp('alice', {action: 'leave'})).status).toBe(200);
     expect((await event()).currentPlayers).toBe(0);
+  });
+  it('returns browser-safe coordinates on successful and repeated RSVP writes', async () => {
+    for (const action of ['join', 'join', 'leave', 'leave']) {
+      const response = await rsvp('alice', {action});
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.event.geopoint).toEqual({latitude: 38.9897, longitude: -76.9378});
+      expect(data.event.orgGeopoint).toEqual({latitude: 0, longitude: 0});
+      expect(data.event.geopoint).not.toHaveProperty('_latitude');
+    }
   });
   it('promotes one attendee and sends one notification despite duplicate leave requests', async () => {
     await rsvp('alice', {action: 'join'});

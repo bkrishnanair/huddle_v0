@@ -6,14 +6,13 @@ import { getServerCurrentUser } from '@/lib/auth-server';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { isAdminUid } from '@/lib/admin-auth';
 import * as geofire from 'geofire-common';
-import { toZonedTime, format } from 'date-fns-tz';
+import { getEventFieldsFromISO } from '@/lib/datetime';
+import { classifyTerpLinkEvent } from '@/lib/terplink-category';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
 
-// Literal, not an expression — Next rejects MemberExpression and
-// ConditionalExpression forms for this export (CLAUDE.md). A run makes up to
-// 100 sequential geocoding calls, so the default 10s ceiling is not enough.
+// A run processes at most 100 listings with four workers and 20 geocoding calls.
 export const maxDuration = 60;
 
 // The caller-supplied `apiUrl` was removed. `z.string().url()` accepts any
@@ -41,11 +40,8 @@ interface TerpLinkEvent {
   organizationName?: string;
 }
 
-/** Campus-centre coordinate with jitter, so co-located pins do not stack exactly. */
-function campusFallback() {
-  const jitter = () => (Math.random() - 0.5) * 0.002;
-  return { lat: UMD_LAT + jitter(), lng: UMD_LNG + jitter(), geocoded: false };
-}
+/** Stable fallback: pin separation belongs to the map, not invented coordinates. */
+function campusFallback() { return { lat: UMD_LAT, lng: UMD_LNG, geocoded: false }; }
 
 async function geocodeLocation(address: string) {
   const fallback = campusFallback();
@@ -71,7 +67,8 @@ async function geocodeLocation(address: string) {
     // Append University of Maryland context to improve geocoding accuracy for campus buildings
     const query = `${address}, University of Maryland, College Park, MD`;
     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${apiKey}`;
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return fallback;
     const data = await res.json();
 
     if (data.status !== 'OK') {
@@ -81,10 +78,9 @@ async function geocodeLocation(address: string) {
 
     if (data.results && data.results[0]) {
        const loc = data.results[0].geometry.location;
-       // Add a tiny bit of jitter even to successful results to distinguish between events in the same building
        return {
-         lat: loc.lat + (Math.random() - 0.5) * 0.0005,
-         lng: loc.lng + (Math.random() - 0.5) * 0.0005,
+         lat: loc.lat,
+         lng: loc.lng,
          geocoded: true,
        };
     }
@@ -96,58 +92,12 @@ async function geocodeLocation(address: string) {
   return fallback;
 }
 
-function mapTerpLinkCategory(categories: string[]): string {
-  const catMap: Record<string, string> = {
-    'Athletics': 'Sports',
-    'Sports': 'Sports',
-    'Club Sports': 'Sports',
-    'Workout': 'Sports',
-    'Fitness': 'Sports',
-    'Training': 'Sports',
-    'Exercise': 'Sports',
-    'Music': 'Music',
-    'Concert': 'Music',
-    'Rehearsal': 'Music',
-    'Performance': 'Music',
-    'Arts': 'Arts & Culture',
-    'Cultural': 'Arts & Culture',
-    'Artist': 'Arts & Culture',
-    'Creative': 'Arts & Culture',
-    'Academic': 'Learning',
-    'Workshop': 'Learning',
-    'Professional Development': 'Learning',
-    'Science': 'Learning',
-    'Library': 'Learning',
-    'Research': 'Learning',
-    'Study': 'Learning',
-    'Community Service': 'Community',
-    'Social': 'Community',
-    'Philanthropy': 'Community',
-    'Meeting': 'Community',
-    'Club': 'Community',
-    'Food': 'Food & Drink',
-    'Cooking': 'Food & Drink',
-    'Dining': 'Food & Drink',
-    'Technology': 'Tech',
-    'Programming': 'Tech',
-    'Software': 'Tech',
-    'Engineering': 'Tech',
-    'Coding': 'Tech',
-    'Outdoor': 'Outdoors',
-    'Recreation': 'Outdoors',
-    'Nature': 'Outdoors',
-    'Adventure': 'Outdoors',
-  };
-
-  for (const cat of categories) {
-    for (const [key, value] of Object.entries(catMap)) {
-      if (cat.toLowerCase().includes(key.toLowerCase())) {
-        return value;
-      }
-    }
-  }
-  return 'Community'; // default
-}
+const sourceEventSchema = z.object({
+  id: z.union([z.string().min(1), z.number()]).transform(String),
+  name: z.string().min(1), startsOn: z.string(), endsOn: z.string().optional().nullable(),
+  description: z.string().optional().nullable(), location: z.string().optional().nullable(),
+  categoryNames: z.array(z.string()).optional(), organizationName: z.string().optional().nullable(),
+});
 
 export async function POST(req: NextRequest) {
   try {
@@ -156,9 +106,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Admin only. A run fans out to up to 100 billed Google Geocoding calls,
-    // and accounts are free to create, so leaving this open to any signed-in
-    // user put an unmetered cost lever in anyone's hands.
+    // Imports use billed geocoding and are restricted to administrators.
     if (!isAdminUid(user.uid)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
@@ -184,6 +132,7 @@ export async function POST(req: NextRequest) {
 
     // Fetch from TerpLink API
     const response = await fetch(apiUrl, {
+      signal: AbortSignal.timeout(8000), redirect: 'error',
       headers: {
         'Accept': 'application/json',
         'User-Agent': 'Huddle/1.0',
@@ -209,111 +158,74 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Database unavailable' }, { status: 503 });
     }
 
-    // Check existing scraped events to avoid duplicates
-    const existingSnap = await adminDb
-      .collection('events')
-      .where('isScraped', '==', true)
-      .where('source', '==', 'terplink')
-      .get();
-
-    const existingSourceUrls = new Set(
-      existingSnap.docs.map(d => d.data().sourceUrl).filter(Boolean)
-    );
-
-    const batch = adminDb.batch();
-    let importCount = 0;
-
-    for (const te of terpEvents) {
-      const sourceUrl = `https://terplink.umd.edu/event/${te.id}`;
-
-      // Skip if already imported
-      if (existingSourceUrls.has(sourceUrl)) continue;
-
-      // Parse dates in UMD local timezone (America/New_York)
-      const eventTz = 'America/New_York';
-      let date = '';
-      let time = '12:00';
-      let endDate: string | undefined = undefined;
-      let endTime: string | undefined = undefined;
-
-      if (te.startsOn) {
-        const dt = new Date(te.startsOn);
-        if (!isNaN(dt.getTime())) {
-          const zonedStart = toZonedTime(dt, eventTz);
-          date = format(zonedStart, 'yyyy-MM-dd', { timeZone: eventTz });
-          time = format(zonedStart, 'HH:mm', { timeZone: eventTz });
-        }
-      }
-
-      if (te.endsOn) {
-        const dtEnd = new Date(te.endsOn);
-        if (!isNaN(dtEnd.getTime())) {
-          const zonedEnd = toZonedTime(dtEnd, eventTz);
-          const endCalDate = format(zonedEnd, 'yyyy-MM-dd', { timeZone: eventTz });
-          endTime = format(zonedEnd, 'HH:mm', { timeZone: eventTz });
-          if (endCalDate && endCalDate !== date) {
-            endDate = endCalDate;
+    // Source-specific lookups include claimed listings so imports never duplicate them.
+    const items = [...new Map(terpEvents.slice(0, 100).flatMap(item => {
+      const parsed = sourceEventSchema.safeParse(item);
+      return parsed.success && /^[a-zA-Z0-9_-]+$/.test(parsed.data.id) ? [[parsed.data.id, parsed.data] as const] : [];
+    })).values()];
+    const existing = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>();
+    for (let offset = 0; offset < items.length; offset += 30) {
+      const urls = items.slice(offset, offset + 30).map(item => 'https://terplink.umd.edu/event/' + item.id);
+      const snapshot = await adminDb.collection('events').where('sourceUrl', 'in', urls).get();
+      snapshot.docs.forEach(doc => existing.set(doc.data().sourceUrl, doc));
+    }
+    const geocodes = new Map<string, ReturnType<typeof geocodeLocation>>();
+    let geocodeRequests = 0, next = 0, imported = 0, refreshed = 0, skipped = 0;
+    const failures: string[] = [];
+    await Promise.all(Array.from({ length: 4 }, async () => {
+      while (next < items.length) {
+        const te = items[next++];
+        try {
+          const sourceUrl = 'https://terplink.umd.edu/event/' + te.id;
+          const previous = existing.get(sourceUrl);
+          const prior = previous?.data();
+          if (prior && (prior.source !== 'terplink' || prior.createdBy !== 'system')) { skipped++; continue; }
+          const start = getEventFieldsFromISO(te.startsOn);
+          const end = te.endsOn ? getEventFieldsFromISO(te.endsOn) : null;
+          if (!start) { skipped++; continue; }
+          const category = classifyTerpLinkEvent(te.categoryNames || [], te.name);
+          const location = te.location || 'University of Maryland';
+          const virtual = /\b(online|zoom|virtual|remote)\b/i.test(location);
+          let point = campusFallback();
+          if (prior?.location === location && prior.geopoint) {
+            point = { lat: prior.geopoint.latitude, lng: prior.geopoint.longitude, geocoded: true };
+          } else if (!virtual) {
+            const key = location.trim().toLowerCase();
+            if (!geocodes.has(key) && geocodeRequests < 20) {
+              geocodeRequests++; geocodes.set(key, geocodeLocation(location));
+            }
+            if (geocodes.has(key)) point = await geocodes.get(key)!;
           }
-        }
+          const sourceFields = {
+            name: te.name, title: te.name,
+            description: (te.description || '').replace(/<[^>]*>/g, '').slice(0, 500),
+            category, sport: category, eventType: virtual ? 'virtual' : 'in-person',
+            date: start.date, time: start.time, timezone: 'America/New_York',
+            endDate: end?.date || '', endTime: end?.time || '', location,
+            geopoint: new GeoPoint(point.lat, point.lng), geohash: geofire.geohashForLocation([point.lat, point.lng]),
+            organizerName: te.organizationName || 'TerpLink', sourceUrl,
+          };
+          const ref = previous?.ref || adminDb.collection('events').doc('terplink_' + te.id);
+          const result = await adminDb.runTransaction(async tx => {
+            const current = await tx.get(ref);
+            if (current.exists) {
+              const value = current.data();
+              if (value?.source !== 'terplink' || value?.createdBy !== 'system') return 'skipped';
+              // Keep ownership, RSVPs, privacy, moderation and counters untouched.
+              tx.update(ref, sourceFields);
+              return 'refreshed';
+            }
+            tx.create(ref, { ...sourceFields, maxPlayers: 50, currentPlayers: 0, players: [],
+              createdBy: 'system', createdAt: Timestamp.now(), checkInOpen: false,
+              isScraped: true, source: 'terplink', viewCount: 0 });
+            return 'imported';
+          });
+          if (result === 'imported') imported++; else if (result === 'refreshed') refreshed++; else skipped++;
+        } catch { failures.push(te.id); }
       }
-
-      if (!date) continue; // skip events without a valid date
-
-      const category = mapTerpLinkCategory(te.categoryNames || []);
-      const loc = te.location || 'University of Maryland';
-      const isOnline = loc.toLowerCase().includes('online') || 
-                       loc.toLowerCase().includes('zoom') || 
-                       loc.toLowerCase().includes('virtual') ||
-                       loc.toLowerCase().includes('remote');
-                       
-      // Virtual events have no physical address to resolve, so skip the billed
-      // Geocoding call entirely. They still need a coordinate because every
-      // event document carries a geohash for the radius query in
-      // getNearbyEvents(); campus centre is the same value geocoding would
-      // have fallen back to anyway.
-      const { lat, lng } = isOnline ? campusFallback() : await geocodeLocation(loc);
-      const geohash = geofire.geohashForLocation([lat, lng]);
-
-      const eventDoc: Record<string, any> = {
-        name: te.name || 'TerpLink Event',
-        title: te.name || 'TerpLink Event',
-        description: te.description ? te.description.replace(/<[^>]*>/g, '').slice(0, 500) : '',
-        category,
-        sport: category,
-        eventType: isOnline ? 'virtual' : 'physical',
-        date,
-        time,
-        timezone: eventTz,
-        ...(endTime ? { endTime } : {}),
-        ...(endDate ? { endDate } : {}),
-        location: loc,
-        maxPlayers: 50,
-        currentPlayers: 0,
-        players: [],
-        geopoint: new GeoPoint(lat, lng),
-        geohash,
-        createdBy: 'system',
-        organizerName: te.organizationName || 'TerpLink',
-        createdAt: Timestamp.now(),
-        checkInOpen: false,
-        isScraped: true,
-        source: 'terplink',
-        sourceUrl,
-        viewCount: 0,
-      };
-
-      const docRef = adminDb.collection('events').doc();
-      batch.set(docRef, eventDoc);
-      importCount++;
-    }
-
-    if (importCount > 0) {
-      await batch.commit();
-    }
-
-    return NextResponse.json({
-      imported: importCount,
-      message: `Imported ${importCount} events from TerpLink`,
+    }));
+    return NextResponse.json({ imported, refreshed, skipped, failed: failures.length, geocodeRequests,
+      message: 'Imported ' + imported + ', refreshed ' + refreshed + ' TerpLink events.',
     });
   } catch (error) {
     console.error('TerpLink scraper error:', error);

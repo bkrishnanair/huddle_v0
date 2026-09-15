@@ -36,13 +36,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     // Allowlist projection. The raw document carries attendee free text,
     // check-in records, waitlist order and unsent announcement drafts.
-    const point = rawEvent.geopoint as { latitude?: number; longitude?: number; _latitude?: number; _longitude?: number } | undefined
-    const latitude = point?.latitude ?? point?._latitude
-    const longitude = point?.longitude ?? point?._longitude
-    const geopoint = typeof latitude === "number" && Number.isFinite(latitude) && Math.abs(latitude) <= 90 &&
-      typeof longitude === "number" && Number.isFinite(longitude) && Math.abs(longitude) <= 180
-      ? { latitude, longitude } : null
-    const event = pickPublicFields({ ...rawEvent, id, geopoint })
+    const event = pickPublicFields({ ...rawEvent, id })
 
     // The roster is not part of the public shape of an event. Organisers,
     // event admins and confirmed attendees see who is coming; nobody else does.

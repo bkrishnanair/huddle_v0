@@ -1,6 +1,8 @@
 "use client"
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react"
+import { createPortal } from "react-dom"
+import { normalizeCoordinates } from "@/lib/coordinates"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Chip } from "@/components/ui/chip"
@@ -16,7 +18,7 @@ import LocationSearchInput from "./location-search"
 import { isToday, isWeekend, isBefore, addHours, isFuture, addDays, endOfWeek, startOfDay } from "date-fns"
 import { toast } from "sonner"
 import { formatTime, getCategoryColor, isEventLive } from "@/lib/utils"
-import { getEventStartUTC } from "@/lib/datetime"
+import { getEventStartUTC, matchesEventTimeFilter, EVENT_TIME_FILTERS } from "@/lib/datetime"
 import { reconcileEvents } from "@/lib/event-reconciliation"
 import { useMinuteTick } from "@/hooks/use-minute-tick"
 import { readBrowserStorage, writeBrowserStorage } from "@/lib/browser-storage"
@@ -55,7 +57,7 @@ const MapRenderer = ({ onMapLoad, children, isDarkMode }: { onMapLoad: (map: goo
 };
 
 const CATEGORIES = ['All', 'Joined', 'Recommended', '🖥️ Virtual', 'Sports', 'Music', 'Community', 'Learning', 'Food & Drink', 'Tech', 'Arts & Culture', 'Outdoors']
-const TIMES = ['All', 'Live', 'Today', 'This Week', 'This Weekend', 'This Month']
+const TIMES = EVENT_TIME_FILTERS
 
 
 const getCategoryIcon = (category: string): string => {
@@ -90,7 +92,9 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const [showListPanel, setShowListPanel] = useState(false);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [hasCenteredDefault, setHasCenteredDefault] = useState(!!initialCenter);
-  const { theme } = useTheme();
+  const { theme, setTheme } = useTheme();
+  const [toolbarHost, setToolbarHost] = useState<HTMLElement | null>(null);
+  useEffect(() => { setToolbarHost(document.getElementById("map-toolbar")); }, []);
   const isDarkMode = theme === 'dark' || theme === 'system';
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -137,14 +141,17 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
     const handleTextSearch = (e: any) => {
       setEventSearchQuery(e.detail.query);
     };
+    const handleClearSearch = () => { setEventSearchQuery(''); setAiKeywords([]); };
 
     window.addEventListener('huddle-map-search', handleHeaderSearch);
     window.addEventListener('huddle-map-ai-search', handleHeaderAiSearch);
     window.addEventListener('huddle-text-search', handleTextSearch);
+    window.addEventListener('huddle-search-clear', handleClearSearch);
     return () => {
       window.removeEventListener('huddle-map-search', handleHeaderSearch);
       window.removeEventListener('huddle-map-ai-search', handleHeaderAiSearch);
       window.removeEventListener('huddle-text-search', handleTextSearch);
+      window.removeEventListener('huddle-search-clear', handleClearSearch);
     };
   }, [map]);
 
@@ -191,22 +198,6 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
     setIsLoadingEvents(true);
     setEventsLoadFailed(false);
-
-    if (user?.uid && !profileFetchAttempted.current) {
-      profileFetchAttempted.current = true;
-      try {
-        const token = await user.getIdToken();
-        const res = await fetch(`/api/users/${user.uid}/profile`, {
-          headers: { "Authorization": `Bearer ${token}` }, signal: controller.signal
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.profile && !controller.signal.aborted) setUserProfile(data.profile);
-        }
-      } catch (err) {
-        console.error("Error fetching user profile for map", err);
-      }
-    }
 
     // Fallback radius if geometry library is not loaded yet
     let radius = 50000;
@@ -274,6 +265,23 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
       setHasCenteredDefault(true);
     }
   }, [map, hasCenteredDefault, userLocation, eventId]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setUserProfile(null);
+    if (user?.uid) void user.getIdToken().then((token: string) => fetch('/api/users/' + user.uid + '/profile?summary=true', {
+      headers: { Authorization: 'Bearer ' + token }, signal: controller.signal,
+    })).then((res: Response) => res.ok ? res.json() : null).then((data: any) => {
+      if (!controller.signal.aborted && data?.profile) setUserProfile(data.profile);
+    }).catch(() => {});
+    return () => controller.abort();
+  }, [user?.uid]);
+
+  const resetFilters = () => {
+    setActiveCategory('All'); setActiveTime('This Week'); setFilterStartDate(''); setFilterEndDate('');
+    setEventSearchQuery(''); setAiKeywords([]);
+    window.dispatchEvent(new Event('huddle-search-clear'));
+  };
 
   // Deep Link handler: Pans map and opens drawer when eventId is supplied via URL
   useEffect(() => {
@@ -536,7 +544,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
       const topJoined = (userProfile?.topCategories || []).map((c: any) => typeof c === 'string' ? c : c.category);
       const combined = [...new Set([...interests, ...topJoined])];
       if (combined.length === 0) {
-        toast.error("Add interests to your profile to see recommended events!");
+        // No preferences: leave public discovery available.
         // We will default to showing all if they have no interests, but ping the warning.
       } else {
         result = result.filter(event => combined.includes(event.category));
@@ -554,70 +562,24 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
       });
     }
 
-    const now = new Date();
-
-    // Time filter logic
-    if (activeTime !== 'All') {
-      result = result.filter(event => {
-        if (!event.date || event.date.includes('/')) return true;
-        try {
-          const eventDateTime = getEventStartUTC(event);
-          if (isNaN(eventDateTime.getTime())) return true;
-
-          if (activeTime === 'Live') {
-            // Use the canonical isEventLive to match Home's happeningNow count,
-            // plus include events starting within the next hour.
-            const isStartingSoon = isBefore(eventDateTime, addHours(now, 1)) && isFuture(eventDateTime);
-            return isEventLive(event) || isStartingSoon;
-          }
-          if (activeTime === 'Today') return isToday(eventDateTime);
-          if (activeTime === 'This Week') {
-            return eventDateTime >= startOfDay(now) && isBefore(eventDateTime, addDays(startOfDay(now), 8));
-          }
-          if (activeTime === 'This Weekend') return isWeekend(eventDateTime) && eventDateTime >= startOfDay(now) && isBefore(eventDateTime, addDays(startOfDay(now), 7));
-          if (activeTime === 'This Month') return eventDateTime >= startOfDay(now) && isBefore(eventDateTime, addDays(startOfDay(now), 31));
-        } catch (e) { }
-        return true;
-      });
-    } else {
-      // Limit "All" on Map to 30 days
-      result = result.filter(event => {
-        if (!event.date || event.date.includes('/')) return true;
-        try {
-          const eventDateTime = getEventStartUTC(event);
-          if (isNaN(eventDateTime.getTime())) return true;
-          return isBefore(eventDateTime, addDays(now, 30));
-        } catch (e) { }
-        return true;
-      });
-    }
-
-    const sorted = result.filter(event => {
-      if (event.status === 'past') return false;
-      if (!event.date || event.date.includes('/')) return true;
-      try {
-        const startDateTime = getEventStartUTC(event);
-        if (!isNaN(startDateTime.getTime())) {
-          let endDateTime;
-          if (event.endTime) {
-            endDateTime = new Date(`${event.date}T${event.endTime}`);
-          } else {
-            endDateTime = new Date(startDateTime.getTime() + 3 * 60 * 60 * 1000);
-          }
-          return new Date() <= endDateTime;
-        }
-      } catch (e) { }
-      return true;
-    });
-
-    return sorted.sort((a, b) => {
-      const dateA = new Date(`${a.date}T${a.time || '00:00'}`).getTime();
-      const dateB = new Date(`${b.date}T${b.time || '00:00'}`).getTime();
-      return dateA - dateB;
-    });
-  }, [events, activeCategory, activeTime, eventSearchQuery, aiKeywords]);
+    return result.filter(event => matchesEventTimeFilter(event, activeTime, new Date(), {
+      startDate: filterStartDate, endDate: filterEndDate,
+    })).sort((a, b) => getEventStartUTC(a).getTime() - getEventStartUTC(b).getTime());
+  }, [events, activeCategory, activeTime, eventSearchQuery, aiKeywords, filterStartDate, filterEndDate, minuteTick]);
 
 
+
+  const mapToolbar = <div className="flex items-center md:flex-col gap-0.5" role="group" aria-label="Map views">
+    <Button size="icon" variant="ghost" aria-label="Show map" aria-pressed={!showListPanel} onClick={() => setShowListPanel(false)} className={!showListPanel ? 'bg-orange-400/15 text-orange-300' : 'text-slate-300'}><MapIcon className="h-4 w-4" /></Button>
+    <Button size="icon" variant="ghost" aria-label="Show next up" aria-pressed={showListPanel} onClick={() => setShowListPanel(true)} className={showListPanel ? 'bg-orange-400/15 text-orange-300' : 'text-slate-300'}><List className="h-4 w-4" /></Button>
+    <Popover><PopoverTrigger asChild><Button size="icon" variant="ghost" aria-label="Map help and settings"><CircleHelp className="h-4 w-4" /></Button></PopoverTrigger>
+      <PopoverContent align="end" className="w-56 border-white/10 bg-panel text-white p-2">
+        <Button variant="ghost" className="w-full justify-start" onClick={() => setShowOnboarding(true)}>How to use the map</Button>
+        <Button variant="ghost" className="w-full justify-start" onClick={() => setTheme(isDarkMode ? 'light' : 'dark')}>{isDarkMode ? 'Use a light map' : 'Use a dark map'}</Button>
+        <Button variant="ghost" className="w-full justify-start" onClick={() => router.push('/feedback')}>Send feedback</Button>
+      </PopoverContent>
+    </Popover>
+  </div>;
 
   const getDisplayDate = (dateStr: string) => {
     if (!dateStr || dateStr.includes('/')) return dateStr;
@@ -635,7 +597,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
     // --- Task 5: Venue-based clustering ---
     // Group nearby events (within ~50m) into clusters
     const mappableEvents = filteredEvents
-      .filter((event: GameEvent) => event.eventType !== 'virtual' && event.geopoint);
+      .filter((event: GameEvent) => event.eventType !== 'virtual' && normalizeCoordinates(event.geopoint));
 
     // At zoom >= 16, show pins unclustered EXCEPT for exact overlapping duplicates. Below that, cluster normally.
     const CLUSTER_RADIUS = currentZoom >= 16 ? 0.0000001 : 0.0005; // ~50m for normal, identical for high zoom
@@ -808,7 +770,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                           } else {
                             // Check global rank for "Anytime / All" default view
                             const globalIndex = filteredEvents.findIndex(e => e.id === event.id);
-                            const hasActiveFilters = activeCategory !== 'All' || activeTime !== 'Any time' || eventSearchQuery.trim() !== '';
+                            const hasActiveFilters = activeCategory !== 'All' || activeTime !== 'This Week' || eventSearchQuery.trim() !== '';
                             
                             // If filtered OR in top 5 of default view -> show as full pin (imminent)
                             if (hasActiveFilters || globalIndex < 5) {
@@ -988,12 +950,13 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
         </div >
 
         <div className="absolute top-[calc(max(0.75rem,env(safe-area-inset-top))+4.75rem)] inset-x-3 sm:inset-x-4 max-w-[1800px] mx-auto z-20 flex flex-col gap-2 pointer-events-none">
+          {toolbarHost && createPortal(mapToolbar, toolbarHost)}
           {/* Filter Chips & View Toggle Container */}
           <div className="pointer-events-auto flex justify-between gap-2 h-auto w-full">
             {/* Filters Pill */}
             <div className="min-w-0 flex-1 max-w-full bg-canvas/85 rounded-3xl p-2 flex flex-col gap-1.5 shadow-2xl border border-white/10 overflow-hidden backdrop-blur-xl">
               {/* Category Row */}
-              <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar w-full pb-0.5">
+              <div className="flex items-center space-x-2 overflow-x-auto overscroll-x-contain w-full pb-0.5">
                 <span className="hidden sm:block shrink-0 text-[10px] font-medium text-slate-400 uppercase tracking-widest mr-1 pl-2">What</span>
                 {CATEGORIES.map(category => (
                   <Chip
@@ -1012,7 +975,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
               <div className="h-px bg-white/5 mx-1" />
 
               {/* Time Row */}
-              <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar w-full pt-0.5">
+              <div className="flex items-center space-x-2 overflow-x-auto overscroll-x-contain w-full pt-0.5">
                 <span className="hidden sm:block shrink-0 text-[10px] font-medium text-slate-400 uppercase tracking-widest mr-1 pl-2">When</span>
                 {TIMES.map(time => (
                   <Chip
@@ -1065,9 +1028,9 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                   </PopoverContent>
                 </Popover>
                 {/* Active filter indicator */}
-                {(activeCategory !== 'All' || activeTime !== 'All' || eventSearchQuery) && (
+                {(activeCategory !== 'All' || activeTime !== 'This Week' || eventSearchQuery || aiKeywords.length > 0) && (
                   <button
-                    onClick={() => { setActiveCategory('All'); setActiveTime('All'); setFilterStartDate(''); setFilterEndDate(''); setEventSearchQuery(''); setAiKeywords([]); }}
+                    onClick={resetFilters}
                     className="shrink-0 text-[9px] text-rose-400 font-black px-2 py-1 bg-rose-400/10 rounded-full border border-rose-400/20 hover:bg-rose-400/20 transition-colors uppercase tracking-tight ml-auto"
                   >
                     Clear
@@ -1076,31 +1039,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
               </div>
             </div>
 
-            {/* View Toggle Pill */}
-            <div className="bg-canvas/85 rounded-3xl p-1 flex flex-col gap-1 items-center justify-center shadow-2xl border border-white/15 shrink-0 w-14 h-auto backdrop-blur-xl">
-              <button
-                className={`rounded-2xl h-11 w-11 flex items-center justify-center transition-all duration-300 ${!showListPanel ? 'bg-orange-500/15 text-orange-300' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-                onClick={() => setShowListPanel(false)}
-                aria-label="Show map" aria-pressed={!showListPanel} title="Map view"
-              >
-                <MapIcon className="w-4 h-4" />
-              </button>
-              <button
-                className={`rounded-2xl h-11 w-11 flex items-center justify-center transition-all duration-300 ${showListPanel ? 'bg-orange-500/15 text-orange-300' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-                onClick={() => setShowListPanel(true)}
-                aria-label="Show event list" aria-pressed={showListPanel} title="List view"
-              >
-                <List className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                aria-label="How to use the map"
-                onClick={() => setShowOnboarding(true)}
-                className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-300 hover:bg-white/10 hover:text-white"
-              >
-                <CircleHelp className="h-4 w-4" />
-              </button>
-            </div>
+            <div className="hidden md:flex">{mapToolbar}</div>
           </div>
 
           {/* AI Searching indicator */}
@@ -1132,14 +1071,14 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                 <div className="w-10 h-10 rounded-full bg-teal-500/15 text-teal-400 mx-auto flex items-center justify-center mb-2">
                   <MapIcon className="w-5 h-5" />
                 </div>
-                <h4 className="text-white font-bold text-sm">No events in this area</h4>
+                <h4 className="text-white font-bold text-sm">No events match these filters</h4>
                 <p className="text-slate-400 text-xs mt-1 leading-relaxed">
-                  Try a wider area or clear your filters. You can also create an event.
+                  Try another date or reset filters. Move the map to explore another area.
                 </p>
                 <div className="flex items-center justify-center gap-2.5 mt-3.5">
-                  {(activeCategory !== 'All' || activeTime !== 'All' || eventSearchQuery) && (
+                  {(activeCategory !== 'All' || activeTime !== 'This Week' || eventSearchQuery || aiKeywords.length > 0) && (
                     <button
-                      onClick={() => { setActiveCategory('All'); setActiveTime('All'); setFilterStartDate(''); setFilterEndDate(''); setEventSearchQuery(''); setAiKeywords([]); }}
+                      onClick={resetFilters}
                       className="px-3 py-1.5 bg-white/10 hover:bg-white/15 text-slate-200 text-xs font-bold rounded-xl transition-colors"
                     >
                       Reset filters

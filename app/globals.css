@@ -328,3 +328,15 @@
     opacity: 0.5;
   }
 }
+/* VisualViewport, not layout vh, defines the space above mobile keyboards. */
+@media (max-width: 639px) {
+  .mobile-overlay-viewport {
+    bottom: var(--overlay-bottom, 0px) !important;
+    max-height: min(92dvh, var(--overlay-height, 92dvh)) !important;
+    margin-top: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .mobile-overlay-viewport input,
+  .mobile-overlay-viewport textarea,
+  .mobile-overlay-viewport select { font-size: 16px; }
+}

@@ -5,9 +5,8 @@ import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Send, MessageCircle } from "lucide-react"
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore"
+import { collection, onSnapshot, query, orderBy, limitToLast } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/lib/firebase-context"
 import { toast } from "sonner"
@@ -52,7 +51,8 @@ export default function EventChat({ eventId, organizerId, pinnedMessage }: Event
   const [scheduleIsAnnouncement, setScheduleIsAnnouncement] = useState(false)
 
   const scrollAreaRef = useRef<HTMLDivElement>(null)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const followLatest = useRef(true)
+  const [chatError, setChatError] = useState(false)
 
   const isOrganizer = user?.uid === organizerId;
 
@@ -61,7 +61,10 @@ export default function EventChat({ eventId, organizerId, pinnedMessage }: Event
     if (!db) return
 
     const chatRef = collection(db, "events", eventId, "chat")
-    const q = query(chatRef, orderBy("timestamp", "asc"))
+    setMessages([])
+    setChatError(false)
+    followLatest.current = true
+    const q = query(chatRef, orderBy("timestamp", "asc"), limitToLast(200))
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const newMessages = snapshot.docs.map((doc) => ({
@@ -70,14 +73,16 @@ export default function EventChat({ eventId, organizerId, pinnedMessage }: Event
       })) as ChatMessage[]
 
       setMessages(newMessages)
-    })
+      setChatError(false)
+    }, () => setChatError(true))
 
     return () => unsubscribe()
   }, [eventId])
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    const viewport = scrollAreaRef.current
+    if (viewport && followLatest.current) viewport.scrollTop = viewport.scrollHeight
   }, [messages])
 
   const handlePinMessage = async (messageText: string) => {
@@ -110,6 +115,7 @@ export default function EventChat({ eventId, organizerId, pinnedMessage }: Event
 
     if (!newMessage.trim() || sending || !user) return
 
+    const submittedMessage = newMessage
     setSending(true)
     try {
       const idToken = await user.getIdToken()
@@ -119,12 +125,15 @@ export default function EventChat({ eventId, organizerId, pinnedMessage }: Event
           "Content-Type": "application/json",
           "Authorization": `Bearer ${idToken}`
         },
-        body: JSON.stringify({ message: newMessage, userId: user.uid, userName: user.displayName }),
+        body: JSON.stringify({ message: submittedMessage, userId: user.uid, userName: user.displayName }),
         credentials: 'include' // <-- Ensures session cookies are sent for authentication
       })
 
       if (response.ok) {
-        setNewMessage("")
+        setNewMessage(current => current === submittedMessage ? "" : current)
+        followLatest.current = true
+        const viewport = scrollAreaRef.current
+        if (viewport) viewport.scrollTop = viewport.scrollHeight
         // Do not show a toast for every message to avoid being noisy.
         // The message appearing in the chat is sufficient feedback.
       } else {
@@ -198,7 +207,7 @@ export default function EventChat({ eventId, organizerId, pinnedMessage }: Event
   }
 
   return (
-    <div className="flex flex-col h-full bg-slate-950/20">
+    <div className="flex min-h-0 flex-col h-full bg-slate-950/20">
       {/* Chat Header */}
       <div className="flex items-center space-x-2 p-3 border-b border-white/10 bg-white/5">
         <MessageCircle className="w-5 h-5 text-primary" />
@@ -217,7 +226,9 @@ export default function EventChat({ eventId, organizerId, pinnedMessage }: Event
       )}
 
       {/* Messages Area */}
-      <ScrollArea className="flex-1 p-3" ref={scrollAreaRef}>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3" ref={scrollAreaRef}
+        onScroll={(e) => { const el = e.currentTarget; followLatest.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80 }}>
+        {chatError && <p role="alert" className="mb-3 text-sm text-amber-300">Chat could not refresh. Check your connection and reopen this event.</p>}
         {messages.length === 0 ? (
           <div className="text-center text-slate-500 py-8">
             <MessageCircle className="w-8 h-8 mx-auto mb-2 text-slate-700" />
@@ -281,13 +292,12 @@ export default function EventChat({ eventId, organizerId, pinnedMessage }: Event
                 </div>
               );
             })}
-            <div ref={messagesEndRef} />
           </div>
         )}
-      </ScrollArea>
+      </div>
 
       {/* Message Input */}
-      <form onSubmit={handleSendMessage} className="p-3 border-t border-white/10 bg-white/5">
+      <form onSubmit={(e) => { followLatest.current = true; void handleSendMessage(e) }} className="shrink-0 p-3 border-t border-white/10 bg-white/5">
         <div className="flex space-x-2">
           <Input
             value={newMessage}
@@ -295,7 +305,8 @@ export default function EventChat({ eventId, organizerId, pinnedMessage }: Event
             placeholder="Type a message..."
             maxLength={500}
             disabled={sending}
-            className="flex-1 glass border-white/20 text-white placeholder:text-white/40 h-10"
+            aria-label="Message to event chat"
+            className="min-w-0 flex-1 glass border-white/20 text-white placeholder:text-white/40 h-11 text-base"
           />
           {isOrganizer && (
             <Button
@@ -304,13 +315,13 @@ export default function EventChat({ eventId, organizerId, pinnedMessage }: Event
               disabled={!newMessage.trim() || sending}
               size="icon"
               variant="outline"
-              className="px-0 w-10 h-10 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20 hover:text-indigo-300"
+              className="shrink-0 px-0 w-11 h-11 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20 hover:text-indigo-300"
               title="Schedule Message"
             >
               <Clock className="w-4 h-4" />
             </Button>
           )}
-          <Button type="submit" disabled={!newMessage.trim() || sending} size="sm" className="px-4 h-10 bg-primary hover:bg-primary/90 text-primary-foreground">
+          <Button type="submit" aria-label="Send message" disabled={!newMessage.trim() || sending} size="sm" className="shrink-0 px-4 h-11 bg-primary hover:bg-primary/90 text-primary-foreground">
             <Send className="w-4 h-4" />
           </Button>
         </div>

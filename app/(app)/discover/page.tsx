@@ -6,8 +6,11 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { EventCard, EventCardSkeleton } from "@/components/events/event-card"
 
-import EventDetailsDrawer from "@/components/event-details-drawer"
-import CreateEventModal from "@/components/create-event-modal"
+import dynamic from 'next/dynamic'
+import { getEventStartUTC, matchesEventTimeFilter, EVENT_TIME_FILTERS } from '@/lib/datetime'
+import { useMinuteTick } from '@/hooks/use-minute-tick'
+const EventDetailsDrawer = dynamic(() => import('@/components/event-details-drawer'))
+const CreateEventModal = dynamic(() => import('@/components/create-event-modal'))
 import { Chip } from "@/components/ui/chip"
 import { Search, SlidersHorizontal, PlusCircle, Star, LogOut, Calendar, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -20,7 +23,7 @@ import { isToday, isWeekend, isBefore, addHours, isFuture, addDays, endOfWeek, s
 import { getCategoryColor, isEventLive } from "@/lib/utils"
 
 const CATEGORY_FILTERS = ["All", "Recommended", "🖥️ Virtual", "Sports", "Music", "Community", "Learning", "Food & Drink", "Tech", "Arts & Culture", "Outdoors"];
-const TIME_FILTERS = ["All", "Live", "Today", "This Week", "This Weekend"];
+const TIME_FILTERS = EVENT_TIME_FILTERS;
 
 const ActionableEmptyState = ({ onOpenCreateModal }: { onOpenCreateModal: () => void }) => (
     <div className="text-center glass-surface border-white/15 rounded-2xl p-8 mt-8">
@@ -35,6 +38,7 @@ const ActionableEmptyState = ({ onOpenCreateModal }: { onOpenCreateModal: () => 
 
 export default function DiscoverPage() {
     const { user } = useAuth();
+    const minuteTick = useMinuteTick();
     const router = useRouter();
     const [allNearbyEvents, setAllNearbyEvents] = useState<GameEvent[]>([]);
     const [userProfile, setUserProfile] = useState<any>(null);
@@ -45,11 +49,11 @@ export default function DiscoverPage() {
     const [usingDefaultLocation, setUsingDefaultLocation] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+    const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>({ lat: 38.9897, lng: -76.9378 });
 
     const [searchQuery, setSearchQuery] = useState("");
     const [activeCategory, setActiveCategory] = useState("All");
-    const [activeTime, setActiveTime] = useState("All");
+    const [activeTime, setActiveTime] = useState("This Week");
     const [activeRange, setActiveRange] = useState("All");
     const [sourceFilter, setSourceFilter] = useState("All");
     const [sortBy, setSortBy] = useState("soonest");
@@ -92,55 +96,25 @@ export default function DiscoverPage() {
 
     useEffect(() => {
         const controller = new AbortController();
-        const fetchInitialData = async () => {
-            if (!userLocation) return;
-            setLoading(true);
-            setLoadError(false);
-            setUserProfile(null);
-            try {
-                // Fetch events globally if 'All' is possible (huge radius)
-                const radius = 5000000;
-
-                const fetchPromises: Promise<Response>[] = [
-                    fetch(`/api/events?lat=${userLocation.lat}&lon=${userLocation.lng}&radius=${radius}&groupRecurring=true`, { signal: controller.signal })
-                ];
-
-                if (user?.uid) {
-                    const token = await user.getIdToken();
-                    fetchPromises.push(
-                        fetch(`/api/users/${user.uid}/profile`, {
-                            signal: controller.signal,
-                            headers: { "Authorization": `Bearer ${token}` }
-                        })
-                    );
-                }
-
-                const responses = await Promise.all(fetchPromises);
-                const eventsRes = responses[0];
-                if (!eventsRes.ok) throw new Error("Event request failed");
-                const eventsData = await eventsRes.json();
-                if (controller.signal.aborted) return;
-                setAllNearbyEvents(eventsData.events || []);
-
-                if (responses.length > 1 && responses[1].ok) {
-                    const profileData = await responses[1].json();
-                    if (!controller.signal.aborted) setUserProfile(profileData.profile);
-                }
-            } catch (error) {
-                if (controller.signal.aborted) return;
-                setLoadError(true);
-                console.error("Failed to fetch initial data:", error);
-            } finally {
-                if (!controller.signal.aborted) {
-                    setLoading(false);
-                    setInitialLoadComplete(true);
-                }
-            }
-        };
-
-        fetchInitialData();
+        setLoading(true); setLoadError(false);
+        fetch('/api/events?groupRecurring=true', { signal: controller.signal })
+          .then(res => { if (!res.ok) throw new Error('Events unavailable'); return res.json(); })
+          .then(data => { if (!controller.signal.aborted) setAllNearbyEvents(data.events || []); })
+          .catch(() => { if (!controller.signal.aborted) setLoadError(true); })
+          .finally(() => { if (!controller.signal.aborted) { setLoading(false); setInitialLoadComplete(true); } });
         return () => controller.abort();
-    }, [user?.uid, userLocation, retryCount]);
+    }, [retryCount, user?.uid]);
+
+    useEffect(() => {
+        const controller = new AbortController();
+        setUserProfile(null);
+        if (user) void user.getIdToken().then(token => fetch('/api/users/' + user.uid + '/profile?summary=true', {
+          signal: controller.signal, headers: { Authorization: 'Bearer ' + token },
+        })).then(res => res.ok ? res.json() : null).then(data => {
+          if (!controller.signal.aborted && data?.profile) setUserProfile(data.profile);
+        }).catch(() => {});
+        return () => controller.abort();
+    }, [user?.uid]);
 
     const handleAiSearch = async (query: string) => {
       setIsAiSearching(true);
@@ -184,22 +158,26 @@ export default function DiscoverPage() {
 
     // Debounced organizer search
     useEffect(() => {
-        if (searchQuery.trim().length < 2) { setOrgResults([]); return; }
+        const controller = new AbortController();
+        setOrgResults([]);
+        if (searchQuery.trim().length < 2 || !user) { setIsOrgSearching(false); return; }
         const timer = setTimeout(async () => {
             setIsOrgSearching(true);
             try {
-                const res = await fetch(`/api/users/search?q=${encodeURIComponent(searchQuery.trim())}`);
+                const token = await user.getIdToken();
+                const res = await fetch(`/api/users/search?q=${encodeURIComponent(searchQuery.trim())}`, { signal: controller.signal, headers: { Authorization: `Bearer ${token}` } });
+                if (controller.signal.aborted) return;
                 if (res.ok) {
                     const data = await res.json();
                     setOrgResults(data.users || []);
                 } else {
                     setOrgResults([]);
                 }
-            } catch { setOrgResults([]); }
-            finally { setIsOrgSearching(false); }
+            } catch { if (!controller.signal.aborted) setOrgResults([]); }
+            finally { if (!controller.signal.aborted) setIsOrgSearching(false); }
         }, 400);
-        return () => clearTimeout(timer);
-    }, [searchQuery]);
+        return () => { clearTimeout(timer); controller.abort(); };
+    }, [searchQuery, user?.uid]);
 
     const handleLogout = async () => {
         try {
@@ -212,7 +190,7 @@ export default function DiscoverPage() {
     }
 
     const { recommendedEvents, otherEvents } = useMemo(() => {
-        const filtered = allNearbyEvents.filter(event => {
+        const filtered = allNearbyEvents.map(event => ({ ...event })).filter(event => {
             const searchLower = searchQuery.toLowerCase();
             const matchesSearch =
                 event.name.toLowerCase().includes(searchLower) ||
@@ -285,53 +263,9 @@ export default function DiscoverPage() {
                 matchesRange = true;
             }
 
-            let isNotPast = true;
-            if (!event.date || event.date.includes('/')) {
-                isNotPast = true; // Legacy events
-            } else {
-                try {
-                    const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
-                    if (!isNaN(eventDateTime.getTime())) {
-                        isNotPast = isFuture(addHours(eventDateTime, 1));
-                    }
-                } catch (e) { }
-            }
-
-            let matchesTime = true;
-            if (activeTime !== 'All') {
-                const now = new Date();
-                if (!event.date || event.date.includes('/')) matchesTime = true; // Skip bad legacy data
-                else {
-                    try {
-                        const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
-                        if (!isNaN(eventDateTime.getTime())) {
-                            if (activeTime === 'Live') {
-                                // Use canonical isEventLive for cross-page consistency
-                                const isStartingSoon = isBefore(eventDateTime, addHours(now, 1)) && isFuture(eventDateTime);
-                                matchesTime = isEventLive(event) || isStartingSoon;
-                            } else if (activeTime === 'Today') {
-                                matchesTime = isToday(eventDateTime);
-                            } else if (activeTime === 'This Week') {
-                                matchesTime = eventDateTime >= startOfDay(now) && isBefore(eventDateTime, addDays(startOfDay(now), 8));
-                            } else if (activeTime === 'This Month') { matchesTime = eventDateTime >= startOfDay(now) && isBefore(eventDateTime, addDays(startOfDay(now), 31)); } else if (activeTime === 'This Weekend') {
-                                matchesTime = isWeekend(eventDateTime) && eventDateTime >= startOfDay(now) && isBefore(eventDateTime, addDays(startOfDay(now), 7));
-                            }
-                        }
-                    } catch (e) {
-                        matchesTime = true;
-                    }
-                }
-            }
-
-            // Date range filter
-            let matchesDateRange = true;
-            if (filterStartDate) {
-                if (filterEndDate) {
-                    matchesDateRange = !!event.date && event.date >= filterStartDate && event.date <= filterEndDate;
-                } else {
-                    matchesDateRange = event.date === filterStartDate;
-                }
-            }
+            const matchesTime = matchesEventTimeFilter(event, filterStartDate ? 'Custom' : activeTime, new Date(), {
+              startDate: filterStartDate, endDate: filterEndDate || filterStartDate,
+            });
 
             // Source filter
             let matchesSource = true;
@@ -341,10 +275,10 @@ export default function DiscoverPage() {
                 matchesSource = !!event.isScraped;
             }
 
-            return matchesSearch && matchesAi && matchesRange && matchesTime && isNotPast && matchesDateRange && matchesSource;
+            return matchesSearch && matchesAi && matchesRange && matchesTime && matchesSource;
         });
 
-        const favoriteCategories = userProfile?.favoriteCategories || [];
+        const favoriteCategories = userProfile?.favoriteSports || [];
         const recommended: GameEvent[] = [];
         const others: GameEvent[] = [];
 
@@ -358,8 +292,8 @@ export default function DiscoverPage() {
         }
 
         others.sort((a, b) => {
-            if (activeTime === 'Starts Soon') return new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime();
-            if (sortBy === 'soonest') return new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime();
+            if (activeTime === 'Starts Soon') return getEventStartUTC(a).getTime() - getEventStartUTC(b).getTime();
+            if (sortBy === 'soonest') return getEventStartUTC(a).getTime() - getEventStartUTC(b).getTime();
             if (sortBy === 'closest') return (a.distance || 999) - (b.distance || 999);
             if (sortBy === 'most_attendees') return (b.currentPlayers || 0) - (a.currentPlayers || 0);
             if (sortBy === 'newest') {
@@ -371,7 +305,7 @@ export default function DiscoverPage() {
         });
 
         return { recommendedEvents: recommended, otherEvents: others };
-    }, [allNearbyEvents, searchQuery, aiKeywords, activeCategory, activeTime, activeRange, sourceFilter, userLocation, userProfile, sortBy, filterStartDate, filterEndDate]);
+    }, [allNearbyEvents, searchQuery, aiKeywords, activeCategory, activeTime, activeRange, sourceFilter, userLocation, userProfile, sortBy, filterStartDate, filterEndDate, minuteTick]);
 
     const renderContent = () => {
         if (loadError) {
@@ -394,7 +328,7 @@ export default function DiscoverPage() {
         const hasRecommended = recommendedEvents.length > 0;
         const hasOther = otherEvents.length > 0;
 
-        if (!hasRecommended && !hasOther) {
+        if (!hasRecommended && !hasOther && orgResults.length === 0) {
             return <ActionableEmptyState onOpenCreateModal={() => setShowCreateModal(true)} />
         }
 
@@ -406,7 +340,7 @@ export default function DiscoverPage() {
                 {/* Organizer search results */}
                 {orgResults.length > 0 && searchQuery.trim().length >= 2 && (
                     <section className="mb-8">
-                        <h2 className="text-lg font-black text-slate-50 mb-3 uppercase tracking-wider">Organizers</h2>
+                        <h2 className="text-lg font-black text-slate-50 mb-3 uppercase tracking-wider">People and organizers</h2>
                         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-1 px-1">
                             {orgResults.map((org) => (
                                 <Link
@@ -423,7 +357,7 @@ export default function DiscoverPage() {
                                     )}
                                     <div className="min-w-0 flex-1">
                                         <p className="text-sm font-bold text-white truncate">{org.displayName}</p>
-                                        <p className="text-[10px] text-slate-400 truncate">{org.bio || 'Organizer'}</p>
+                                        <p className="text-[10px] text-slate-400 truncate">{org.bio || 'View profile'}</p>
                                     </div>
                                 </Link>
                             ))}
@@ -467,10 +401,10 @@ export default function DiscoverPage() {
 
     return (
         <div className="min-h-screen w-full bg-canvas p-5 pb-[calc(var(--safe-bottom)+2rem)] sm:p-8 sm:pb-[calc(var(--safe-bottom)+2rem)] overflow-x-hidden [&>header]:max-w-7xl [&>header]:mx-auto [&>div]:max-w-7xl [&>div]:mx-auto">
-            <header className="flex justify-between items-start mb-10">
+            <header className="flex justify-between items-start mb-4 sm:mb-8">
                 <div className="space-y-1">
-                    <h1 className="font-display text-4xl sm:text-5xl font-bold text-white tracking-tight">Discover</h1>
-                    <p className="text-slate-400 text-base">{usingDefaultLocation ? 'Browsing from College Park. Location is unavailable.' : 'Find your next campus plan.'}</p>
+                    <h1 className="font-display text-3xl sm:text-5xl font-bold text-white tracking-tight">Discover</h1>
+                    <p className="text-slate-400 text-sm sm:text-base">{usingDefaultLocation ? 'Browsing College Park · Location unavailable' : 'Find your next campus plan.'}</p>
                 </div>
                 <div className="flex items-center gap-3">
                     {user && <Button variant="ghost" size="icon" aria-label="Sign out" className="h-11 w-11 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 text-slate-400" onClick={handleLogout}>
@@ -479,14 +413,14 @@ export default function DiscoverPage() {
                 </div>
             </header>
 
-            <div className="flex flex-col gap-6 mb-12">
+            <div className="flex flex-col gap-3 mb-5 sm:gap-6 sm:mb-10">
                 {/* Search & Sort Group */}
-                <div className="flex flex-col md:flex-row items-center gap-4 w-full">
+                <div className="flex items-center gap-2 sm:gap-4 w-full">
                     <div className="relative flex-1 w-full group">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors z-10" />
                         <Input
-                            aria-label="Search campus events"
-                            placeholder="What are you in the mood for?"
+                            aria-label="Search events and people"
+                            placeholder="Search events and people"
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                             onKeyDown={e => {
@@ -494,15 +428,15 @@ export default function DiscoverPage() {
                                     handleAiSearch(searchQuery);
                                 }
                             }}
-                            className="pl-12 pr-12 bg-white/5 border-white/10 h-14 rounded-2xl text-base focus:ring-primary/20"
+                            className="pl-12 pr-8 bg-white/5 border-white/10 h-12 sm:h-14 rounded-2xl text-base focus:ring-primary/20"
                         />
                         {isAiSearching && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-teal-400 animate-spin" />}
                     </div>
-                    <div className="w-full md:w-auto shrink-0">
+                    <div className="w-12 sm:w-48 shrink-0">
                         <Select value={sortBy} onValueChange={setSortBy}>
-                            <SelectTrigger className="w-full md:w-[200px] glass-surface border-white/10 h-14 rounded-2xl shadow-2xl font-bold text-slate-300">
-                                <SlidersHorizontal className="w-4 h-4 mr-3 text-primary" />
-                                <SelectValue />
+                            <SelectTrigger aria-label="Sort events" className="w-full glass-surface border-white/10 h-12 sm:h-14 rounded-2xl font-bold text-slate-300 [&>svg:last-child]:hidden sm:[&>svg:last-child]:block">
+                                <SlidersHorizontal className="w-4 h-4 shrink-0 sm:mr-3 text-primary" />
+                                <span className="hidden sm:inline"><SelectValue /></span>
                             </SelectTrigger>
                             <SelectContent className="glass-surface border-white/10">
                                 <SelectItem value="soonest">Sort: Soonest</SelectItem>
@@ -532,8 +466,8 @@ export default function DiscoverPage() {
                     </div>
 
                     {/* Compact filter row: Time chips + More Filters toggle */}
-                    <div className="flex items-center gap-3 flex-wrap">
-                        <div className="flex items-center gap-1.5 p-1 bg-white/[0.025] border border-white/10 rounded-3xl max-w-full overflow-x-auto no-scrollbar">
+                    <div className="flex items-center gap-2">
+                        <div className="flex min-w-0 flex-1 items-center gap-1.5 p-1 bg-white/[0.025] border border-white/10 rounded-3xl overflow-x-auto no-scrollbar">
                             {TIME_FILTERS.map(time => (
                                 <div key={time} className="shrink-0">
                                     <Chip
@@ -547,7 +481,9 @@ export default function DiscoverPage() {
                         </div>
                         <button
                             onClick={() => setShowMoreFilters(!showMoreFilters)}
-                            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all border ${showMoreFilters || activeRange !== 'All' || filterStartDate
+                            aria-expanded={showMoreFilters}
+                            aria-label="More event filters"
+                            className={`flex shrink-0 min-h-11 items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-colors border ${showMoreFilters || activeRange !== 'All' || filterStartDate
                                 ? 'bg-primary/20 text-primary border-primary/30'
                                 : 'glass-surface text-slate-400 border-white/10 hover:text-white'
                                 }`}

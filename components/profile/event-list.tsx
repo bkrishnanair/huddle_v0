@@ -7,7 +7,11 @@ import { Loader2, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import { useAuth } from "@/lib/firebase-context"
 import { useRouter } from "next/navigation"
-import EventDetailsDrawer from "@/components/event-details-drawer"
+import dynamic from 'next/dynamic'
+import { getEventStartUTC, matchesEventTimeFilter } from '@/lib/datetime'
+import { useMinuteTick } from '@/hooks/use-minute-tick'
+import { Button } from '@/components/ui/button'
+const EventDetailsDrawer = dynamic(() => import('@/components/event-details-drawer'))
 
 interface EventListProps {
   userId: string
@@ -21,80 +25,40 @@ export function EventList({ userId, eventType, searchQuery = "", filterStartDate
   const { user } = useAuth()
   const router = useRouter()
   const [events, setEvents] = useState<GameEvent[]>([])
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const minuteTick = useMinuteTick()
+  const now = useMemo(() => new Date(), [minuteTick])
+  const [retry, setRetry] = useState(0)
   const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [timeFilter, setTimeFilter] = useState<"upcoming" | "past">("upcoming")
 
   useEffect(() => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setUserLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        })
-      },
-      () => {
-        // Default to SF if location denied
-        setUserLocation(null)
-      }
-    )
-  }, [])
-
-  useEffect(() => {
+    if (!userId || !user) return
+    const controller = new AbortController()
     const fetchEvents = async () => {
       setIsLoading(true)
       setError(null)
       try {
-        const { getAuth } = await import("firebase/auth");
-        const currentUser = getAuth().currentUser;
-        const idToken = currentUser ? await currentUser.getIdToken() : "";
-
-        const response = await fetch(`/api/users/${userId}/events?type=${eventType}`, {
-          headers: {
-            "Authorization": `Bearer ${idToken}`
-          },
-          credentials: 'include'
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch events with status: ${response.status}`)
-        }
-
+        const idToken = await user.getIdToken()
+        if (controller.signal.aborted) return
+        const response = await fetch('/api/users/' + userId + '/events?type=' + eventType, {
+          signal: controller.signal,
+          headers: { Authorization: 'Bearer ' + idToken },
+          credentials: 'include',
+        })
+        if (!response.ok) throw new Error('Please try again when your connection is stable.')
         const data = await response.json()
-        let fetchedEvents = data.events || []
-
-        // Calculate distances if location is available
-        if (userLocation) {
-          fetchedEvents = fetchedEvents.map((event: GameEvent) => {
-            if (event.geopoint) {
-              const R = 3958.8; // Radius in miles
-              const dLat = (event.geopoint.latitude - userLocation.lat) * Math.PI / 180;
-              const dLon = (event.geopoint.longitude - userLocation.lng) * Math.PI / 180;
-              const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(event.geopoint.latitude * Math.PI / 180) *
-                Math.sin(dLon / 2) * Math.sin(dLon / 2);
-              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-              return { ...event, distance: Math.round(R * c * 10) / 10 };
-            }
-            return event;
-          });
-        }
-
-        setEvents(fetchedEvents)
+        if (!controller.signal.aborted) setEvents(data.events || [])
       } catch (err) {
-        console.error(`Error fetching ${eventType} events:`, err)
-        setError(err instanceof Error ? err.message : "An unknown error occurred")
+        if (!controller.signal.aborted) setError(err instanceof Error ? err.message : 'Could not load events')
       } finally {
-        setIsLoading(false)
+        if (!controller.signal.aborted) setIsLoading(false)
       }
     }
-
-    if (userId) {
-      fetchEvents()
-    }
-  }, [userId, eventType, userLocation])
+    void fetchEvents()
+    return () => controller.abort()
+  }, [userId, eventType, user?.uid, retry])
 
   const handleUnjoin = async (eventId: string) => {
     if (!user) return;
@@ -129,7 +93,7 @@ export function EventList({ userId, eventType, searchQuery = "", filterStartDate
   }
 
   const processedEvents = useMemo(() => {
-    let filtered = events;
+    let filtered = [...events];
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter(e =>
@@ -152,14 +116,7 @@ export function EventList({ userId, eventType, searchQuery = "", filterStartDate
       }
     }
 
-    const parseDateTime = (ev: GameEvent) => {
-      if (!ev.date) return 0;
-      try {
-        const timePart = ev.time || '00:00:00';
-        const d = ev.date.includes('/') ? new Date(ev.date) : new Date(`${ev.date}T${timePart}`);
-        return isNaN(d.getTime()) ? 0 : d.getTime();
-      } catch { return 0; }
-    };
+    const parseDateTime = (event: GameEvent) => getEventStartUTC(event).getTime() || 0;
 
     // Sort soonest first by default
     filtered.sort((a, b) => parseDateTime(a) - parseDateTime(b));
@@ -171,29 +128,7 @@ export function EventList({ userId, eventType, searchQuery = "", filterStartDate
     return filtered;
   }, [events, searchQuery, filterStartDate, filterEndDate, eventType]);
 
-  const isUpcoming = (ev: GameEvent) => {
-    if (ev.status === 'past') return false;
-    if (!ev.date) return true;
-
-    try {
-      const timePart = ev.time || '00:00';
-      const startDateTime = ev.date.includes('/') ? new Date(ev.date) : new Date(`${ev.date}T${timePart}`);
-      if (isNaN(startDateTime.getTime())) return true;
-
-      const now = new Date();
-
-      let endDateTime;
-      if (ev.endTime) {
-        endDateTime = new Date(`${ev.date}T${ev.endTime}`);
-      } else {
-        endDateTime = new Date(startDateTime.getTime() + 3 * 60 * 60 * 1000);
-      }
-
-      return now <= endDateTime;
-    } catch {
-      return true;
-    }
-  };
+  const isUpcoming = (event: GameEvent) => matchesEventTimeFilter(event, 'All', now);
 
   if (isLoading) {
     return (
@@ -209,6 +144,7 @@ export function EventList({ userId, eventType, searchQuery = "", filterStartDate
         <AlertCircle className="w-10 h-10 text-destructive mb-3" />
         <p className="font-semibold text-lg mb-1">Could not load events</p>
         <p className="text-sm text-slate-400">{error}</p>
+        <Button variant="outline" className="mt-3 min-h-11" onClick={() => setRetry(value => value + 1)}>Try again</Button>
       </div>
     )
   }

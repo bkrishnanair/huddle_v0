@@ -11,22 +11,12 @@ import {
 } from '@/lib/serendipity-scorer';
 import { composeNotification } from '@/lib/serendipity-composer';
 import { sendPushToUser } from '@/lib/push-server';
-import { getEventStartUTC } from '@/lib/datetime';
+import { canSendRecommendation, isRecommendationEvent } from '@/lib/recommendation-policy';
+import { getUpcomingEventWindow, getEventStartUTC } from '@/lib/datetime';
 import type { GameEvent } from '@/lib/types';
 import type { CronResult } from './types';
 
-/**
- * Serendipity Agent cron handler.
- *
- * Query optimizations vs the original:
- * - Events: bounded to date >= today AND date <= today+2,
- *   then filtered in-memory for <48h window (was: full collection scan).
- *   Estimated reads: ~10–30 events per run.
- * - Users: still scans all users because every user is a potential
- *   notification candidate. For the current scale (~100–500 users)
- *   this is acceptable. At >1000 users, switch to a pre-computed
- *   "interested" index.
- */
+/** Bounded event, interest and proximity queries; one nudge per user per day. */
 export async function runSerendipity(): Promise<CronResult> {
   const start = Date.now();
   const errors: string[] = [];
@@ -36,18 +26,14 @@ export async function runSerendipity(): Promise<CronResult> {
     const adminDb = getFirebaseAdminDb();
     if (!adminDb) throw new Error('Database unavailable');
 
-    const now = new Date();
-    const in48Hours = new Date(now.getTime() + 48 * 60 * 60 * 1000);
-    const todayStr = now.toISOString().split('T')[0];
-    const twoDaysAheadStr = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split('T')[0];
+    const { now, until: in48Hours, from: todayStr, to: twoDaysAheadStr } = getUpcomingEventWindow();
 
     // BOUNDED query: only events in the 0–2 day window
     const eventsSnap = await adminDb
       .collection('events')
       .where('date', '>=', todayStr)
       .where('date', '<=', twoDaysAheadStr)
+      .limit(100)
       .get();
 
     const atRiskEvents: AtRiskEvent[] = [];
@@ -55,7 +41,7 @@ export async function runSerendipity(): Promise<CronResult> {
 
     eventsSnap.docs.forEach((doc) => {
       const data = doc.data();
-      if (data.isPrivate || data.status === 'archived' || data.status === 'past') return;
+      if (!isRecommendationEvent(data as GameEvent, now)) return;
 
       const eventDateTime = getEventStartUTC(data as GameEvent);
       if (isNaN(eventDateTime.getTime())) return;
@@ -98,7 +84,7 @@ export async function runSerendipity(): Promise<CronResult> {
         reason: { candidatesEvaluated: 0, qualified: 0, durationMs: 0 },
         act: { notificationsSent: 0, durationMs: 0 },
         totalDurationMs: Date.now() - start,
-        summary: 'No at-risk events found. All events are healthy.',
+        summary: 'No eligible events in the recommendation window.',
       });
 
       return {
@@ -118,16 +104,19 @@ export async function runSerendipity(): Promise<CronResult> {
     let totalCandidatesEvaluated = 0;
     let totalQualified = 0;
     const userFollowing = new Map<string, string[]>();
+    const queryCache = new Map<string, Promise<FirebaseFirestore.QuerySnapshot>>();
+    const cached = (key: string, query: FirebaseFirestore.Query) => {
+      if (!queryCache.has(key)) queryCache.set(key, query.get());
+      return queryCache.get(key)!;
+    };
 
     for (const event of atRiskEvents) {
       const candidatesMap = new Map<string, CandidateUser>();
 
       // 1. Query by interest match (if users have favoriteSports array)
       try {
-        const interestSnap = await adminDb.collection('users')
-          .where('favoriteSports', 'array-contains', event.category)
-          .limit(100)
-          .get();
+        const interestSnap = await cached('interest:' + event.category, adminDb.collection('users')
+          .where('favoriteSports', 'array-contains', event.category).limit(100));
         
         interestSnap.docs.forEach((doc) => {
           const data = doc.data();
@@ -159,12 +148,8 @@ export async function runSerendipity(): Promise<CronResult> {
           const bounds = geofire.geohashQueryBounds(center, 40233);
           
           for (const b of bounds) {
-            const geoSnap = await adminDb.collection('users')
-              .orderBy('geohash')
-              .startAt(b[0])
-              .endAt(b[1])
-              .limit(50)
-              .get();
+            const geoSnap = await cached('geo:' + b.join(':'), adminDb.collection('users')
+              .orderBy('geohash').startAt(b[0]).endAt(b[1]).limit(50));
               
             geoSnap.docs.forEach((doc) => {
               if (!candidatesMap.has(doc.id)) {
@@ -200,6 +185,7 @@ export async function runSerendipity(): Promise<CronResult> {
               .collection('users')
               .doc(user.uid)
               .collection('following')
+              .limit(200)
               .get();
             userFollowing.set(
               user.uid,
@@ -244,6 +230,7 @@ export async function runSerendipity(): Promise<CronResult> {
       const topCandidates = scores.slice(0, 10);
 
       for (const candidate of topCandidates) {
+        if (notificationsSent >= 20) break;
         try {
           const spotsLeft = event.maxPlayers - event.currentPlayers;
           const composed = await composeNotification(candidate, {
@@ -259,9 +246,9 @@ export async function runSerendipity(): Promise<CronResult> {
             .collection('users')
             .doc(candidate.userId)
             .collection('notifications')
-            .doc();
+            .doc('serendipity_' + event.id);
 
-          await notifRef.set({
+          const payload = {
             userId: candidate.userId,
             type: 'serendipity_nudge',
             message: composed.message,
@@ -273,7 +260,24 @@ export async function runSerendipity(): Promise<CronResult> {
               factors: candidate.factors,
               reasons: candidate.reasons,
             },
+          };
+          const userRef = adminDb.collection('users').doc(candidate.userId);
+          const sent = await adminDb.runTransaction(async tx => {
+            const [notification, userDoc, eventDoc] = await Promise.all([
+              tx.get(notifRef), tx.get(userRef), tx.get(adminDb.collection('events').doc(event.id)),
+            ]);
+            if (!userDoc.exists || !eventDoc.exists || !canSendRecommendation(
+              { ...userDoc.data(), uid: candidate.userId }, eventDoc.data() as GameEvent, notification.exists, now,
+            )) return false;
+            const organizerId = eventDoc.data()?.createdBy;
+            if (!organizerId) return false;
+            const organizer = await tx.get(adminDb.collection('users').doc(organizerId));
+            if (!organizer.exists || organizer.data()?.blockedUsers?.includes(candidate.userId)) return false;
+            tx.create(notifRef, payload);
+            tx.update(userRef, { lastSerendipityAt: now.toISOString() });
+            return true;
           });
+          if (!sent) continue;
 
           notificationsSent++;
           processed++;

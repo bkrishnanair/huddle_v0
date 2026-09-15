@@ -9,14 +9,14 @@ import { z } from 'zod';
 export const dynamic = 'force-dynamic';
 
 const searchSchema = z.object({
-  q: z.string().min(1).max(100),
+  q: z.string().trim().min(2).max(100),
 });
 
 /**
  * GET /api/users/search?q=running+club
  * 
- * Searches users by displayName prefix match (case-insensitive).
- * Returns up to 10 matching user profiles for the organizer search feature.
+ * Bounded name-prefix lookup, with a legacy contains-match fallback.
+ * Returns public profile fields only; no email or location search.
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -43,18 +43,27 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const queryLower = validation.data.q.toLowerCase();
-
-    // Firestore doesn't support case-insensitive search natively.
-    // Use a range query on a lowercase displayName field if available,
-    // otherwise fetch a batch and filter client-side.
-    const usersSnap = await adminDb.collection('users')
-      .limit(200) // Scan recent users
-      .get();
+    const search = validation.data.q;
+    const queryLower = search.toLowerCase();
+    // Existing displayName index needs no new field/backfill. Common case variants
+    // reach profiles outside the legacy scan; this is not full-text search.
+    const prefixes = [...new Set([search, queryLower,
+      queryLower.replace(/(^|\s)\S/g, letter => letter.toUpperCase())])];
+    const users = adminDb.collection('users');
+    const [viewer, legacy, ...prefixResults] = await Promise.all([
+      users.doc(user.uid).get(),
+      users.limit(200).get(),
+      ...prefixes.map(prefix => users.orderBy('displayName')
+        .startAt(prefix).endAt(prefix + '\uf8ff').limit(10).get()),
+    ]);
+    const blocked = new Set<string>(viewer.data()?.blockedUsers || []);
+    const candidates = new Map([...prefixResults.flatMap(snapshot => snapshot.docs), ...legacy.docs]
+      .map(doc => [doc.id, doc]));
 
     const matches: any[] = [];
-    for (const doc of usersSnap.docs) {
+    for (const doc of candidates.values()) {
       const data = doc.data();
+      if (doc.id === user.uid || blocked.has(doc.id) || data.blockedUsers?.includes(user.uid)) continue;
       const name = (data.displayName || data.name || '').toLowerCase();
       if (name.includes(queryLower)) {
         matches.push({

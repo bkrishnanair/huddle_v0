@@ -97,6 +97,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
   const router = useRouter()
   const [event, setEvent] = useState<GameEvent | null>(initialEvent)
   const [isLoading, setIsLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState('details')
   const [attendees, setAttendees] = useState<{ id: string, name: string, loyaltyCount?: number, note?: string, answers?: Record<string, string>, pickup?: string, reliabilityScore?: number | null }[]>([])
   const [isFetchingAttendees, setIsFetchingAttendees] = useState(false)
   const [isCloning, setIsCloning] = useState(false)
@@ -597,9 +598,9 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
   const accent = getAccentTokens(catColor);
 
   return (
-    <Drawer open={isOpen} onOpenChange={onClose}>
+    <Drawer open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
       <DrawerContent 
-        className="border-white/10 bg-panel/95 text-foreground max-w-2xl mx-auto rounded-t-[2rem] max-h-[92dvh] flex flex-col focus:outline-none backdrop-blur-md isolate overflow-hidden"
+        className="border-white/10 bg-panel/95 text-foreground max-w-2xl mx-auto rounded-t-[2rem] h-[92dvh] max-h-[92dvh] flex flex-col focus:outline-none backdrop-blur-md isolate overflow-hidden"
         style={{
           borderTop: `3.5px solid ${catColor}`,
           boxShadow: `0 -8px 30px -4px ${catColor}25`
@@ -627,7 +628,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                   {event.icon || <CategoryIcon category={event.sport || event.category} />}
                 </span>
                 {event.title || event.name}
-                {event.maxPlayers - event.currentPlayers > 0 && event.maxPlayers - event.currentPlayers <= 3 && (
+                {(!event.isScraped || event.source === 'claimed') && event.maxPlayers - event.currentPlayers > 0 && event.maxPlayers - event.currentPlayers <= 3 && (
                   <span className="bg-red-400 text-canvas px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(239,68,68,0.5)]">
                     <AlertTriangle className="w-3 h-3" />
                     Filling up
@@ -660,7 +661,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
           </div>
         </DrawerHeader>
 
-        <Tabs defaultValue="details" className="flex-1 w-full h-full flex flex-col min-h-0 overflow-hidden">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 w-full flex flex-col min-h-0 overflow-hidden">
           <div className="px-5 mb-3">
             <TabsList className="grid w-full grid-cols-3 bg-canvas/60 border border-white/5 rounded-2xl p-1 h-auto">
               <TabsTrigger value="details" className="text-slate-400 data-[state=active]:bg-white/10 data-[state=active]:text-white min-h-11 text-sm font-semibold transition-all rounded-xl">Details</TabsTrigger>
@@ -682,12 +683,12 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
             </TabsList>
           </div>
 
-          <TabsContent value="details" className="flex-1 h-full overflow-y-auto outline-none pb-4 mt-0 data-[state=inactive]:hidden">
+          <TabsContent value="details" className="min-h-0 flex-1 overflow-y-auto overscroll-contain outline-none pb-4 mt-0 data-[state=inactive]:hidden">
             <div className="px-5 space-y-4">
               {/* Info Grid - Modern Compact */}
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { icon: Users, label: "Capacity", value: `${event.currentPlayers} / ${event.maxPlayers}` },
+                  { icon: Users, label: "Capacity", value: event.isScraped && event.source !== 'claimed' ? 'Check source' : `${event.currentPlayers} / ${event.maxPlayers}` },
                   { icon: Calendar, label: "Date", value: (() => {
                     if (!event.date) return 'TBD';
                     if (typeof event.date !== 'string') return String(event.date);
@@ -1041,7 +1042,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
           </TabsContent>
 
           <TabsContent value="chat" className="flex-1 min-h-0 flex flex-col overflow-hidden outline-none mt-0 pb-2 data-[state=inactive]:hidden">
-            <div className="flex-1 overflow-hidden px-5">
+            <div className="min-h-0 flex-1 overflow-hidden px-3 sm:px-5">
               <div className="h-full rounded-2xl overflow-hidden border border-white/5 shadow-2xl">
                 <EventChat
                   eventId={event.id as string}
@@ -1063,7 +1064,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
             </div>
           </TabsContent>
         </Tabs>
-        <DrawerFooter className="flex flex-col gap-3 p-5 pt-4 bg-canvas/95 border-t border-white/10 shrink-0">
+        <DrawerFooter className={`flex flex-col gap-3 p-3 sm:p-5 bg-canvas/95 border-t border-white/10 shrink-0 ${activeTab === 'chat' ? 'hidden' : ''}`}>
           {/* Main Action Button */}
           {!isOrganizer && (
             <div className="flex flex-col gap-2">
@@ -1188,7 +1189,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
 
       {/* RSVP PROMPT MODAL (For Name & Notes) */}
       <Dialog open={showRsvpPrompt} onOpenChange={setShowRsvpPrompt}>
-        <DialogContent className="glass-surface border-white/10 sm:max-w-[425px]">
+        <DialogContent className="glass-surface border-white/10 sm:max-w-[425px] flex flex-col overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="text-xl font-display font-bold text-white">Join event</DialogTitle>
             <DialogDescription className="text-slate-400">
@@ -1198,7 +1199,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto no-scrollbar px-1">
+          <div className="min-h-0 grid gap-4 py-2 flex-1 overflow-y-auto overscroll-contain px-1">
             {/* ONLY show Name input if they are not logged in */}
             {!user && (
               <div className="grid gap-2">

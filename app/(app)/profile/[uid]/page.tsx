@@ -10,7 +10,8 @@ import { UserCircle, Calendar, Star, Info, BarChart3, Loader2 } from "lucide-rea
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { EventCard } from "@/components/events/event-card"
-import EventDetailsDrawer from "@/components/event-details-drawer"
+import dynamic from 'next/dynamic'
+const EventDetailsDrawer = dynamic(() => import('@/components/event-details-drawer'))
 import { GameEvent } from "@/lib/types"
 import FollowListModal from "@/components/profile/follow-list-modal"
 import { FollowButton } from "@/components/follow-button"
@@ -67,20 +68,6 @@ export default function PublicProfilePage() {
   const [followModalOpen, setFollowModalOpen] = useState(false)
   const [followModalType, setFollowModalType] = useState<"followers" | "following">("followers")
 
-  useEffect(() => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setUserLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        })
-      },
-      () => {
-        setUserLocation(null)
-      }
-    )
-  }, [])
-
   const fetchProfileData = useCallback(async () => {
     if (!uid) return
     setLoading(true)
@@ -97,27 +84,7 @@ export default function PublicProfilePage() {
         if (data.followerCount !== undefined) setFollowerCount(data.followerCount)
         if (data.followingCount !== undefined) setFollowingCount(data.followingCount)
 
-        const eventsRes = await fetch(`/api/events/past?userId=${uid}`)
-        if (eventsRes.ok) {
-          let events = (await eventsRes.json()).events || []
-
-          if (userLocation) {
-            events = events.map((event: any) => {
-              if (event.geopoint) {
-                const R = 3958.8;
-                const dLat = (event.geopoint.latitude - userLocation.lat) * Math.PI / 180;
-                const dLon = (event.geopoint.longitude - userLocation.lng) * Math.PI / 180;
-                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                  Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(event.geopoint.latitude * Math.PI / 180) *
-                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
-                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                return { ...event, distance: Math.round(R * c * 10) / 10 };
-              }
-              return event;
-            });
-          }
-          setPastEvents(events)
-        }
+        setPastEvents(data.pastEvents || [])
       } else {
         toast.error("Profile not found")
         router.push("/map")

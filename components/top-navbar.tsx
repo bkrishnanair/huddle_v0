@@ -38,13 +38,14 @@ export function TopNavbar() {
 
     return (
         <header className="fixed top-[max(0.75rem,env(safe-area-inset-top))] inset-x-3 max-w-[1800px] mx-auto z-40 h-16 bg-canvas/90 backdrop-blur-xl border border-white/10 rounded-3xl shadow-xl pointer-events-auto transition-colors sm:inset-x-4">
-            <div className="h-full px-3 sm:px-4 flex items-center justify-between gap-3">
+            <div className="h-full px-3 sm:px-4 flex items-center justify-between gap-1 sm:gap-3">
                 {/* Logo Section */}
                 <Link href="/home" className="flex min-h-11 items-center gap-2.5 shrink-0">
-                    <HuddleLogo size={32} />
+                    <span className={isMapPage ? "hidden sm:block" : ""}><HuddleLogo size={32} /></span>
                     <span className="font-display text-xl sm:text-2xl font-bold text-white tracking-tight">huddle<span className="text-orange-400">.</span></span>
                 </Link>
 
+                {isMapPage && <div id="map-toolbar" className="flex md:hidden min-w-0" />}
                 {/* Search Bar Integration (Cross-Platform) */}
                 <div className="hidden md:flex flex-1 max-w-4xl px-4 gap-2 animate-in fade-in slide-in-from-top-2 duration-500">
                     {/* Location Search */}
@@ -87,14 +88,14 @@ export function TopNavbar() {
 
                 {/* Action Items */}
                 <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                    <Link href="/feedback" aria-label="Send feedback" title="Send feedback" className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-xl px-2 text-xs font-semibold text-slate-300 hover:bg-white/10 hover:text-white"><MessageSquare className="h-4 w-4" aria-hidden="true" /><span className="hidden sm:inline">Feedback</span></Link>
+                    <Link href="/feedback" aria-label="Send feedback" title="Send feedback" className={`${isMapPage ? "hidden md:inline-flex" : "inline-flex"} min-h-11 min-w-11 items-center justify-center gap-2 rounded-xl px-2 text-xs font-semibold text-slate-300 hover:bg-white/10 hover:text-white`}><MessageSquare className="h-4 w-4" aria-hidden="true" /><span className="hidden sm:inline">Feedback</span></Link>
                     {mounted && (
                         <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                             aria-label={theme === 'dark' ? 'Use a light map' : 'Use a dark map'}
-                            className="w-11 h-11 rounded-2xl text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                            className={`${isMapPage ? "hidden md:flex" : ""} w-11 h-11 rounded-2xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors`}
                         >
                             {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                         </Button>

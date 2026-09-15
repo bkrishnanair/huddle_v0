@@ -36,7 +36,7 @@ export default function AppLayout({
     }
   }, [user, loading, isPublicRoute])
 
-  if (loading) {
+  if (loading && !isPublicRoute) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between overflow-hidden relative">
         {/* Top Navbar Skeleton */}
@@ -105,4 +105,3 @@ export default function AppLayout({
     </div>
   )
 }
-

@@ -1,3 +1,5 @@
+import { normalizeCoordinates } from './coordinates';
+
 export interface Player {
   id: string;
   displayName: string;
@@ -193,7 +195,8 @@ export type PublicEventField = (typeof PUBLIC_EVENT_FIELDS)[number];
  * for anything new is private.
  *
  * Absent keys are skipped rather than emitted as undefined, so the JSON payload
- * carries no dead keys.
+ * carries no dead keys. Coordinates always use the plain browser contract;
+ * Admin SDK GeoPoints otherwise serialize with underscored property names.
  */
 export function pickPublicFields<T extends Record<string, unknown>>(
   event: T,
@@ -201,7 +204,9 @@ export function pickPublicFields<T extends Record<string, unknown>>(
   const out: Partial<Record<PublicEventField, unknown>> = {};
   for (const field of PUBLIC_EVENT_FIELDS) {
     if (event[field] !== undefined) {
-      out[field] = event[field];
+      out[field] = field === 'geopoint' || field === 'orgGeopoint'
+        ? normalizeCoordinates(event[field])
+        : event[field];
     }
   }
   return out;

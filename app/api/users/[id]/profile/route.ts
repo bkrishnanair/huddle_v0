@@ -7,6 +7,8 @@ import { getServerCurrentUser } from "@/lib/auth-server"
 import { adminDb } from "@/lib/firebase-admin"
 import { getEventCountsForUser, getUserJoinedEvents } from "@/lib/db"
 import { profileUpdateInput } from '@/lib/request-schemas'
+import { pickPublicFields } from '@/lib/types'
+import { getEventStartUTC, getEventEndUTC } from '@/lib/datetime'
 
 export const runtime = 'nodejs'
 
@@ -63,8 +65,10 @@ export async function GET(
       notifyReminders: userData?.notifyReminders ?? true,
     }
 
-    const stats = await getEventCountsForUser(requestedUserId);
-    const joinedEvents = await getUserJoinedEvents(requestedUserId);
+    if (request.nextUrl.searchParams.get('summary') === 'true') {
+      return NextResponse.json({ profile: { uid: requestedUserId, favoriteSports: profile.favoriteSports } });
+    }
+    const [stats, joinedEvents] = await Promise.all([getEventCountsForUser(requestedUserId), getUserJoinedEvents(requestedUserId)]);
     const now = Date.now();
 
     // Process and sort for strictly past events
@@ -72,15 +76,15 @@ export async function GET(
       .filter((event: any) => {
         if (!event.date || event.date.includes('/')) return false;
         try {
-          const eventDateTime = new Date(`${event.date}T${event.time || '00:00'}`);
+          const eventDateTime = getEventEndUTC(event);
           return !isNaN(eventDateTime.getTime()) && eventDateTime.getTime() < now;
         } catch (e) {
           return false;
         }
       })
       .sort((a: any, b: any) => {
-        const dateA = new Date(`${a.date}T${a.time || '00:00'}`).getTime();
-        const dateB = new Date(`${b.date}T${b.time || '00:00'}`).getTime();
+        const dateA = getEventStartUTC(a).getTime();
+        const dateB = getEventStartUTC(b).getTime();
         return dateB - dateA; // Most recent past events first
       });
 
@@ -107,7 +111,7 @@ export async function GET(
     const followerCount = followersSnapshot.data().count;
     const followingCount = followingSnapshot.data().count;
 
-    return NextResponse.json({ profile, stats, pastEvents, reliabilityScore, totalTracked, followerCount, followingCount })
+    return NextResponse.json({ profile, stats, pastEvents: pastEvents.map(event => pickPublicFields(event)), reliabilityScore, totalTracked, followerCount, followingCount })
   } catch (error) {
     console.error(`Error fetching profile for user:`, error)
     return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 })

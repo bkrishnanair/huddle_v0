@@ -4,6 +4,8 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { getFirebaseAdminDb } from "@/lib/firebase-admin";
+import { pickPublicFields } from '@/lib/types';
+import { getEventStartUTC, getEventEndUTC } from '@/lib/datetime';
 import { getEventCountsForUser, getUserJoinedEvents } from "@/lib/db";
 
 export async function GET(
@@ -39,23 +41,22 @@ export async function GET(
       createdAt: userData?.createdAt || null,
     };
 
-    const stats = await getEventCountsForUser(userId);
-    const joinedEvents = await getUserJoinedEvents(userId);
+    const [stats, joinedEvents] = await Promise.all([getEventCountsForUser(userId), getUserJoinedEvents(userId)]);
     const now = Date.now();
 
     const pastEvents = (joinedEvents || [])
       .filter((event: any) => {
-        if (!event.date || event.date.includes("/")) return false;
+        if (event.isPrivate || !event.date || event.date.includes("/")) return false;
         try {
-          const eventDateTime = new Date(`${event.date}T${event.time || "00:00"}`);
+          const eventDateTime = getEventEndUTC(event);
           return !isNaN(eventDateTime.getTime()) && eventDateTime.getTime() < now;
         } catch {
           return false;
         }
       })
       .sort((a: any, b: any) => {
-        const dateA = new Date(`${a.date}T${a.time || "00:00"}`).getTime();
-        const dateB = new Date(`${b.date}T${b.time || "00:00"}`).getTime();
+        const dateA = getEventStartUTC(a).getTime();
+        const dateB = getEventStartUTC(b).getTime();
         return dateB - dateA;
       });
 
@@ -79,8 +80,10 @@ export async function GET(
     let followerCount = 0;
     let followingCount = 0;
     try {
-      const followersSnap = await adminDb.collection("users").doc(userId).collection("followers").count().get();
-      const followingSnap = await adminDb.collection("users").doc(userId).collection("following").count().get();
+      const [followersSnap, followingSnap] = await Promise.all([
+        adminDb.collection("users").doc(userId).collection("followers").count().get(),
+        adminDb.collection("users").doc(userId).collection("following").count().get(),
+      ]);
       followerCount = followersSnap.data().count;
       followingCount = followingSnap.data().count;
     } catch {
@@ -90,7 +93,7 @@ export async function GET(
     return NextResponse.json({
       profile: publicProfile,
       stats,
-      pastEvents,
+      pastEvents: pastEvents.map(event => pickPublicFields(event)),
       reliabilityScore,
       totalTracked,
       followerCount,

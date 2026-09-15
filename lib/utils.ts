@@ -25,13 +25,13 @@ export function formatTime(time24: string) {
 }
 
 export const CATEGORY_COLORS: Readonly<Record<string, string>> = {
-    Sports: "#FF4D4D", // Electric Crimson / Coral Red
+    Sports: "#FB923C", // Orange
     Music: "#A855F7", // Neon Purple
-    Community: "#F43F5E", // Radiant Hot Pink / Rose
+    Community: "#2DD4BF", // Teal
     Learning: "#38BDF8", // Electric Sky Blue
     "Food & Drink": "#FBBF24", // Radiant Amber Gold
-    Tech: "#06B6D4", // Electric Cyan
-    "Arts & Culture": "#FB7185", // Electric Coral / Salmon
+    Tech: "#818CF8", // Indigo
+    "Arts & Culture": "#F472B6", // Pink
     Outdoors: "#10B981", // Vivid Emerald Green
     "🖥️ Virtual": "#A78BFA", // Violet with AA contrast against canvas foreground
     Recommended: "#F59E0B", // Amber

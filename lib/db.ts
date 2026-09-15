@@ -23,6 +23,7 @@ import * as geofire from "geofire-common"
 export { db };
 import { getUser } from "./db-client";
 import { pickPublicUserFields } from "./types";
+import { normalizeCoordinates } from './coordinates';
 
 
 
@@ -101,21 +102,23 @@ export const getNearbyEvents = async (center: [number, number], radiusInM: numbe
     }
 
     const snapshots = await Promise.all(promises)
-    const matchingDocs = []
+    const matchingDocs = new Map<string, any>()
 
     for (const snap of snapshots) {
       for (const doc of snap.docs) {
-        const lat = doc.get("geopoint").latitude
-        const lng = doc.get("geopoint").longitude
+        const point = normalizeCoordinates(doc.get("geopoint"));
+        if (!point) continue;
+        const lat = point.latitude;
+        const lng = point.longitude;
 
         const distanceInKm = geofire.distanceBetween([lat, lng], center)
         const distanceInM = distanceInKm * 1000
         if (distanceInM <= radiusInM) {
-          matchingDocs.push({ id: doc.id, ...doc.data() })
+          matchingDocs.set(doc.id, { id: doc.id, ...doc.data() })
         }
       }
     }
-    return matchingDocs
+    return [...matchingDocs.values()]
   } catch (error) {
     console.error("Error fetching nearby events:", error)
     throw new Error("Failed to query nearby events.")
@@ -612,16 +615,17 @@ export const toggleFollowUser = async (followerId: string, targetId: string, isF
 
     const targetUserRef = adminDb.collection("users").doc(targetId);
 
-    // Check if target has blocked the follower
-    const targetSnap = await targetUserRef.get();
-    if (targetSnap.exists && targetSnap.data()?.blockedUsers?.includes(followerId)) {
-      throw new Error("UNAUTHORIZED_BLOCK");
-    }
-
     const followerFollowingRef = adminDb.collection("users").doc(followerId).collection("following").doc(targetId);
     const targetFollowersRef = targetUserRef.collection("followers").doc(followerId);
 
     await adminDb.runTransaction(async (transaction) => {
+      const [target, follower] = await Promise.all([
+        transaction.get(targetUserRef), transaction.get(adminDb.collection('users').doc(followerId)),
+      ]);
+      if (isFollowing && (!target.exists || !follower.exists)) throw new Error('User not found');
+      if (isFollowing && (target.data()?.blockedUsers?.includes(followerId) || follower.data()?.blockedUsers?.includes(targetId))) {
+        throw new Error('UNAUTHORIZED_BLOCK');
+      }
       // It's a simple set/delete, but we use a transaction to ensure both subcollections stay in sync
       if (isFollowing) {
         transaction.set(followerFollowingRef, { followedAt: Timestamp.now() });

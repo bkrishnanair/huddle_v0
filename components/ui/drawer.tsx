@@ -4,13 +4,15 @@ import * as React from "react"
 import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn } from "@/lib/utils"
+import { useOverlayViewport } from '@/hooks/use-overlay-viewport'
 
 const Drawer = ({
-  shouldScaleBackground = true,
+  shouldScaleBackground = false,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
   <DrawerPrimitive.Root
     shouldScaleBackground={shouldScaleBackground}
+    repositionInputs={false}
     {...props}
   />
 )
@@ -37,14 +39,18 @@ DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName
 const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+>(({ className, children, style, ...props }, ref) => {
+  const viewportStyle = useOverlayViewport();
+  return (
   <DrawerPortal>
     <DrawerOverlay />
     <DrawerPrimitive.Content
       ref={ref}
+      style={{ ...viewportStyle, ...style }}
       className={cn(
         "fixed inset-x-0 bottom-0 z-[70] mt-12 flex max-h-[94dvh] h-auto flex-col rounded-t-3xl border border-white/10 bg-panel/95 text-slate-100 shadow-2xl backdrop-blur-xl",
-        className
+        className,
+        "mobile-overlay-viewport"
       )}
       {...props}
     >
@@ -52,7 +58,8 @@ const DrawerContent = React.forwardRef<
       {children}
     </DrawerPrimitive.Content>
   </DrawerPortal>
-))
+  );
+})
 DrawerContent.displayName = "DrawerContent"
 
 const DrawerHeader = ({
