@@ -569,7 +569,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
 
 
-  const mapToolbar = <div className="flex items-center md:flex-col gap-0.5" role="group" aria-label="Map views">
+  const mapToolbar = <div className="flex items-center  gap-0.5" role="group" aria-label="Map views">
     <Button size="icon" variant="ghost" aria-label="Show map" aria-pressed={!showListPanel} onClick={() => setShowListPanel(false)} className={!showListPanel ? 'bg-orange-400/15 text-orange-300' : 'text-slate-300'}><MapIcon className="h-4 w-4" /></Button>
     <Button size="icon" variant="ghost" aria-label="Show next up" aria-pressed={showListPanel} onClick={() => setShowListPanel(true)} className={showListPanel ? 'bg-orange-400/15 text-orange-300' : 'text-slate-300'}><List className="h-4 w-4" /></Button>
     <Popover><PopoverTrigger asChild><Button size="icon" variant="ghost" aria-label="Map help and settings"><CircleHelp className="h-4 w-4" /></Button></PopoverTrigger>
@@ -954,7 +954,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
           {/* Filter Chips & View Toggle Container */}
           <div className="pointer-events-auto flex justify-between gap-2 h-auto w-full">
             {/* Filters Pill */}
-            <div className="min-w-0 flex-1 max-w-full bg-canvas/85 rounded-3xl p-2 flex flex-col gap-1.5 shadow-2xl border border-white/10 overflow-hidden backdrop-blur-xl">
+            <div className="min-w-0 w-full md:w-fit max-w-full bg-canvas/85 rounded-3xl p-2 flex flex-col gap-1.5 shadow-2xl border border-white/10 overflow-hidden backdrop-blur-xl">
               {/* Category Row */}
               <div className="flex items-center space-x-2 overflow-x-auto overscroll-x-contain w-full pb-0.5">
                 <span className="hidden sm:block shrink-0 text-[10px] font-medium text-slate-400 uppercase tracking-widest mr-1 pl-2">What</span>
@@ -1039,7 +1039,6 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
               </div>
             </div>
 
-            <div className="hidden md:flex">{mapToolbar}</div>
           </div>
 
           {/* AI Searching indicator */}

@@ -45,7 +45,7 @@ export function TopNavbar() {
                     <span className="font-display text-xl sm:text-2xl font-bold text-white tracking-tight">huddle<span className="text-orange-400">.</span></span>
                 </Link>
 
-                {isMapPage && <div id="map-toolbar" className="flex md:hidden min-w-0" />}
+                {isMapPage && <div id="map-toolbar" className="flex min-w-0" />}
                 {/* Search Bar Integration (Cross-Platform) */}
                 <div className="hidden md:flex flex-1 max-w-4xl px-4 gap-2 animate-in fade-in slide-in-from-top-2 duration-500">
                     {/* Location Search */}
@@ -95,7 +95,7 @@ export function TopNavbar() {
                             size="icon"
                             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                             aria-label={theme === 'dark' ? 'Use a light map' : 'Use a dark map'}
-                            className={`${isMapPage ? "hidden md:flex" : ""} w-11 h-11 rounded-2xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors`}
+                            className="w-11 h-11 rounded-2xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
                         >
                             {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                         </Button>
