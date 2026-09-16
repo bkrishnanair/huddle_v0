@@ -666,6 +666,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             defaultZoom={15}
             className="w-full h-full"
             disableDefaultUI={true}
+            clickableIcons={false}
             mapId={mapId}
 
             // @ts-ignore
@@ -758,13 +759,10 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
 
                       let isFutureEvent = false;
                       let pinTier: 'live' | 'imminent' | 'future' = 'future';
-                      let pinOpacity = 1;
                       if (!event.date || event.date.includes('/')) {
                         isFutureEvent = false;
                       } else {
                         try {
-                          const eventDateTime = getEventStartUTC(event);
-                          const now = new Date();
                           if (isEventOngoing(event)) {
                             pinTier = 'live';
                           } else {
@@ -780,12 +778,6 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                                 isFutureEvent = true;
                             }
                             
-                            // Farthest events = less vibrant (opacity fading)
-                            const diffTime = eventDateTime.getTime() - now.getTime();
-                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                            if (diffDays > 0) {
-                                pinOpacity = Math.max(0.3, 1 - (diffDays * 0.1));
-                            }
                           }
                         } catch (e) {
                           isFutureEvent = false;
@@ -802,6 +794,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                         return (
                           <AdvancedMarker
                             key={event.id}
+                            title={event.name}
                             position={{ lat: (event as any).displayLat || event.geopoint.latitude, lng: (event as any).displayLng || event.geopoint.longitude }}
                             onClick={() => {
                               setSelectedEvent(event);
@@ -809,14 +802,14 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                             }}
                             onMouseEnter={() => setHoveredEvent(event)}
                             onMouseLeave={() => setHoveredEvent(null)}
-                            style={{ zIndex: pinTier === 'live' ? 30 : pinTier === 'imminent' ? 20 : 0, opacity: pinOpacity }}
+                            style={{ zIndex: pinTier === 'live' ? 30 : pinTier === 'imminent' ? 20 : 0 }}
                           >
                             {pinTier === 'live' ? (
                               <LivePin category={event.category} icon={event.icon} size={30} />
                             ) : pinTier === 'imminent' ? (
                               <MediumPin category={event.category} icon={event.icon} size={20} />
                             ) : (
-                              <DotPin category={event.category} size={12} />
+                              <DotPin category={event.category} />
                             )}
                           </AdvancedMarker>
                         );
