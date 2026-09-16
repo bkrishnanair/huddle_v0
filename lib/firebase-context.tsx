@@ -3,7 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react"
 import { type User, onAuthStateChanged } from "firebase/auth"
-import { logOut } from "./auth"
+import { logOut, handleGoogleRedirectResult } from "./auth"
 import { auth, app } from "./firebase"
 import { FirebaseApp } from "firebase/app"
 
@@ -50,6 +50,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // FIX: Ensure auth object is not null before setting up the listener.
     if (auth) {
+      handleGoogleRedirectResult();
       const unsubscribe = onAuthStateChanged(
         auth,
         async (user) => {

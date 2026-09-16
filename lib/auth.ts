@@ -3,7 +3,7 @@
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signInWithPopup,
+  signInWithRedirect, getRedirectResult,
   GoogleAuthProvider,
   signInAnonymously,
   signOut,
@@ -46,25 +46,29 @@ export const signInWithEmail = async (email: string, password: string) => {
 // SOCIAL LOGIN: This is the new function for handling Google Sign-In.
 export const signInWithGoogle = async () => {
   if (!auth) throw new Error("Firebase Auth is not initialized on the client.");
+  await signInWithRedirect(auth, googleProvider);
+};
 
-  // 1. Trigger the Google Sign-In popup.
-  const result = await signInWithPopup(auth, googleProvider);
-  const user = result.user;
-
-  // 2. Check if the user already exists in our Firestore 'users' collection.
-  const userProfile = await getUser(user.uid);
-
-  // 3. If the user is new (no profile exists), create a new document for them.
-  if (!userProfile) {
-    await createUser(user.uid, {
-      email: user.email!,
-      name: user.displayName || user.email?.split('@')[0] || 'New User',
-      photoURL: user.photoURL || null,
-    });
+export const handleGoogleRedirectResult = async () => {
+  if (!auth) return null;
+  try {
+    const result = await getRedirectResult(auth);
+    if (result?.user) {
+      const user = result.user;
+      const userProfile = await getUser(user.uid);
+      if (!userProfile) {
+        await createUser(user.uid, {
+          email: user.email!,
+          name: user.displayName || user.email?.split('@')[0] || 'New User',
+          photoURL: user.photoURL || null,
+        });
+      }
+      return user;
+    }
+  } catch (error) {
+    console.error("Redirect sign-in error:", error);
   }
-
-  // 4. Return the user object for the application to use.
-  return user;
+  return null;
 };
 
 // GUEST LOGIN: Create an anonymous account and save their chosen name
