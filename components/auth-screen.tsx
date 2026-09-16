@@ -22,8 +22,12 @@ export default function AuthScreen({ onLogin, onBackToLanding }: AuthScreenProps
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [showVerifyBanner, setShowVerifyBanner] = useState(false)
-  const { user } = useAuth()
+  const { user, error: contextError } = useAuth()
   const router = useRouter()
+
+  useEffect(() => {
+    if (contextError) setError(contextError)
+  }, [contextError])
 
   useEffect(() => {
     // If the user is already signed in, don't trap them on a spinner if onLogin isn't called

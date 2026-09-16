@@ -50,20 +50,32 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // FIX: Ensure auth object is not null before setting up the listener.
     if (auth) {
-      handleGoogleRedirectResult();
+      handleGoogleRedirectResult().catch(err => {
+        console.error("Redirect sign-in error:", err);
+        setError(err.message || "Google sign-in failed during redirect.");
+      });
       const unsubscribe = onAuthStateChanged(
         auth,
         async (user) => {
           if (user) {
             try {
               const idToken = await user.getIdToken()
-              await fetch("/api/auth/login", {
+              const res = await fetch("/api/auth/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ idToken }),
               })
-            } catch (err) {
+              if (!res.ok) {
+                const text = await res.text();
+                throw new Error("Session creation failed: " + text);
+              }
+            } catch (err: any) {
               console.error("Error setting session cookie:", err)
+              await logOut()
+              setUser(null)
+              setError(err.message || "Failed to establish server session.")
+              setLoading(false)
+              return
             }
           }
           setUser(user)

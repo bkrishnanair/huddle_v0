@@ -12,6 +12,15 @@ const nextConfig = {
     unoptimized: true,
   },
   output: "standalone",
+  async rewrites() {
+    return [
+      {
+        source: '/__/auth/:path*',
+        destination: 'https://huddle-dca59.firebaseapp.com/__/auth/:path*',
+      },
+    ];
+  },
+
   async headers() {
     return ['/sw.js', '/firebase-messaging-sw.js', '/offline.html'].map(source => ({
       source,
