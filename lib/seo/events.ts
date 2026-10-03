@@ -2,7 +2,8 @@ import 'server-only';
 
 import { cache } from 'react';
 import { getFirebaseAdminDb } from '@/lib/firebase-admin';
-import { getDirectoryDateWindow, getEventEndUTC, getEventStartUTC } from '@/lib/datetime';
+import { getEventEndUTC, getEventStartUTC } from '@/lib/datetime';
+import { getDiscoveryEventDocs } from '@/lib/event-discovery';
 import type { GameEvent } from '@/lib/types';
 
 export const SEO_ORIGIN = 'https://huddlemap.live';
@@ -54,20 +55,14 @@ export const getSeoEvent = cache(async (id: string): Promise<SeoEvent | null> =>
 });
 
 export const getSeoEvents = cache(async (): Promise<{events: SeoEvent[]; truncated: boolean}> => {
-  const db = getFirebaseAdminDb();
-  if (!db) throw new Error('Event discovery is temporarily unavailable');
   const now = new Date();
-  const window = getDirectoryDateWindow(now);
-  // Single-field range/order: uses existing automatic date indexing, no rule or
-  // composite-index migration. Read budget stays bounded as the collection grows.
-  const snapshot = await db.collection('events').where('date', '>=', window.from)
-    .where('date', '<=', window.until).orderBy('date').limit(1001).get();
-  const events = snapshot.docs.slice(0, 1000).flatMap(doc => {
+  const { docs, truncated } = await getDiscoveryEventDocs({ now, limit: 1000 });
+  const events = docs.flatMap(doc => {
     const event = projectSeoEvent(doc.id, doc.data(), now);
     return event ? [event] : [];
   });
   events.sort((a, b) => getEventStartUTC(a as GameEvent).getTime() - getEventStartUTC(b as GameEvent).getTime() || a.id.localeCompare(b.id));
-  return {events, truncated: snapshot.size > 1000};
+  return {events, truncated};
 });
 
 export function eventJsonLd(event: SeoEvent) {
