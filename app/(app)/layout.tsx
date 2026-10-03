@@ -24,7 +24,7 @@ export default function AppLayout({
   const pathname = usePathname()
   
   const [showAuthGate, setShowAuthGate] = useState(false)
-  const isPublicRoute = pathname === "/map" || pathname === "/discover" || pathname === "/login" || (pathname?.startsWith("/profile/") && pathname !== "/profile")
+  const isPublicRoute = pathname === "/map" || pathname === "/discover" || pathname === "/organizers" || pathname?.startsWith("/organizers/") || pathname === "/partners" || pathname === "/login" || (pathname?.startsWith("/profile/") && pathname !== "/profile")
   const showTopNav = pathname === "/map" || pathname === "/home" || pathname === "/"
 
   useEffect(() => {

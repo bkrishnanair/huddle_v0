@@ -9,6 +9,9 @@
     "start": "next start",
     "preflight": "node scripts/preflight.mjs",
     "test": "vitest run",
+    "android:generate": "node scripts/android-twa.mjs generate",
+    "android:build": "node scripts/android-twa.mjs build",
+    "android:verify-links": "node scripts/android-twa.mjs verify-links",
     "test:rules": "firebase emulators:exec --only firestore --project huddlev0git-test \"node scripts/test-rules.mjs && vitest run --config vitest.integration.config.mts\""
   },
   "dependencies": {

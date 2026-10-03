@@ -17,6 +17,22 @@ import type { GameEvent } from '@/lib/types';
 
 const DEFAULT_TIMEZONE = 'America/New_York';
 
+/** Validate calendar input without Date's rollover of impossible dates. */
+export function isCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T12:00:00Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+export function isClockTime(value: string): boolean {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+}
+
+export function isTimeZone(value: string): boolean {
+  try { new Intl.DateTimeFormat('en-US', { timeZone: value }).format(); return true; }
+  catch { return false; }
+}
+
 export const EVENT_TIME_FILTERS = ['This Week', 'Live', 'Today', 'This Weekend', 'This Month', 'All'] as const;
 
 /** Event-local calendar windows; ongoing overnight/multi-day events remain visible. */

@@ -5,6 +5,7 @@ import { getFirebaseAdminDb } from '@/lib/firebase-admin';
 import { getServerCurrentUser } from '@/lib/auth-server';
 import { isEventLive } from '@/lib/utils';
 import { pickPublicFields } from '@/lib/types';
+import { matchesEventTimeFilter } from '@/lib/datetime';
 
 export const dynamic = 'force-dynamic';
 
@@ -111,12 +112,17 @@ export async function GET(request: NextRequest) {
 
     // --- SERENDIPITY PICKS ---
     let serendipityPicks: any[] = [];
+    let fromFollowing: any[] = [];
     const user = await getServerCurrentUser();
     if (user) {
       try {
+        const following = await adminDb.collection('users').doc(user.uid).collection('following').limit(200).get();
+        const ids = new Set(following.docs.map(doc => doc.id));
+        fromFollowing = allEvents.filter(event => ids.has(event.createdBy) && matchesEventTimeFilter(event, 'All')).slice(0, 12);
         const notifsSnap = await adminDb.collection('users').doc(user.uid)
           .collection('notifications')
           .where('type', '==', 'serendipity_nudge')
+          .limit(50)
           .get();
 
         const pickEventIds = new Set<string>();
@@ -137,13 +143,12 @@ export async function GET(request: NextRequest) {
       newOnHuddle: newEvents.map(pickPublicFields),
       categoryCounts,
       serendipityPicks: serendipityPicks.map(pickPublicFields),
+      fromFollowing: fromFollowing.map(pickPublicFields),
     }, {
       headers: {
-        // `private`, not `s-maxage`. serendipityPicks is derived from the
-        // signed-in user's own notifications, so a shared CDN entry would serve
-        // one student's recommendations to the next caller. Browser-only
-        // caching still removes the repeat-load cost this route was paying.
-        'Cache-Control': 'private, max-age=60',
+        // Personalized follows and nudges must not survive account switches
+        // in either a shared cache or the browser's URL-keyed HTTP cache.
+        'Cache-Control': 'private, no-store',
       },
     });
   } catch (error) {

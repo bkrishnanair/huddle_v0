@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Bell, CheckCircle2, ChevronRight, Speaker, TagIcon, Edit, Clock, Sparkles, Users, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -226,6 +227,7 @@ export function NotificationBell() {
                                             </div>
 
                                             {/* Post-Event Reporting Inline UI */}
+                                            {n.eventId && n.type !== 'post_event' && <Link href={'/map?eventId=' + encodeURIComponent(n.eventId)} onClick={e => { e.stopPropagation(); void markAsRead(n.id, n.read); setIsOpen(false); }} className="mt-1 inline-flex min-h-11 items-center text-xs font-semibold text-orange-300 underline">View event</Link>}
                                             {n.type === "post_event" && reportingEventId === n.eventId && (
                                                 <div className="mt-3 bg-black/40 rounded-lg p-3 border border-white/5 cursor-default" onClick={e => e.stopPropagation()}>
                                                     {reportingStatus === "success" ? (

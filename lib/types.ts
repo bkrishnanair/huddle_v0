@@ -117,7 +117,7 @@ export interface RosterEntry {
 export interface AppNotification {
   id: string;
   userId: string;
-  type: "waitlist_promo" | "event_update" | "event_announcement" | "general" | "rsvp_update" | "serendipity_nudge" | "friend_attending" | "post_event" | "event_reminder" | "new_event_from_followed";
+  type: "waitlist_promo" | "event_update" | "event_announcement" | "general" | "rsvp_update" | "serendipity_nudge" | "friend_attending" | "friend_invite" | "post_event" | "event_reminder" | "new_event_from_followed";
   message: string;
   eventId?: string;
   eventName?: string;

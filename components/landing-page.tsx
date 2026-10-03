@@ -1,482 +1,178 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  ArrowRight,
-  CalendarCheck,
-  Check,
-  Compass,
-  Download,
-  MapPin,
-  Music2,
-  Radio,
-  Sparkles,
-  Users,
-  Zap,
-} from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUpRight, Check, Compass, Download, MapPin, Pause, Play, Users } from "lucide-react";
 import { trackFunnelEvent } from "@/lib/analytics";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
 import { InstallDialog } from "@/components/install-dialog";
 import { HuddleLogo } from "@/components/huddle-logo";
 import { Button } from "@/components/ui/button";
+import { CampusScene, GatheringVisual } from "@/components/landing/campus-scene";
+import styles from "@/components/landing/landing-motion.module.css";
 
 interface LandingPageProps {
   onGetStarted: () => void;
   isAuthenticated?: boolean;
 }
 
-/** Illustrative campus preview, not a claim about live inventory. */
-function CampusMapVisual() {
-  return (
-    <div className="relative isolate mx-auto w-full max-w-xl">
-      <div className="absolute -inset-8 -z-10 rounded-full bg-teal-400/10 blur-3xl" />
-      <div className="relative aspect-square overflow-hidden rounded-[2rem] border border-white/10 bg-panel shadow-2xl sm:aspect-[1/1.05]">
-        <svg
-          viewBox="0 0 500 520"
-          className="absolute inset-0 h-full w-full"
-          role="img"
-          aria-label="Illustration of campus paths and event pins"
-        >
-          <defs>
-            <pattern
-              id="campus-grid"
-              width="32"
-              height="32"
-              patternUnits="userSpaceOnUse"
-            >
-              <path
-                d="M32 0H0V32"
-                fill="none"
-                stroke="#ffffff"
-                strokeOpacity=".035"
-              />
-            </pattern>
-          </defs>
-          <rect width="500" height="520" fill="url(#campus-grid)" />
-          <path
-            d="M290 0C260 95 390 120 385 245S475 365 500 375V0Z"
-            fill="#173934"
-            fillOpacity=".45"
-          />
-          <path
-            d="M0 400Q130 300 215 365T440 460L500 520H0Z"
-            fill="#173934"
-            fillOpacity=".5"
-          />
-          <g fill="#1D2A3D" stroke="#2A3A4F" strokeWidth="1.5">
-            <rect
-              x="74"
-              y="108"
-              width="87"
-              height="52"
-              rx="8"
-              transform="rotate(-12 74 108)"
-            />
-            <rect
-              x="195"
-              y="53"
-              width="62"
-              height="96"
-              rx="8"
-              transform="rotate(-12 195 53)"
-            />
-            <rect
-              x="342"
-              y="177"
-              width="104"
-              height="62"
-              rx="8"
-              transform="rotate(-12 342 177)"
-            />
-            <rect
-              x="95"
-              y="274"
-              width="83"
-              height="64"
-              rx="8"
-              transform="rotate(-12 95 274)"
-            />
-            <rect
-              x="253"
-              y="295"
-              width="72"
-              height="80"
-              rx="8"
-              transform="rotate(-12 253 295)"
-            />
-          </g>
-          <g fill="none" strokeLinecap="round">
-            <path
-              d="M-30 250L540 125M-20 432L530 318M170 -20Q115 230 235 550M308 -20L425 550"
-              stroke="#29374A"
-              strokeWidth="13"
-            />
-            <path
-              d="M-30 250L540 125M-20 432L530 318M170 -20Q115 230 235 550M308 -20L425 550"
-              stroke="#182336"
-              strokeWidth="8"
-            />
-            <path
-              d="M160 370Q155 220 300 200"
-              stroke="#2DD4BF"
-              strokeWidth="3"
-              strokeDasharray="3 9"
-              opacity=".7"
-            />
-          </g>
-          <g
-            fill="#7C8EA6"
-            fontFamily="sans-serif"
-            fontSize="10"
-            letterSpacing="2"
-          >
-            <text x="42" y="204" transform="rotate(-12 42 204)">
-              CAMPUS DRIVE
-            </text>
-            <text x="337" y="297">
-              THE QUAD
-            </text>
-          </g>
-        </svg>
-        <div className="absolute inset-x-5 top-5 flex items-center justify-between gap-2">
-          <span className="flex items-center gap-2 rounded-full border border-white/10 bg-canvas/80 px-3 py-2 text-xs font-medium text-slate-200 backdrop-blur-md">
-            <MapPin className="h-3.5 w-3.5 text-orange-400" /> College Park, MD
-          </span>
-          <span className="text-[10px] font-medium uppercase tracking-widest text-slate-400">
-            Campus preview
-          </span>
-        </div>
-        <div className="absolute left-[21%] top-[25%] flex h-12 w-12 rotate-[-8deg] items-center justify-center rounded-2xl border border-orange-300/40 bg-orange-500 text-canvas shadow-glow">
-          <Zap className="h-6 w-6" />
-        </div>
-        <div className="absolute right-[27%] top-[36%] flex h-16 w-16 items-center justify-center rounded-full border-8 border-teal-400/15 bg-teal-400/20 shadow-xl">
-          <span className="absolute inset-0 rounded-full border border-teal-300/30 motion-safe:animate-ping" />
-          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-teal-400 text-canvas">
-            <Music2 className="h-5 w-5" />
-          </span>
-        </div>
-        <div className="absolute bottom-[30%] left-[25%] flex h-11 w-11 items-center justify-center rounded-full border border-violet-300/40 bg-violet-500 text-white shadow-xl">
-          <Users className="h-5 w-5" />
-        </div>
-        <div className="absolute bottom-5 left-5 right-5 rounded-3xl border border-white/15 bg-canvas/85 p-4 shadow-2xl backdrop-blur-xl sm:p-5">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-300/25 to-emerald-500/5 text-teal-300">
-              <Music2 className="h-7 w-7" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium text-teal-300">
-                Find your kind of night
-              </p>
-              <p className="mt-1 font-display text-xl font-bold text-white">
-                Open mic. Open invite.
-              </p>
-              <p className="mt-1 text-xs text-slate-400">
-                Your next plan could be right here.
-              </p>
-            </div>
-            <ArrowRight className="hidden h-5 w-5 text-slate-300 sm:block" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function LandingPage({
-  onGetStarted,
-  isAuthenticated = false,
-}: LandingPageProps) {
+export default function LandingPage({ onGetStarted, isAuthenticated = false }: LandingPageProps) {
   const router = useRouter();
-  const {
-    isMounted,
-    isInstalled,
-    isDialogOpen,
-    setIsDialogOpen,
-    promptInstall,
-  } = usePwaInstall();
-  const handleInstallClick = async (placement: "hero" | "nav") => {
-    trackFunnelEvent({
-      name: "landing_cta_click",
-      properties: {
-        placement: placement === "hero" ? "install_hero" : "install_nav",
-      },
-    });
-    const outcome = await promptInstall();
-    if (outcome === "dialog" || outcome === "unavailable")
-      setIsDialogOpen(true);
-  };
+  const root = useRef<HTMLDivElement>(null);
+  // Static first render: SSR, disabled JavaScript and reduced-motion users see all content.
+  const [reducedMotion, setReducedMotion] = useState(true);
+  const [paused, setPaused] = useState(false);
+  const [visible, setVisible] = useState(true);
+  const { isMounted, isInstalled, isDialogOpen, setIsDialogOpen, promptInstall } = usePwaInstall();
+
   useEffect(() => {
     trackFunnelEvent({ name: "landing_view" });
     const previous = document.body.style.backgroundColor;
     document.body.style.backgroundColor = "#0B101B";
+    return () => { document.body.style.backgroundColor = previous; };
+  }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updatePreference = () => setReducedMotion(media.matches);
+    const updateVisibility = () => setVisible(document.visibilityState === "visible");
+    updatePreference();
+    updateVisibility();
+    media.addEventListener("change", updatePreference);
+    document.addEventListener("visibilitychange", updateVisibility);
+
+    const sections = root.current?.querySelectorAll<HTMLElement>("[data-motion-section]") ?? [];
+    const observer = "IntersectionObserver" in window ? new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        const element = entry.target as HTMLElement;
+        element.dataset.inView = String(entry.isIntersecting);
+        if (entry.isIntersecting) element.dataset.entered = "true";
+      }
+    }, { threshold: 0.08 }) : null;
+    sections.forEach(section => {
+      if (observer) observer.observe(section);
+      else section.dataset.inView = "true";
+    });
     return () => {
-      document.body.style.backgroundColor = previous;
+      observer?.disconnect();
+      media.removeEventListener("change", updatePreference);
+      document.removeEventListener("visibilitychange", updateVisibility);
     };
   }, []);
+
+  const handleInstallClick = async (placement: "hero" | "nav") => {
+    trackFunnelEvent({ name: "landing_cta_click", properties: { placement: placement === "hero" ? "install_hero" : "install_nav" } });
+    const outcome = await promptInstall();
+    if (outcome === "dialog" || outcome === "unavailable") setIsDialogOpen(true);
+  };
   const handleOpenMap = (placement: "hero" | "nav" | "footer" = "hero") => {
     trackFunnelEvent({ name: "landing_cta_click", properties: { placement } });
     router.push("/map");
   };
   const handleHostEvent = () => {
-    trackFunnelEvent({
-      name: "landing_cta_click",
-      properties: { placement: "organizer" },
-    });
+    trackFunnelEvent({ name: "landing_cta_click", properties: { placement: "organizer" } });
     router.push("/map?intent=create");
   };
 
   return (
-    <div className="min-h-screen overflow-hidden bg-canvas font-body text-slate-100">
-      <header className="relative z-10 border-b border-white/5">
-        <nav
-          aria-label="Primary"
-          className="mx-auto flex min-h-20 max-w-7xl items-center justify-between gap-3 px-5 sm:px-8"
-        >
-          <button
-            onClick={() => router.push("/")}
-            aria-label="Huddle home"
-            className="flex items-center gap-2.5 rounded-xl pr-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-400"
-          >
-            <HuddleLogo size={34} />
-            <span className="font-display text-2xl font-bold tracking-tight">
-              huddle<span className="text-orange-400">.</span>
-            </span>
-          </button>
-          <div className="flex items-center gap-2 sm:gap-5">
-            <a
-              href="#organizers"
-              className="hidden min-h-11 items-center text-sm font-medium text-slate-300 hover:text-white md:inline-flex"
-            >
-              For organizers
-            </a>
-            {!isInstalled && isMounted && (
-              <Button
-                variant="ghost"
-                className="hidden text-slate-300 lg:inline-flex"
-                onClick={() => handleInstallClick("nav")}
-              >
-                <Download /> Install app
-              </Button>
-            )}
-            {!isAuthenticated && (
-              <Button
-                variant="ghost"
-                onClick={onGetStarted}
-                className="px-3 text-slate-300"
-              >
-                Sign in
-              </Button>
-            )}
-            <Button
-              onClick={() => handleOpenMap("nav")}
-              className="rounded-full px-4 sm:px-5"
-            >
-              Explore <ArrowRight />
-            </Button>
+    <div ref={root} className={styles.page + " min-h-screen overflow-x-clip bg-canvas font-body text-slate-100"} data-motion={!reducedMotion && !paused && visible ? "on" : "off"}>
+      <a href="#landing-main" className="sr-only z-50 rounded-xl bg-orange-400 p-3 text-slate-950 focus:not-sr-only focus:absolute focus:left-4 focus:top-4">Skip to content</a>
+      <header className="relative z-10">
+        <nav aria-label="Primary" className="mx-auto flex min-h-20 max-w-7xl items-center justify-between gap-3 border-b border-white/10 px-5 sm:min-h-24 sm:px-8">
+          <Link href="/" aria-label="Huddle home" className="flex min-h-11 items-center gap-2 rounded-xl">
+            <HuddleLogo size={32} aria-hidden="true" />
+            <span className="font-display text-2xl font-bold tracking-tight">huddle<span className="text-orange-400">.</span></span>
+          </Link>
+          <div className="hidden items-center gap-8 text-sm text-slate-400 lg:flex">
+            <a href="#how-it-works" className="inline-flex min-h-11 items-center transition-colors hover:text-white">How it works</a>
+            <a href="#organizers" className="inline-flex min-h-11 items-center transition-colors hover:text-white">For organizers</a>
+          </div>
+          <div className="flex items-center gap-1 sm:gap-3">
+            {!isInstalled && isMounted && <Button variant="ghost" className="hidden text-slate-300 xl:inline-flex" onClick={() => handleInstallClick("nav")}><Download aria-hidden="true" /> Install app</Button>}
+            {!isAuthenticated && <Button variant="ghost" onClick={onGetStarted} className="px-3 text-slate-300">Sign in</Button>}
+            <Button onClick={() => handleOpenMap("nav")} className="rounded-full px-4 shadow-none sm:px-5">Explore <ArrowUpRight aria-hidden="true" /></Button>
           </div>
         </nav>
       </header>
-      <main>
-        <section className="relative isolate mx-auto grid max-w-7xl items-center gap-12 px-5 pb-16 pt-12 sm:px-8 sm:py-20 lg:grid-cols-2 lg:gap-16 lg:py-24">
-          <div className="pointer-events-none absolute -left-40 top-0 -z-10 h-96 w-96 rounded-full bg-orange-500/10 blur-3xl" />
-          <div>
-            {/* <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-teal-400/20 bg-teal-400/5 px-3 py-2 text-xs font-semibold text-teal-300">
-              <Radio className="h-3.5 w-3.5" /> Less scrolling. More showing up.
-            </div> */}
-            <h1 className="font-display text-5xl font-bold leading-[1.04] tracking-tight text-white sm:text-6xl xl:text-7xl">
-              See what’s happening around campus.
-              <br />
-              <span className="text-orange-400">Right now.</span>
+      <main id="landing-main">
+        <section data-motion-section aria-labelledby="hero-heading" className="relative mx-auto max-w-7xl px-5 pb-10 pt-10 sm:px-8 sm:pt-16">
+          <div className={styles.reveal + " relative z-10 text-center"}>
+            <p className="mb-6 inline-flex items-center gap-2.5 font-mono text-[10px] uppercase tracking-[.2em] text-teal-300 sm:text-xs"><span className="h-1.5 w-1.5 rounded-full bg-teal-300" /> The campus event map</p>
+            <h1 id="hero-heading" className={styles.heroTitle + " font-display font-semibold text-orange-50"}>
+              Less scrolling.<br /><span className={styles.heroAccent + " text-orange-400"}>More showing up.</span>
             </h1>
-            <p className="mt-6 max-w-md text-base leading-relaxed text-slate-400 sm:text-lg">
-              The pickup game. The open mic. The people you haven’t met yet.
-              Your next good plan is closer than you think.
+            <p className="mx-auto mt-8 max-w-lg text-base leading-relaxed text-slate-400 sm:text-lg">See what’s happening around campus.<br className="hidden sm:block" /> The pickup game. The open mic. The people you haven’t met yet.</p>
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+              <Button size="lg" onClick={() => handleOpenMap("hero")} className="group rounded-full px-7 shadow-none">Explore the map <ArrowUpRight aria-hidden="true" className="motion-safe:transition-transform motion-safe:group-hover:-translate-y-0.5 motion-safe:group-hover:translate-x-0.5" /></Button>
+              {!isInstalled && isMounted && <Button size="lg" variant="ghost" onClick={() => handleInstallClick("hero")} className="rounded-full text-slate-300"><Download aria-hidden="true" /> Add to your phone</Button>}
+            </div>
+            <p className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-slate-400">
+              <span className="inline-flex items-center gap-1.5"><Check className="h-3 w-3 text-teal-300" aria-hidden="true" /> Free to explore</span>
+              <span>No download or account needed to browse</span>
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Button
-                size="lg"
-                onClick={() => handleOpenMap("hero")}
-                className="rounded-2xl px-7 text-base"
-              >
-                Explore the map <ArrowRight />
-              </Button>
-              {!isInstalled && isMounted && (
-                <Button
-                  size="lg"
-                  variant="outline"
-                  onClick={() => handleInstallClick("hero")}
-                  className="rounded-2xl px-5"
-                >
-                  <Download /> Get the app
-                </Button>
-              )}
-            </div>
-            <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-400">
-              {[
-                "Free to explore",
-                "No download needed",
-                "Browse without an account",
-              ].map((text) => (
-                <span key={text} className="inline-flex items-center gap-1.5">
-                  <Check className="h-3.5 w-3.5 text-teal-400" />
-                  {text}
-                </span>
-              ))}
-            </div>
           </div>
-          <CampusMapVisual />
+          <div className={styles.revealLater + " mt-3 sm:mt-0"}><CampusScene /></div>
+          <div className="mt-6 flex items-center justify-between gap-3 border-b border-white/10 pb-5">
+            <a href="#how-it-works" className="inline-flex min-h-11 items-center gap-2 text-xs text-slate-400 hover:text-white"><ArrowDown className="h-3.5 w-3.5" aria-hidden="true" /> A little less online. A little more out there.</a>
+            <button type="button" onClick={() => setPaused(value => !value)} disabled={reducedMotion} aria-pressed={paused || reducedMotion} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-3 text-xs text-slate-400 hover:bg-white/5 hover:text-white disabled:cursor-default disabled:opacity-70" aria-label={reducedMotion ? "Reduced motion enabled" : paused ? "Play landing animations" : "Pause landing animations"}>
+              {paused || reducedMotion ? <Play className="h-3 w-3" aria-hidden="true" /> : <Pause className="h-3 w-3" aria-hidden="true" />}
+              <span className="hidden sm:inline">{reducedMotion ? "Reduced motion" : paused ? "Play motion" : "Pause motion"}</span>
+            </button>
+          </div>
         </section>
-        <section
-          aria-labelledby="how-it-works"
-          className="mx-auto max-w-7xl px-5 pb-20 sm:px-8"
-        >
-          <div className="mb-8 flex items-center gap-3">
-            <span className="h-px flex-1 bg-white/10" />
-            <h2
-              id="how-it-works"
-              className="text-xs font-semibold uppercase tracking-widest text-slate-400"
-            >
-              Out of the group chat. Into the moment.
-            </h2>
-            <span className="h-px flex-1 bg-white/10" />
+
+        <section id="how-it-works" data-motion-section aria-labelledby="how-heading" className="mx-auto max-w-7xl scroll-mt-6 px-5 py-12 sm:px-8 sm:py-20">
+          <div className={styles.reveal + " mb-12 grid gap-5 lg:grid-cols-2 lg:items-end"}>
+            <div><p className="mb-4 font-mono text-xs uppercase tracking-widest text-slate-500">01 / From a pin to a plan</p><h2 id="how-heading" className="max-w-xl font-display text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">Your campus is bigger<br />than your group chat.</h2></div>
+            <p className="max-w-md text-base leading-relaxed text-slate-400 lg:justify-self-end">Good things are happening outside your usual circle. Huddle makes them easier to find. What happens next is up to you.</p>
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className={styles.revealLater + " grid gap-8 md:grid-cols-3 md:gap-10"}>
             {[
-              {
-                icon: Compass,
-                title: "Find your scene",
-                body: "A whole campus of plans, on one map. Filter by what you’re into and when you’re free.",
-              },
-              {
-                icon: MapPin,
-                title: "Get the whole picture",
-                body: "The time, the place, the people going. Everything you need before heading out.",
-              },
-              {
-                icon: Users,
-                title: "Make it a plan",
-                body: "Sign in, save your spot, and show up. Good things happen when you get together.",
-              },
-            ].map((step, i) => (
-              <div
-                key={step.title}
-                className="rounded-3xl border border-white/10 bg-white/[0.025] p-6 sm:p-7"
-              >
-                <div className="mb-7 flex items-center justify-between">
-                  <step.icon className="h-6 w-6 text-orange-400" />
-                  <span className="font-mono text-xs text-slate-400">
-                    0{i + 1}
-                  </span>
-                </div>
-                <h3 className="font-display text-xl font-bold">{step.title}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-slate-400">
-                  {step.body}
-                </p>
-              </div>
+              { icon: Compass, number: "01", title: "Find your scene.", body: "Browse nearby events by what you’re into and when you’re free.", detail: "A campus full of possibilities", color: "text-teal-300" },
+              { icon: MapPin, number: "02", title: "Get the whole picture.", body: "Check the time, the place, and the details before heading out.", detail: "Less back-and-forth", color: "text-orange-300" },
+              { icon: Users, number: "03", title: "Make it a plan.", body: "Sign in to RSVP. Send the link to a friend. Meet them there.", detail: "The best part is offline", color: "text-violet-300" },
+            ].map(step => (
+              <article key={step.number} className="group border-t border-white/15 pt-6">
+                <div className="mb-8 flex items-center justify-between"><step.icon className={"h-7 w-7 " + step.color} aria-hidden="true" /><span className="font-mono text-xs text-slate-500">{step.number}</span></div>
+                <h3 className="font-display text-2xl font-semibold">{step.title}</h3>
+                <p className="mt-3 max-w-xs text-sm leading-relaxed text-slate-400">{step.body}</p>
+                <p className={"mt-7 text-xs " + step.color}>{step.detail}</p>
+              </article>
             ))}
           </div>
         </section>
-        <section
-          id="organizers"
-          aria-labelledby="organizers-heading"
-          className="mx-auto max-w-7xl px-5 pb-20 sm:px-8"
-        >
-          <div className="relative isolate overflow-hidden rounded-[2rem] border border-white/10 bg-panel px-6 py-10 sm:p-12 lg:grid lg:grid-cols-2 lg:gap-16">
-            <div className="pointer-events-none absolute -right-24 -top-24 -z-10 h-96 w-96 rounded-full bg-orange-500/10 blur-3xl" />
-            <div>
-              <span className="text-xs font-semibold uppercase tracking-widest text-orange-400">
-                For the people who make it happen
-              </span>
-              <h2
-                id="organizers-heading"
-                className="mt-4 font-display text-3xl font-bold tracking-tight sm:text-4xl"
-              >
-                Bring the plan.
-                <br />
-                We’ll help bring the people.
-              </h2>
-              <p className="mt-4 max-w-md text-sm leading-relaxed text-slate-400">
-                A club meetup, pickup game, or study session — give it a place on the
-                map and keep everyone in the loop.
-              </p>
-              <Button onClick={handleHostEvent} className="mt-7">
-                Create your first event <ArrowRight />
-              </Button>
+
+        <section id="organizers" data-motion-section aria-labelledby="organizers-heading" className="mx-auto max-w-7xl scroll-mt-6 px-5 py-12 sm:px-8 sm:py-20">
+          <div className="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/70 backdrop-blur-md lg:grid lg:grid-cols-2">
+            <div className={styles.reveal + " p-7 sm:p-12"}>
+              <p className="font-mono text-xs uppercase tracking-widest text-orange-300">02 / Make something happen</p>
+              <h2 id="organizers-heading" className="mt-6 font-display text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">Bring the plan.<br /><span className="text-slate-400">Make room for<br className="hidden lg:block" /> someone new.</span></h2>
+              <p className="mt-6 max-w-sm text-sm leading-relaxed text-slate-400">Keep your group chat. Give everyone else a way in. Put your club meetup, pickup game, or study session on the map.</p>
+              <Button onClick={handleHostEvent} className="mt-7 rounded-full shadow-none">Put your event on the map <ArrowUpRight aria-hidden="true" /></Button>
+              <p className="mt-4 text-xs text-slate-500">Event details, RSVPs, and event chat. Together.</p>
             </div>
-            <div className="mt-10 space-y-3 lg:mt-0">
-              {[
-                {
-                  icon: MapPin,
-                  title: "Get discovered",
-                  text: "Put your event where your campus is looking.",
-                },
-                {
-                  icon: Users,
-                  title: "Keep your crew together",
-                  text: "Manage RSVPs, waitlists, and event chat in one place.",
-                },
-                {
-                  icon: CalendarCheck,
-                  title: "See who shows up",
-                  text: "Check in your attendees and understand your turnout.",
-                },
-              ].map((item) => (
-                <div
-                  key={item.title}
-                  className="flex items-center gap-4 rounded-2xl border border-white/5 bg-white/5 p-4"
-                >
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-400/10 text-teal-300">
-                    <item.icon className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <h3 className="text-sm font-semibold">{item.title}</h3>
-                    <p className="mt-1 text-sm text-slate-400">{item.text}</p>
-                  </div>
-                </div>
-              ))}
+            <div className={styles.revealLater + " flex flex-col justify-center border-t border-white/10 px-4 pb-6 pt-3 sm:px-8 lg:border-l lg:border-t-0"}>
+              <GatheringVisual />
+              <p className="mx-auto max-w-xs text-center text-sm leading-relaxed text-slate-400">Not just the people who already know.<br /><span className="text-teal-200">The people who’d love to be there.</span></p>
             </div>
           </div>
         </section>
-        <section className="px-5 pb-20 text-center">
-          <Sparkles className="mx-auto mb-5 h-6 w-6 text-teal-300" />
-          <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
-            Your next “you had to be there” starts here.
-          </h2>
-          <Button
-            size="lg"
-            className="mt-7 rounded-full"
-            onClick={() => handleOpenMap("footer")}
-          >
-            Open the map <ArrowRight />
-          </Button>
-          <p className="mt-4 text-sm text-slate-400">
-            See what’s out there. Decide when you get there.
-          </p>
+
+        <section data-motion-section aria-labelledby="last-heading" className="relative mx-auto max-w-7xl px-5 pb-20 pt-12 text-center sm:px-8 sm:pb-28 sm:pt-20">
+          <div className={styles.reveal}>
+            <p className="mb-6 font-mono text-xs uppercase tracking-widest text-teal-300">Built in College Park. Made for showing up.</p>
+            <h2 id="last-heading" className={styles.finalWord + " font-display font-semibold"}>Meet you<br /><span className="text-orange-400">out there.</span></h2>
+            <p className="mx-auto mt-6 max-w-sm text-sm leading-relaxed text-slate-400">Your next “you had to be there” starts somewhere. See what’s around you.</p>
+            <Button size="lg" onClick={() => handleOpenMap("footer")} className="mt-7 rounded-full shadow-none">Open the map <ArrowRight aria-hidden="true" /></Button>
+          </div>
         </section>
       </main>
       <footer className="border-t border-white/10">
-        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-3 px-5 py-6 sm:flex-row sm:items-center sm:px-8">
-          <p className="text-xs text-slate-400">
-            Huddle Map, LLC · College Park, MD
-          </p>
-          <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
-            {[
-              { href: "/directory", label: "Event directory" },
-              { href: "/privacy", label: "Privacy" },
-              { href: "/terms", label: "Terms" },
-              { href: "/contact", label: "Contact" },
-              { href: "/feedback", label: "Feedback" },
-            ].map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="inline-flex min-h-11 min-w-11 items-center justify-center text-xs text-slate-400 hover:text-white"
-              >
-                {link.label}
-              </Link>
-            ))}
+        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-4 px-5 py-6 sm:px-8 lg:flex-row lg:items-center">
+          <p className="text-xs text-slate-500">Huddle Map, LLC · College Park, MD</p>
+          <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-1">
+            {[{ href: "/directory", label: "Event directory" }, { href: "/privacy", label: "Privacy" }, { href: "/terms", label: "Terms" }, { href: "/contact", label: "Contact" }, { href: "/feedback", label: "Feedback" }].map(link => <Link key={link.href} href={link.href} className="inline-flex min-h-11 min-w-11 items-center text-xs text-slate-400 hover:text-white">{link.label}</Link>)}
           </nav>
         </div>
       </footer>

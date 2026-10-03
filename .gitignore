@@ -34,3 +34,11 @@ next-env.d.ts
 
 # Local launch verification output
 .artifacts/
+
+# Android TWA: generated project, signing material and build outputs stay local.
+/android/twa/generated/
+/android/twa/signing/
+*.keystore
+*.jks
+*.aab
+*.apk

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/firebase-context"
+import { AdminOrganizerReviews } from "@/components/admin-organizer-reviews"
 import { BarChart3, Users, Eye, Calendar, Zap, Archive, Globe, Loader2, ShieldAlert, Sparkles, Play, ChevronDown, ChevronRight, Brain, Radio, BellRing, Clock, Target } from "lucide-react"
 
 interface Metrics {
@@ -244,6 +245,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
+        <AdminOrganizerReviews />
         {/* Stat Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-8">
           {statCards.map((card) => {

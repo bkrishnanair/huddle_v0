@@ -152,7 +152,7 @@ export const EventCard = React.memo(
             )}
           </h3>
           <p className="mb-2 sm:mb-4 truncate text-xs text-slate-300">
-            Hosted by {event.organizerName || "your campus community"}
+            Hosted by {event.createdBy && !event.isScraped ? <Link href={'/organizers/' + encodeURIComponent(event.createdBy)} onClick={e => e.stopPropagation()} className="inline-flex min-h-11 items-center underline-offset-4 hover:underline">{event.organizerName || "your campus community"}</Link> : event.organizerName || "your campus community"}
           </p>
           <div className="space-y-2 text-xs text-slate-300">
             <div className="flex items-start gap-2.5">

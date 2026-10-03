@@ -107,7 +107,14 @@ describe('crawler routes', () => {
   it('retains static sitemap links if Firebase is unavailable', async () => {
     mocks.db.mockReturnValue(null);
     const logger = vi.spyOn(console, 'error').mockImplementation(() => {});
-    expect((await sitemap()).length).toBe(10);
+    const urls = (await sitemap()).map(entry => entry.url);
+    expect(urls).toEqual([
+      'https://huddlemap.live',
+      'https://huddlemap.live/directory',
+      'https://huddlemap.live/organizers',
+      'https://huddlemap.live/partners',
+      ...DIRECTORY_CATEGORIES.map(category => `https://huddlemap.live/directory/${category.slug}`),
+    ]);
     logger.mockRestore();
   });
 });

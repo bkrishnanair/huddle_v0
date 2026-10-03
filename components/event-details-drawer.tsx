@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import Link from "next/link"
 import {
   Drawer,
   DrawerContent,
@@ -33,7 +34,6 @@ import { useAuth } from "@/lib/firebase-context"
 import { signInAsGuest } from "@/lib/auth"
 import { db } from "@/lib/firebase"
 import { doc, onSnapshot } from "firebase/firestore"
-import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { format, parseISO } from "date-fns"
 import CreateEventModal from "./create-event-modal"
@@ -45,6 +45,8 @@ import { FollowButton } from "@/components/follow-button"
 import { getEventStartUTC, formatEventTimeRange } from "@/lib/datetime"
 import { isEventLive } from "@/lib/utils"
 import { trackFunnelEvent } from "@/lib/analytics"
+import { getEventShareData, shareEvent } from '@/lib/event-sharing'
+import { RsvpNextSteps } from './events/rsvp-next-steps'
 
 function EventCountdown({ date, time, timezone }: { date: string; time: string; timezone?: string }) {
   const [label, setLabel] = useState("");
@@ -94,7 +96,6 @@ interface EventDetailsDrawerProps {
 
 export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClose, onEventUpdated }: EventDetailsDrawerProps) {
   const { user, loading } = useAuth()
-  const router = useRouter()
   const [event, setEvent] = useState<GameEvent | null>(initialEvent)
   const [isLoading, setIsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('details')
@@ -103,6 +104,8 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
   const [isCloning, setIsCloning] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [isClaiming, setIsClaiming] = useState(false)
+  const [claimEvidence, setClaimEvidence] = useState("")
+  useEffect(() => { setClaimEvidence(""); }, [initialEvent?.id]);
   const [showRsvpPrompt, setShowRsvpPrompt] = useState(false)
   const [guestName, setGuestName] = useState("")
   const [guestEmail, setGuestEmail] = useState("")
@@ -110,6 +113,20 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
   const [rsvpNote, setRsvpNote] = useState("")
   const [rsvpAnswers, setRsvpAnswers] = useState<Record<string, string>>({})
   const [rsvpPickupId, setRsvpPickupId] = useState("")
+  const [joinedEventId, setJoinedEventId] = useState<string | null>(null)
+  const [isSharing, setIsSharing] = useState(false)
+  const [shareFallback, setShareFallback] = useState<{ id: string; url: string } | null>(null)
+  const detailsViewport = useRef<HTMLDivElement>(null)
+  const sharing = useRef(false)
+
+  useEffect(() => {
+    setJoinedEventId(null)
+    setShareFallback(null)
+  }, [initialEvent.id, isOpen])
+
+  useEffect(() => {
+    if (joinedEventId && detailsViewport.current) detailsViewport.current.scrollTop = 0
+  }, [joinedEventId, activeTab])
 
   // Reporting State
   const [reportTarget, setReportTarget] = useState<string | null>(null)
@@ -221,28 +238,23 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
   }
 
 
-  const handleShare = async () => {
-    if (!event) return;
-    const shareUrl = `${window.location.origin}/map?eventId=${event.id}`
-
-    // Always attempt clipboard copy first
+  const handleShare = async (invite = false) => {
+    if (!event || sharing.current || (invite && event.isPrivate)) return;
+    const data = getEventShareData(event, window.location.origin, invite)
+    sharing.current = true
+    setIsSharing(true)
     try {
-      await navigator.clipboard.writeText(shareUrl)
-      toast.success("Link copied!")
-    } catch (err) {
-      console.error("Clipboard copy failed", err)
-    }
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `Huddle: ${event.title}`,
-          text: `Check out this ${event.sport} event on Huddle!`,
-          url: shareUrl,
-        })
-      } catch (err) {
-        // user cancelled share, fail silently
-      }
+      const result = await shareEvent(data)
+      if (result === 'copied') toast.success('Event link copied')
+      if (result !== 'cancelled') setShareFallback(null)
+    } catch {
+      setShareFallback({ id: event.id, url: data.url! })
+      setActiveTab('details')
+      if (detailsViewport.current) detailsViewport.current.scrollTop = 0
+      toast.info('Select and copy the event link below')
+    } finally {
+      sharing.current = false
+      setIsSharing(false)
     }
   }
 
@@ -553,6 +565,9 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
         }
 
         let msg = "Success!";
+        const confirmedJoin = action === 'join' && data.event.players?.includes(activeUser.uid)
+        setJoinedEventId(confirmedJoin ? event.id : null)
+        if (confirmedJoin) setActiveTab('details')
         if (action === "join") {
           msg = data.event.players?.includes(activeUser.uid) ? "You've joined the event" : "You've joined the waitlist";
         } else {
@@ -654,7 +669,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                     {event.eventType === 'virtual' ? '🖥️ Virtual' : '📡 Hybrid'}
                   </span>
                 )}
-                <span className="text-slate-400 text-xs font-medium flex items-center gap-1">by {event.organizerName}{event.isOrganizerVerified && <BadgeCheck className="w-3.5 h-3.5 text-blue-400 shrink-0" />}</span>
+                <span className="text-slate-400 text-xs font-medium flex items-center gap-1">by {event.isScraped ? event.organizerName : <Link className="inline-flex min-h-11 items-center underline-offset-4 hover:underline" href={'/organizers/' + encodeURIComponent(event.createdBy)}>{event.organizerName}</Link>}{event.isOrganizerVerified && <BadgeCheck className="w-3.5 h-3.5 text-blue-400 shrink-0" />}</span>
               </DrawerDescription>
             </div>
             <DrawerClose asChild><Button variant="ghost" size="icon" aria-label="Close event details" className="shrink-0 rounded-full border border-white/10 text-slate-400"><X /></Button></DrawerClose>
@@ -683,7 +698,16 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
             </TabsList>
           </div>
 
-          <TabsContent value="details" className="min-h-0 flex-1 overflow-y-auto overscroll-contain outline-none pb-4 mt-0 data-[state=inactive]:hidden">
+          <TabsContent ref={detailsViewport} value="details" className="min-h-0 flex-1 overflow-y-auto overscroll-contain outline-none pb-4 mt-0 data-[state=inactive]:hidden">
+            {joinedEventId === event.id && (
+              <RsvpNextSteps event={event} sharing={isSharing} onInvite={() => void handleShare(true)} onDone={() => setJoinedEventId(null)} />
+            )}
+            {shareFallback?.id === event.id && (
+              <div className="mx-5 mb-4 space-y-2">
+                <Label htmlFor="event-share-link">Copy event link</Label>
+                <Input id="event-share-link" readOnly value={shareFallback.url} onFocus={e => e.currentTarget.select()} className="min-h-11 text-base" />
+              </div>
+            )}
             <div className="px-5 space-y-4">
               {/* Info Grid - Modern Compact */}
               <div className="grid grid-cols-2 gap-3">
@@ -725,13 +749,16 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                     <h4 className="text-sm font-black text-white">Are you the organizer?</h4>
                   </div>
                   <p className="text-xs text-slate-400 mb-3">
-                    Claim this event to enable RSVPs, manage attendance, and send announcements to your attendees.
+                    Request organizer access. Huddle reviews your role before transferring control; submitting a request does not change the event.
                     {(event.currentPlayers > 0 || (event.players && event.players.length > 0)) && (
                       <span className="block mt-1 text-violet-400 font-bold">
-                        ⚡ {event.currentPlayers || event.players?.length || 0} existing attendee{(event.currentPlayers || event.players?.length || 0) !== 1 ? 's' : ''} will be preserved and notified.
+                        {event.currentPlayers || event.players?.length || 0} existing RSVP{(event.currentPlayers || event.players?.length || 0) !== 1 ? 's' : ''} will be preserved.
                       </span>
                     )}
                   </p>
+                  <label className="mb-3 block text-xs text-slate-300">Public link showing your organizer role
+                    <Input type="url" value={claimEvidence} onChange={e => setClaimEvidence(e.target.value)} placeholder="https://club-website-or-official-profile" />
+                  </label>
                   <Button
                     onClick={async () => {
                       setIsClaiming(true);
@@ -740,16 +767,16 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                         const res = await fetch('/api/events/claim', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-                          body: JSON.stringify({ scrapedEventId: event.id }),
+                          body: JSON.stringify({ scrapedEventId: event.id, evidenceUrl: claimEvidence.trim() }),
                         });
                         if (res.ok) {
                           const data = await res.json();
-                          toast.success('🎉 Event claimed! All existing RSVPs are preserved.');
-                          onEventUpdated(data.event);
-                          // Don't close — let the user see their newly-claimed event with updated ownership
-                          if (data.isNewOrganizer) {
-                            router.push('/dashboard?onboarding=true');
+                          if (data.status === 'pending') {
+                            toast.success('Request received. Huddle will review your organizer role.');
+                            return;
                           }
+                          toast.success('Organizer access granted. Existing RSVPs are preserved.');
+                          if (data.event) onEventUpdated(data.event);
                         } else {
                           const errData = await res.json().catch(() => ({ error: 'Failed to claim event' }));
                           toast.error(errData.error || 'Failed to claim event');
@@ -764,7 +791,7 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
                     className="w-full h-10 bg-violet-500 hover:bg-violet-600 text-white font-bold text-sm gap-2"
                   >
                     {isClaiming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Crown className="w-4 h-4" />}
-                    {isClaiming ? 'Claiming...' : 'Claim This Event'}
+                    {isClaiming ? 'Checking access…' : 'Request organizer access'}
                   </Button>
                 </div>
               )}
@@ -1141,7 +1168,8 @@ export default function EventDetailsDrawer({ event: initialEvent, isOpen, onClos
             </Button>
             <Button
               variant="outline"
-              onClick={handleShare}
+              onClick={() => void handleShare()}
+              disabled={isSharing}
               className="col-span-2 h-10 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold"
               title="Share event"
             >
