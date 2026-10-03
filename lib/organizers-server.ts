@@ -2,7 +2,8 @@ import 'server-only';
 
 import { getFirebaseAdminDb } from '@/lib/firebase-admin';
 import { publicOrganizer, organizerIdSchema } from '@/lib/organizers';
-import { getDirectoryDateWindow, getEventStartUTC, matchesEventTimeFilter } from '@/lib/datetime';
+import { getEventStartUTC } from '@/lib/datetime';
+import { getDiscoveryEventDocs } from '@/lib/event-discovery';
 import { normalizeCoordinates } from '@/lib/coordinates';
 import { pickPublicFields, type GameEvent } from '@/lib/types';
 
@@ -23,14 +24,10 @@ export async function getOrganizerDirectory() {
 }
 
 export async function getOrganizerEvents(id: string): Promise<GameEvent[]> {
-  const db = getFirebaseAdminDb();
-  if (!db) throw new Error('Events unavailable');
-  const { from, until } = getDirectoryDateWindow();
-  const snapshot = await db.collection('events').where('createdBy', '==', id)
-    .where('date', '>=', from).where('date', '<=', until).orderBy('date').limit(100).get();
-  return snapshot.docs.flatMap(doc => {
+  const { docs } = await getDiscoveryEventDocs({ createdBy: id, limit: 100 });
+  return docs.flatMap(doc => {
     const data = doc.data();
-    if (data.isPrivate || !matchesEventTimeFilter(data as GameEvent, 'All')) return [];
+    if (data.isPrivate) return [];
     return [{ ...pickPublicFields({ ...data, id: doc.id }), geopoint: normalizeCoordinates(data.geopoint) } as GameEvent];
   }).sort((a, b) => getEventStartUTC(a).getTime() - getEventStartUTC(b).getTime());
 }

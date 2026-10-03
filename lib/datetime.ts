@@ -85,13 +85,36 @@ export function getEventFieldsFromISO(value: string, timezone = DEFAULT_TIMEZONE
   return { date: format(zoned, 'yyyy-MM-dd', { timeZone: timezone }), time: format(zoned, 'HH:mm', { timeZone: timezone }) };
 }
 
-/** Bounded SEO discovery window, including recent overnight/multi-day starts. */
+/** Start-date window; discovery also queries older events with overlapping end dates. */
 export function getDirectoryDateWindow(now = new Date()) {
   const from = new Date(now);
   const until = new Date(now);
   from.setUTCDate(from.getUTCDate() - 7);
   until.setUTCDate(until.getUTCDate() + 90);
   return { from: from.toISOString().slice(0, 10), until: until.toISOString().slice(0, 10) };
+}
+
+/** A broad date-only scan bound; eligibility always uses the exact UTC end below. */
+export function getEventCleanupWindow(now = new Date()) {
+  const cutoff = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+  const through = new Date(cutoff);
+  // Include local dates ahead of UTC, without making the cutoff itself imprecise.
+  through.setUTCDate(through.getUTCDate() + 1);
+  return { cutoff, through: through.toISOString().slice(0, 10) };
+}
+
+export function shouldArchiveEvent(event: GameEvent, now = new Date()): boolean {
+  if (event.status !== undefined && event.status !== 'active') return false;
+  try {
+    if (!isCalendarDate(event.date?.trim() || '')) return false;
+    const start = getEventStartUTC(event);
+    const end = getEventEndUTC(event);
+    return Number.isFinite(start.getTime()) && Number.isFinite(end.getTime()) &&
+      end >= start && end <= getEventCleanupWindow(now).cutoff;
+  } catch {
+    // Malformed legacy dates must never trigger a destructive status change.
+    return false;
+  }
 }
 
 /** Stable public-page display in the event's timezone, not the server's locale. */
@@ -131,7 +154,8 @@ export function getEventStartUTC(event: GameEvent): Date {
 /**
  * Get the UTC Date when the event ends.
  *
- * If endTime is set, uses it. Otherwise defaults to start + 2 hours.
+ * Uses endTime when set, or the end of an explicit endDate. With neither,
+ * defaults to start + 2 hours.
  * Resilient against empty/whitespace endDate strings and cross-midnight times.
  */
 export function getEventEndUTC(event: GameEvent): Date {
@@ -140,6 +164,18 @@ export function getEventEndUTC(event: GameEvent): Date {
   if (isNaN(startUTC.getTime())) return new Date(NaN);
 
   const endTimeStr = event.endTime?.trim();
+  const explicitEndDate = event.endDate?.trim();
+  if (explicitEndDate && (!isCalendarDate(explicitEndDate) || explicitEndDate < event.date.trim())) {
+    return new Date(NaN);
+  }
+  if (endTimeStr && !/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(endTimeStr)) {
+    return new Date(NaN);
+  }
+  if (explicitEndDate && !endTimeStr) {
+    const nextDay = new Date(`${explicitEndDate}T12:00:00Z`);
+    nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+    return new Date(fromZonedTime(`${nextDay.toISOString().slice(0, 10)}T00:00:00`, tz).getTime() - 1);
+  }
   if (endTimeStr) {
     const endDateStr = (event.endDate && event.endDate.trim().length > 0)
       ? event.endDate.trim()

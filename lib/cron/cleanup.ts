@@ -1,52 +1,52 @@
-// lib/cron/cleanup.ts
-// Handler: archive stale events older than 48 hours.
 import 'server-only';
 
+import { FieldPath } from 'firebase-admin/firestore';
 import { getFirebaseAdminDb } from '@/lib/firebase-admin';
+import { getEventCleanupWindow, shouldArchiveEvent } from '@/lib/datetime';
+import type { GameEvent } from '@/lib/types';
 import type { CronResult } from './types';
 
-/**
- * Archive events whose date is more than 48 hours ago.
- * Bounded query: date < cutoff AND status != 'archived', limit 100.
- * Estimated reads per run: ≤100
- */
+const PAGE_SIZE = 200;
+
+/** Archive only events that ended at least 48 hours ago, never merely old starts. */
 export async function runCleanup(): Promise<CronResult> {
   const start = Date.now();
+  const now = new Date();
   const errors: string[] = [];
   let processed = 0;
 
   try {
-    const adminDb = getFirebaseAdminDb();
-    if (!adminDb) throw new Error('Database unavailable');
+    const db = getFirebaseAdminDb();
+    if (!db) throw new Error('Database unavailable');
+    const stateRef = db.collection('cronState').doc('eventCleanup');
+    const { through } = getEventCleanupWindow(now);
 
-    const cutoff = new Date();
-    cutoff.setHours(cutoff.getHours() - 48);
-    const cutoffStr = cutoff.toISOString().split('T')[0];
-    
-    // Moving window: events from exactly 7 days before cutoff, up to cutoff.
-    // This avoids fetching extremely old events that are already archived.
-    const cutoffMinus7 = new Date(cutoff.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const cutoffMinus7Str = cutoffMinus7.toISOString().split('T')[0];
-
-    const staleSnap = await adminDb
-      .collection('events')
-      .where('date', '>=', cutoffMinus7Str)
-      .where('date', '<', cutoffStr)
-      .limit(200)
-      .get();
-
-    if (!staleSnap.empty) {
-      const batch = adminDb.batch();
-      staleSnap.docs.forEach((doc) => {
-        if (doc.data().status !== 'archived') {
-          batch.update(doc.ref, { status: 'archived' });
-          processed++;
-        }
-      });
-      if (processed > 0) {
-        await batch.commit();
+    // Revisit old multi-day events after they end instead of abandoning them
+    // outside a moving start-date window. Retry if an organizer extends an event.
+    processed = await db.runTransaction(async transaction => {
+      const state = await transaction.get(stateRef);
+      const cursor = state.data()?.cursor;
+      let query = db.collection('events').where('date', '<=', through)
+        .orderBy('date').orderBy(FieldPath.documentId()).limit(PAGE_SIZE);
+      if (typeof cursor?.date === 'string' &&
+          typeof cursor?.id === 'string' && cursor.id && !cursor.id.includes('/')) {
+        query = query.startAfter(cursor.date, cursor.id);
       }
-    }
+      const snapshot = await transaction.get(query);
+      let archived = 0;
+      for (const doc of snapshot.docs) {
+        if (shouldArchiveEvent(doc.data() as GameEvent, now)) {
+          transaction.update(doc.ref, { status: 'archived' });
+          archived++;
+        }
+      }
+      const last = snapshot.docs.at(-1);
+      transaction.set(stateRef, {
+        cursor: snapshot.size === PAGE_SIZE && last
+          ? { date: last.data().date, id: last.id } : null,
+      });
+      return archived;
+    });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     errors.push(msg);
