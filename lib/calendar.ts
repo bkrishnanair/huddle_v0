@@ -1,4 +1,8 @@
 import { GameEvent } from "./types";
+import { getEventStartUTC, getEventEndUTC } from './datetime';
+
+const escapeIcsText = (value: string): string => value.replace(/\\/g, '\\\\')
+    .replace(/\r\n|\r|\n/g, '\\n').replace(/;/g, '\\;').replace(/,/g, '\\,');
 
 export function generateGoogleCalendarUrl(event: GameEvent): string {
     const title = encodeURIComponent(event.name || event.title || "");
@@ -7,9 +11,8 @@ export function generateGoogleCalendarUrl(event: GameEvent): string {
     const location = encodeURIComponent(locationStr);
 
     try {
-        const startDate = new Date(`${event.date}T${event.time || "00:00"}`);
-        // Assume events are 2 hours long
-        const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+        const startDate = getEventStartUTC(event);
+        const endDate = getEventEndUTC(event);
 
         const formatGCalDate = (date: Date) => {
             return date.toISOString().replace(/-|:|\.\d\d\d/g, "");
@@ -34,8 +37,8 @@ export function generateIcsContent(event: GameEvent): string {
     const locationStr = typeof event.location === "string" ? event.location : (event.location?.name || event.venue || "");
 
     try {
-        const startDate = new Date(`${event.date}T${event.time || "00:00"}`);
-        const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+        const startDate = getEventStartUTC(event);
+        const endDate = getEventEndUTC(event);
         const now = new Date();
 
         const formatIcsDate = (date: Date) => {
@@ -52,16 +55,16 @@ export function generateIcsContent(event: GameEvent): string {
             "CALSCALE:GREGORIAN",
             "METHOD:PUBLISH",
             "BEGIN:VEVENT",
-            `SUMMARY:${title}`,
-            `UID:${event.id}@huddle.com`,
+            `SUMMARY:${escapeIcsText(title)}`,
+            `UID:${encodeURIComponent(event.id)}@huddle.com`,
             `SEQUENCE:0`,
             `STATUS:CONFIRMED`,
             `TRANSP:OPAQUE`,
             `DTSTART:${formatIcsDate(startDate)}`,
             `DTEND:${formatIcsDate(endDate)}`,
             `DTSTAMP:${formatIcsDate(now)}`,
-            `LOCATION:${locationStr}`,
-            `DESCRIPTION:${details.replace(/\n/g, "\\n")}\\n\\n${eventUrl}`,
+            `LOCATION:${escapeIcsText(locationStr)}`,
+            `DESCRIPTION:${escapeIcsText(`${details}\n\n${eventUrl}`)}`,
             "END:VEVENT",
             "END:VCALENDAR"
         ].join("\r\n");
@@ -83,4 +86,6 @@ export function downloadIcsFile(event: GameEvent) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    // Allow the browser to start the download before releasing its backing URL.
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }

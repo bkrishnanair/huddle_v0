@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Copy, CheckCheck } from "lucide-react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -19,6 +19,7 @@ import LocationSearchInput from "./location-search"
 import { Chip } from "@/components/ui/chip"
 import { toast } from "sonner"
 import { useAuth } from "@/lib/firebase-context"
+import { descriptionEnhancementSchema, type DescriptionEnhancement } from "@/lib/event-description"
 
 interface CreateEventModalProps {
   isOpen: boolean
@@ -44,7 +45,10 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
     date: "", endDate: "", time: "", endTime: "", maxPlayers: 10, description: "", icon: ""
   })
   const [isAiLoading, setIsAiLoading] = useState(false)
-  const [suggestions, setSuggestions] = useState<{ transitTip?: string; suggestedQuestions?: string[] } | null>(null)
+  const [suggestions, setSuggestions] = useState<DescriptionEnhancement['suggestions'] | null>(null)
+  const [descriptionProposal, setDescriptionProposal] = useState<{ source: string; result: DescriptionEnhancement } | null>(null)
+  const [descriptionUndo, setDescriptionUndo] = useState<{ before: string; applied: string } | null>(null)
+  const enhancementRequest = useRef<AbortController | null>(null)
   const [boostEvent, setBoostEvent] = useState(false)
 
   // Virtual / Hybrid Event State
@@ -86,6 +90,17 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   // Use the styled map ID for dark mode consistency
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID;
+
+  useEffect(() => {
+    setDescriptionProposal(null)
+    setDescriptionUndo(null)
+    setSuggestions(null)
+    setIsAiLoading(false)
+    return () => {
+      enhancementRequest.current?.abort()
+      enhancementRequest.current = null
+    }
+  }, [isOpen, initialData, userLocation])
 
   useEffect(() => {
     if (isOpen) {
@@ -304,46 +319,65 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
     }
   }
 
+  const enhancementInput = JSON.stringify({
+    rawText: formData.description,
+    category: formData.category,
+    location: formData.location,
+    date: formData.date,
+    time: formData.time,
+  })
+  const proposalIsCurrent = descriptionProposal?.source === enhancementInput
+
   const handleEnhanceDescription = async () => {
-    if (!formData.description) return
+    if (!formData.description.trim() || enhancementRequest.current) return
     if (!user) {
       toast.error('Must be signed in to use AI enhancement')
       return;
     }
 
+    const request = new AbortController()
+    enhancementRequest.current = request
+    const timeout = setTimeout(() => {
+      request.abort()
+      if (enhancementRequest.current === request) {
+        enhancementRequest.current = null
+        setIsAiLoading(false)
+        toast.error('That took too long. Your draft is unchanged.')
+      }
+    }, 30000)
     setIsAiLoading(true)
+    setDescriptionProposal(null)
+    setSuggestions(null)
     try {
       const idToken = await user.getIdToken()
+      if (request.signal.aborted) return
       const res = await fetch('/api/ai/enhance-description', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${idToken}`
         },
-        body: JSON.stringify({
-          rawText: formData.description,
-          category: formData.category,
-          location: formData.location,
-          date: formData.date,
-          time: formData.time
-        })
+        body: enhancementInput,
+        signal: request.signal,
       })
 
       if (!res.ok) {
         throw new Error('Enhancement failed')
       }
 
-      const data = await res.json()
-      setFormData(prev => ({ ...prev, description: data.enhanced }))
-      if (data.suggestions) {
-        setSuggestions(data.suggestions)
-      }
-      toast.success('Draft updated. Review it before publishing.')
+      const data = descriptionEnhancementSchema.parse(await res.json())
+      if (enhancementRequest.current !== request || request.signal.aborted) return
+      setDescriptionProposal({ source: enhancementInput, result: data })
     } catch (error) {
-      console.error(error)
-      toast.error('Failed to enhance description')
+      if (enhancementRequest.current === request) {
+        toast.error(request.signal.aborted ? 'That took too long. Your draft is unchanged.' : 'Could not generate a suggestion. Your draft is unchanged.')
+      }
     } finally {
-      setIsAiLoading(false)
+      clearTimeout(timeout)
+      if (enhancementRequest.current === request) {
+        enhancementRequest.current = null
+        setIsAiLoading(false)
+      }
     }
   }
 
@@ -660,12 +694,12 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                 <button
                   type="button"
                   onClick={handleEnhanceDescription}
-                  disabled={isAiLoading || !formData.description}
-                  className="text-[10px] font-black uppercase tracking-wider text-primary hover:text-action-tint transition-colors flex items-center gap-1 disabled:opacity-50"
-                  title="Enhance with AI"
+                  disabled={isAiLoading || !formData.description.trim()}
+                  className="min-h-11 px-2 text-xs font-semibold text-primary hover:text-action-tint transition-colors flex items-center gap-1 disabled:opacity-50"
+                  title="Suggest clearer wording without changing your draft"
                 >
                   {isAiLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                  AI Enhance
+                  {isAiLoading ? 'Writing suggestion…' : 'Suggest wording'}
                 </button>
               </div>
               <Textarea
@@ -676,32 +710,47 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                 className="resize-none h-20 bg-slate-800/50 border-white/10 text-slate-50"
                 maxLength={500}
               />
-              {suggestions && (
-                <div className="mt-2 p-3 rounded-2xl bg-primary text-paper/10 border border-action-tint space-y-2">
+              {descriptionProposal && (
+                <div className="mt-3 space-y-3 rounded-2xl border border-white/15 bg-slate-950 p-3" aria-label="AI description suggestion">
+                  <p className="sr-only" role="status">Your suggestion is ready to review. Your description has not changed.</p>
+                  <p className="text-xs font-semibold text-orange-300">Suggested description · Review before using</p>
+                  <p className="whitespace-pre-wrap break-words text-sm text-slate-200">{descriptionProposal.result.enhanced}</p>
+                  {proposalIsCurrent && <div className="flex flex-wrap gap-2">
+                    {descriptionProposal.result.suggestions?.title && <Button type="button" variant="outline" className="h-auto min-h-11 whitespace-normal text-left" onClick={() => setFormData(prev => ({ ...prev, name: descriptionProposal.result.suggestions!.title! }))}>Use title: {descriptionProposal.result.suggestions.title}</Button>}
+                    {descriptionProposal.result.suggestions?.category && <Button type="button" variant="outline" onClick={() => {
+                      const category = descriptionProposal.result.suggestions!.category!;
+                      setFormData(prev => ({ ...prev, category }));
+                      setDescriptionProposal(previous => previous ? { ...previous, source: JSON.stringify({ ...JSON.parse(previous.source), category }) } : null);
+                    }}>Use category: {descriptionProposal.result.suggestions.category}</Button>}
+                    {descriptionProposal.result.suggestions?.icon && <Button type="button" variant="outline" onClick={() => setFormData(prev => ({ ...prev, icon: descriptionProposal.result.suggestions!.icon! }))}>Use icon: {descriptionProposal.result.suggestions.icon}</Button>}
+                  </div>}
+                  {!proposalIsCurrent && <p className="text-xs text-amber-300" role="status">Your event details changed. Generate a new suggestion to keep your latest edits.</p>}
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" className="min-h-11 rounded-xl" disabled={!proposalIsCurrent} onClick={() => {
+                      if (!proposalIsCurrent) return
+                      setDescriptionUndo({ before: formData.description, applied: descriptionProposal.result.enhanced })
+                      setFormData(prev => ({ ...prev, description: descriptionProposal.result.enhanced }))
+                      setSuggestions(descriptionProposal.result.suggestions || null)
+                      setDescriptionProposal(null)
+                    }}>Use suggestion</Button>
+                    <Button type="button" variant="ghost" className="min-h-11 rounded-xl" onClick={() => setDescriptionProposal(null)}>Keep mine</Button>
+                  </div>
+                </div>
+              )}
+              {descriptionUndo && formData.description === descriptionUndo.applied && (
+                <Button type="button" variant="ghost" className="mt-1 min-h-11 text-xs" onClick={() => {
+                  setFormData(prev => ({ ...prev, description: descriptionUndo.before }))
+                  setDescriptionUndo(null)
+                  setSuggestions(null)
+                  setDescriptionProposal(null)
+                }}>Restore my original description</Button>
+              )}
+              {suggestions && suggestions.suggestedQuestions.length > 0 && (
+                <div className="mt-2 p-3 rounded-2xl bg-slate-950 border border-white/15 space-y-2">
                   <div className="flex items-center gap-2 mb-1">
                     <Sparkles className="w-3 h-3 text-primary" />
-                    <span className="text-xs font-bold text-primary">AI Suggestions</span>
+                    <span className="text-xs font-bold text-primary">Optional RSVP questions</span>
                   </div>
-                  {suggestions.transitTip && (
-                    <div className="text-xs text-slate-400 flex flex-col gap-1">
-                      <span className="font-semibold text-slate-200">Transit Tip:</span>
-                      <div className="flex items-start gap-2">
-                        <span className="flex-1">{suggestions.transitTip}</span>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          className="h-6 text-[10px] px-2 bg-primary text-paper/20 hover:bg-primary text-paper/30 text-action-tint"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setFormData(prev => ({ ...prev, transitTips: suggestions.transitTip || "" }));
-                            toast.success("Added transit tip!");
-                          }}
-                        >
-                          Use
-                        </Button>
-                      </div>
-                    </div>
-                  )}
                   {suggestions.suggestedQuestions && suggestions.suggestedQuestions.length > 0 && (
                     <div className="text-xs text-slate-400 flex flex-col gap-1">
                       <span className="font-semibold text-slate-200">RSVP Questions:</span>
@@ -716,7 +765,7 @@ export default function CreateEventModal({ isOpen, onClose, onEventCreated, user
                                 toast.success("Added question!");
                               }
                             }}
-                            className="text-[10px] bg-slate-800/50 hover:bg-white/10 cursor-pointer" 
+                            className="min-h-11 text-xs bg-slate-800/50 hover:bg-white/10 cursor-pointer"
                           >
                             {q}
                           </Chip>

@@ -35,9 +35,9 @@ export function FollowButton({
       e.preventDefault();
       e.stopPropagation();
 
-      if (!user) {
-        toast.error("Sign in to follow users");
-        router.push("/login");
+      if (!user || user.isAnonymous) {
+        toast.info("Sign in to follow this organizer");
+        router.push('/login?return_to=' + encodeURIComponent(window.location.pathname + window.location.search));
         return;
       }
 
@@ -85,8 +85,8 @@ export function FollowButton({
     [user, targetUserId, isFollowing, optimisticToggle, router, targetUserName]
   );
 
-  if (followingLoading || !user) return null;
-  if (user.uid === targetUserId) return null;
+  if (followingLoading && user && !user.isAnonymous) return null;
+  if (user?.uid === targetUserId) return null;
 
   return (
     <Button

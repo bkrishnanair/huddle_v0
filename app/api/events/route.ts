@@ -277,7 +277,9 @@ export async function POST(request: NextRequest) {
     const userDoc = await adminDb.collection("users").doc(user.uid).get()
     const userData = userDoc.data()
     const organizerName = userData?.name || user.name || user.email?.split("@")[0] || "User"
-    const isOrganizerVerified = userData?.verificationStatus === 'verified'
+    // User profiles are client-writable and cannot confer verification.
+    // Verified identity is shown on the reviewed, server-controlled organizer page.
+    const isOrganizerVerified = false
 
     // compute recurrence dates
     const dates = [rest.date];

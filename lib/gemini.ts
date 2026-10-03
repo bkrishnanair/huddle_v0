@@ -2,7 +2,8 @@ import 'server-only';
 
 import { GoogleGenerativeAI, type GenerationConfig } from '@google/generative-ai';
 
-const MODEL_NAME = 'gemini-2.5-flash-preview-04-17';
+// Keep model rollout independent from UI changes; do not pin production to a dated preview.
+const MODEL_NAME = process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash';
 
 let genAIInstance: GoogleGenerativeAI | null = null;
 

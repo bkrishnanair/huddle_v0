@@ -12,6 +12,7 @@ import { useTheme } from "next-themes"
 import dynamic from "next/dynamic"
 import OnboardingTooltip from "./onboarding-tooltip"
 import { EventCard } from "@/components/events/event-card"
+import { MapEventPreview, MapEventTrigger } from "@/components/events/map-event-preview"
 import { Map, AdvancedMarker, Pin, useMap, InfoWindow } from "@vis.gl/react-google-maps"
 import { GameEvent } from "@/lib/types"
 import LocationSearchInput from "./location-search"
@@ -80,6 +81,9 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
   const [events, setEvents] = useState<GameEvent[]>([])
   const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null)
   const [hoveredEvent, setHoveredEvent] = useState<GameEvent | null>(null)
+  const [previewEventId, setPreviewEventId] = useState<string | null>(null)
+  const [canHover, setCanHover] = useState(false)
+  const previewTrigger = useRef<HTMLButtonElement | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>(initialCenter || { lat: 38.9897, lng: -76.9378 }) // College Park, MD
@@ -118,6 +122,42 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
       fetch(`/api/events/${eventId}/view`, { method: 'POST' }).catch(() => { });
     }
   }, []);
+
+  useEffect(() => {
+    const query = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const update = () => { setCanHover(query.matches); setHoveredEvent(null); setPreviewEventId(null); };
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+
+  // A preview must not remain over a different map mode, filter, or dialog.
+  useEffect(() => {
+    setPreviewEventId(null);
+    setHoveredEvent(null);
+  }, [activeCategory, activeTime, filterStartDate, filterEndDate, eventSearchQuery, aiKeywords,
+    showListPanel, selectedEvent?.id, showCreateModal, showOnboarding]);
+
+  const openEventDetails = (event: GameEvent) => {
+    setPreviewEventId(null);
+    setHoveredEvent(null);
+    setSelectedEvent(event);
+    trackEventView(event.id);
+  };
+
+  const selectMapEvent = (event: GameEvent, trigger?: HTMLButtonElement) => {
+    if (canHover) {
+      openEventDetails(event);
+    } else {
+      previewTrigger.current = trigger || null;
+      setPreviewEventId(event.id);
+    }
+  };
+
+  const changeHoverPreview = (event: GameEvent, open: boolean) => {
+    if (!canHover) return;
+    setHoveredEvent(previous => open ? event : previous?.id === event.id ? null : previous);
+  };
 
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID;
@@ -567,6 +607,10 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
     })).sort((a, b) => getEventStartUTC(a).getTime() - getEventStartUTC(b).getTime());
   }, [events, activeCategory, activeTime, eventSearchQuery, aiKeywords, filterStartDate, filterEndDate, minuteTick]);
 
+  const previewEvent = filteredEvents.find(event => event.id === previewEventId) || null;
+  useEffect(() => {
+    if (previewEventId && !previewEvent) setPreviewEventId(null);
+  }, [previewEventId, previewEvent]);
 
 
   const mapToolbar = <div className="flex items-center  gap-0.5" role="group" aria-label="Map views">
@@ -790,20 +834,18 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                       // Also simplify to dots if zoomed far out (unless it's a live event)
                       const isZoomedOut = currentZoom <= 14;
                       
-                      if (!isHovered && (!forceFullPin || (isZoomedOut && pinTier !== 'live'))) {
+                      if (!forceFullPin || (isZoomedOut && pinTier !== 'live')) {
                         return (
                           <AdvancedMarker
                             key={event.id}
                             title={event.name}
                             position={{ lat: (event as any).displayLat || event.geopoint.latitude, lng: (event as any).displayLng || event.geopoint.longitude }}
-                            onClick={() => {
-                              setSelectedEvent(event);
-                              trackEventView(event.id);
-                            }}
-                            onMouseEnter={() => setHoveredEvent(event)}
-                            onMouseLeave={() => setHoveredEvent(null)}
+                            onClick={() => selectMapEvent(event)}
                             style={{ zIndex: pinTier === 'live' ? 30 : pinTier === 'imminent' ? 20 : 0 }}
                           >
+                            <MapEventTrigger event={event} hoverEnabled={canHover} open={isHovered && canHover}
+                              onOpenChange={(open) => changeHoverPreview(event, open)}
+                              onSelect={(trigger) => selectMapEvent(event, trigger)}>
                             {pinTier === 'live' ? (
                               <LivePin category={event.category} icon={event.icon} size={30} />
                             ) : pinTier === 'imminent' ? (
@@ -811,6 +853,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                             ) : (
                               <DotPin category={event.category} />
                             )}
+                            </MapEventTrigger>
                           </AdvancedMarker>
                         );
                       }
@@ -819,20 +862,18 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                         <AdvancedMarker
                           key={event.id}
                           position={{ lat: (event as any).displayLat || event.geopoint.latitude, lng: (event as any).displayLng || event.geopoint.longitude }}
-                          onClick={() => {
-                            setSelectedEvent(event);
-                            trackEventView(event.id);
-                          }}
-                          onMouseEnter={() => setHoveredEvent(event)}
-                          onMouseLeave={() => setHoveredEvent(null)}
+                          onClick={() => selectMapEvent(event)}
                           style={{ zIndex: isHovered ? 50 : (showDetails ? 10 : 0) }}
                         >
-                          <div className={`flex flex-col items-center transition-transform duration-200 transform origin-bottom ${isHovered ? 'scale-110 -translate-y-1' : 'scale-100'}`}>
+                          <MapEventTrigger event={event} hoverEnabled={canHover} open={isHovered && canHover}
+                            onOpenChange={(open) => changeHoverPreview(event, open)}
+                            onSelect={(trigger) => selectMapEvent(event, trigger)}>
+                          <div className="flex flex-col items-center">
                             {/* Floating Info Bubble */}
                             <div className={`
                               mb-2 px-3 py-1.5 rounded-2xl bg-panel border border-slate-700 shadow-[0_4px_20px_rgba(0,0,0,0.5)]
                               transition-[opacity,transform] duration-200 ease-out flex flex-col items-center
-                              ${showDetails ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
+                              ${showDetails && !isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}
                             `}>
                               <span className="text-[11px] font-black text-white max-w-52 truncate leading-none mb-1">{event.name}</span>
                               <div className="flex items-center gap-2">
@@ -932,6 +973,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                               ${isHovered ? 'scale-150 opacity-60' : 'scale-100 opacity-30'}
                             `} />
                           </div >
+                          </MapEventTrigger>
                         </AdvancedMarker >
                       );
                     });
@@ -1096,7 +1138,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
         </div>
 
         {/* Mobile Floating Search Bar ("Where to?") - Stays visible even when list is hidden */}
-        {!showListPanel && (
+        {!showListPanel && !previewEvent && (
           <div className="md:hidden absolute bottom-[calc(var(--safe-bottom)+0.5rem)] inset-x-4 z-30 animate-in fade-in slide-in-from-bottom-4 duration-500 pointer-events-none">
             <div className="pointer-events-auto relative h-[48px] bg-slate-950/80 backdrop-blur-3xl rounded-2xl border border-primary/40 p-[1px] flex items-center focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20 transition-all shadow-[0_8px_32px_rgba(0,0,0,0.4),0_0_15px_rgba(245,158,11,0.15)]">
               <Search className="w-4 h-4 ml-4 text-primary/80 shrink-0" />
@@ -1111,7 +1153,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
         )}
 
         {/* Location Permission Toast/Prompt */}
-        {showLocationPrompt && !showOnboarding && !userLocation && (
+        {showLocationPrompt && !showOnboarding && !userLocation && !previewEvent && (
           <div className="absolute inset-x-4 bottom-[calc(var(--safe-bottom)+4.5rem)] z-50 mx-auto max-w-sm pointer-events-auto" role="region" aria-label="Location preference">
             <div className="bg-panel/95 backdrop-blur-xl border border-white/15 p-4 rounded-3xl shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
               <div className="flex items-start gap-4">
@@ -1160,7 +1202,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
         />
 
         {
-          !showListPanel && (
+          !showListPanel && !previewEvent && (
             <div className="absolute bottom-[calc(var(--safe-bottom)+4.5rem)] md:bottom-[calc(var(--safe-bottom)+1rem)] right-4 z-40 flex flex-col gap-4 pointer-events-none">
               <Button
                 onClick={handleRecenter}
@@ -1204,8 +1246,15 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
             </div>
           )
         }
-
-
+        {previewEvent && !showListPanel && !selectedEvent && !showCreateModal && !showOnboarding && (
+          <div className="absolute inset-x-4 bottom-[calc(var(--safe-bottom)+0.5rem)] z-40 mx-auto max-w-sm">
+            <MapEventPreview event={previewEvent} onOpen={() => openEventDetails(previewEvent)}
+              onClose={() => {
+                setPreviewEventId(null);
+                previewTrigger.current?.focus({ preventScroll: true });
+              }} />
+          </div>
+        )}
       </div >
 
       {selectedEvent && <EventDetailsDrawer event={selectedEvent} isOpen={!!selectedEvent} onClose={() => setSelectedEvent(null)} onEventUpdated={handleEventUpdated} />

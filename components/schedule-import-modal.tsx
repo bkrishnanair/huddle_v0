@@ -1,22 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { X, Upload, Sparkles, Loader2, Check, Pencil, Trash2, CalendarPlus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import LocationSearchInput from "@/components/location-search";
+import { useAuth } from "@/lib/firebase-context";
+import { DIRECTORY_CATEGORIES } from "@/lib/seo/categories";
+import { publishScheduleSchema, publishScheduleEventSchema, scheduleParseResultSchema, SCHEDULE_LIMIT, type ScheduleDraft } from "@/lib/schedule-import";
 import { toast } from "sonner";
-
-interface ParsedEvent {
-  title: string;
-  date: string;
-  time: string;
-  endTime?: string;
-  location: string;
-  category: string;
-  description: string;
-  capacity: number;
-}
 
 interface ScheduleImportModalProps {
   isOpen: boolean;
@@ -24,276 +18,155 @@ interface ScheduleImportModalProps {
   onEventsCreated: () => void;
 }
 
-const SAMPLE_TEXT = `UMD Running Club - Spring 2026 Schedule
-
-April 14 (Mon) - Easy Run, 5:30pm, McKeldin Mall, Outdoor Run
-April 16 (Wed) - Tempo Run, 5:30pm, Paint Branch Trail, Speed Work
-April 19 (Sat) - Long Run (8mi), 8:00am, Lake Artemesia, Endurance
-April 21 (Mon) - Recovery Jog, 5:30pm, McKeldin Mall, Easy Run
-April 23 (Wed) - Hill Repeats, 5:30pm, Stadium Drive, Speed Work
-April 26 (Sat) - Trail Run, 8:00am, Greenbelt Park, Outdoor Run`;
-
 export default function ScheduleImportModal({ isOpen, onClose, onEventsCreated }: ScheduleImportModalProps) {
+  const { user } = useAuth();
   const [rawText, setRawText] = useState("");
-  const [parsedEvents, setParsedEvents] = useState<ParsedEvent[]>([]);
-  const [isParsing, setIsParsing] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [rows, setRows] = useState<{ id: string; event: ScheduleDraft }[]>([]);
+  const [timezone, setTimezone] = useState("America/New_York");
+  const [busy, setBusy] = useState<"parse" | "publish" | null>(null);
+  const [error, setError] = useState("");
+  const [reviewed, setReviewed] = useState(false);
+  const [submitted, setSubmitted] = useState<string | null>(null);
+  const [submissionId, setSubmissionId] = useState("");
+  const parsing = useRef<AbortController | null>(null);
+  const working = useRef(false);
+  const account = useRef(user?.uid);
+  account.current = user?.uid;
 
-  if (!isOpen) return null;
+  useEffect(() => () => parsing.current?.abort(), []);
+  useEffect(() => {
+    if (!isOpen) { parsing.current?.abort(); parsing.current = null; }
+  }, [isOpen]);
+  useEffect(() => {
+    setRows([]); setRawText(""); setSubmitted(null); setSubmissionId(""); setError(""); setReviewed(false);
+  }, [user?.uid]);
 
-  const handleParse = async () => {
-    if (!rawText.trim()) {
-      toast.error("Please paste your schedule text first");
-      return;
-    }
+  const update = (id: string, changes: Partial<ScheduleDraft>) => {
+    if (submitted) return;
+    setRows(previous => previous.map(row => row.id === id ? { ...row, event: { ...row.event, ...changes } } : row));
+    setReviewed(false);
+  };
 
-    setIsParsing(true);
-    setParsedEvents([]);
+  const parse = async () => {
+    if (!user || user.isAnonymous || working.current) return;
+    const uid = user.uid;
+    working.current = true; setBusy("parse"); setError("");
+    const controller = new AbortController();
+    parsing.current = controller;
+    const timeout = setTimeout(() => controller.abort(), 55000);
     try {
+      const token = await user.getIdToken();
       const res = await fetch("/api/ai/parse-schedule", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", signal: controller.signal,
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
         body: JSON.stringify({ rawText }),
       });
-
-      if (!res.ok) throw new Error("Parse failed");
-
       const data = await res.json();
-      setParsedEvents(data.events || []);
-      toast.success(`Found ${data.count} events in your schedule`);
-    } catch {
-      toast.error("Failed to parse schedule. Try reformatting the text.");
+      if (!res.ok) throw new Error(data.error || "Could not read this schedule.");
+      const checked = scheduleParseResultSchema.parse({ events: data.events });
+      if (controller.signal.aborted || account.current !== uid) return;
+      setRows(checked.events.map(event => ({ id: crypto.randomUUID(), event })));
+      setSubmissionId(crypto.randomUUID()); setReviewed(false); setSubmitted(null);
+      if (!checked.events.length) setError("No events found. Include explicit dates, times, and venues.");
+    } catch (failure) {
+      if (account.current === uid && parsing.current === controller) setError(failure instanceof Error && failure.name !== "AbortError" ? failure.message : "Parsing timed out. Your text is still here.");
     } finally {
-      setIsParsing(false);
+      clearTimeout(timeout); working.current = false; setBusy(null);
+      if (parsing.current === controller) parsing.current = null;
     }
   };
 
-  const handleCreateAll = async () => {
-    if (parsedEvents.length === 0) return;
-    setIsCreating(true);
+  const publish = async () => {
+    if (!user || user.isAnonymous || working.current) return;
+    const checked = publishScheduleSchema.safeParse({ submissionId, timezone, events: rows.map(row => row.event) });
+    if (!checked.success) { setError(checked.error.issues[0]?.message || "Complete every event."); return; }
+    if (!reviewed) { setError("Confirm that you reviewed every event."); return; }
+    const payload = submitted || JSON.stringify(checked.data);
+    const uid = user.uid;
+    setSubmitted(payload); working.current = true; setBusy("publish"); setError("");
     try {
+      const token = await user.getIdToken();
       const res = await fetch("/api/events/bulk", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ events: parsedEvents }),
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: payload, signal: AbortSignal.timeout(45000),
       });
-
-      if (!res.ok) throw new Error("Bulk create failed");
-
       const data = await res.json();
-      toast.success(`🎉 Created ${data.created} events! Your schedule is live.`);
-      onEventsCreated();
-      onClose();
-    } catch {
-      toast.error("Failed to create events. Please try again.");
-    } finally {
-      setIsCreating(false);
-    }
+      if (!res.ok) {
+        // Definite rejection: allow corrections. Uncertain outcomes must retry the exact request.
+        if ([400, 401, 403, 409, 429].includes(res.status)) setSubmitted(null);
+        throw new Error(data.error || "Publishing could not be confirmed.");
+      }
+      if (account.current !== uid) return;
+      setRows([]); setSubmitted(null); setRawText(""); setReviewed(false);
+      toast.success("Published " + data.created + " events.");
+      onEventsCreated(); onClose();
+    } catch (failure) {
+      if (account.current === uid) setError(failure instanceof Error ? failure.message : "Connection lost. Retry the unchanged draft to confirm publishing.");
+    } finally { working.current = false; setBusy(null); }
   };
 
-  const updateEvent = (index: number, field: keyof ParsedEvent, value: string | number) => {
-    setParsedEvents(prev => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
-      return updated;
-    });
-  };
-
-  const removeEvent = (index: number) => {
-    setParsedEvents(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const loadSample = () => {
-    setRawText(SAMPLE_TEXT);
-  };
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-slate-950 border border-white/10 rounded-2xl shadow-2xl">
-        {/* Header */}
-        <div className="sticky top-0 bg-slate-950/95 backdrop-blur-sm border-b border-white/5 p-4 flex items-center justify-between z-10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-              <CalendarPlus className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-lg font-black text-white">AI Schedule Import</h2>
-              <p className="text-xs text-slate-500">Paste your event schedule and let AI extract the events</p>
-            </div>
+  return <Dialog open={isOpen} onOpenChange={open => { if (!open && busy !== "publish") onClose(); }}>
+    <DialogContent className="flex max-h-[90dvh] flex-col overflow-hidden bg-slate-950 text-white sm:max-w-2xl"
+      onInteractOutside={e => { if ((e.target as HTMLElement)?.closest?.('.pac-container')) e.preventDefault(); }}>
+      <DialogHeader>
+        <DialogTitle>Import an event schedule</DialogTitle>
+        <DialogDescription>Describe one event or paste a schedule or spreadsheet rows. Review up to {SCHEDULE_LIMIT} events per import; nothing publishes automatically.</DialogDescription>
+      </DialogHeader>
+      <div className="min-h-0 space-y-4 overflow-y-auto overscroll-contain p-1">
+        {(!user || user.isAnonymous) && <p role="status">Sign in with a full account to publish events.</p>}
+        {error && <p role="alert" className="rounded-xl border border-rose-400/30 p-3 text-sm text-rose-300">{error}</p>}
+        {!rows.length ? <>
+          <label className="block text-sm" htmlFor="schedule-text">Schedule text (include the year)</label>
+          <Textarea id="schedule-text" value={rawText} onChange={e => setRawText(e.target.value)} maxLength={20000} rows={8}
+            placeholder="Paste dates, titles, times, venues and known capacity. Missing details will be left for you to complete." disabled={!!busy} />
+          <Button type="button" onClick={parse} disabled={!!busy || rawText.trim().length < 10 || !user || user.isAnonymous} className="w-full">
+            {busy === "parse" && <Loader2 className="h-4 w-4 animate-spin" />}Review extracted events
+          </Button>
+        </> : <>
+          <p className="text-sm text-slate-300">Confirm each venue on the map. Missing times and capacity are never guessed. For longer schedules, import the remaining rows separately.</p>
+          <label className="block space-y-1 text-sm">Timezone
+            <Input value={timezone} onChange={e => { setTimezone(e.target.value); setReviewed(false); }} disabled={!!busy || !!submitted} placeholder="America/New_York" />
+          </label>
+          {rows.map(({ id, event }, index) => {
+            const validation = publishScheduleEventSchema.safeParse(event);
+            return <details key={id} className="rounded-2xl border border-white/10 bg-slate-900/70 p-3" open={!validation.success ? true : undefined}>
+              <summary className="min-h-11 cursor-pointer text-sm font-semibold">{index + 1}. {event.title || "Untitled event"} {!validation.success && <span className="text-amber-300"> · Needs review</span>}</summary>
+              <fieldset disabled={!!busy || !!submitted} className="space-y-3 pt-2">
+                <label className="block text-sm">Title<Input value={event.title} maxLength={120} onChange={e => update(id, { title: e.target.value })} /></label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="text-sm">Date<Input type="date" value={event.date} onChange={e => update(id, { date: e.target.value })} /></label>
+                  <label className="text-sm">Start time<Input type="time" value={event.time} onChange={e => update(id, { time: e.target.value })} /></label>
+                  <label className="text-sm">End date (optional)<Input type="date" value={event.endDate} onChange={e => update(id, { endDate: e.target.value })} /></label>
+                  <label className="text-sm">End time (optional)<Input type="time" value={event.endTime} onChange={e => update(id, { endTime: e.target.value })} /></label>
+                </div>
+                <label className="block text-sm">Category
+                  <select className="min-h-11 w-full rounded-xl bg-slate-800 px-3" value={event.category} onChange={e => update(id, { category: e.target.value })}>
+                    <option value="">Choose a category</option>{DIRECTORY_CATEGORIES.map(category => <option key={category.slug}>{category.name}</option>)}
+                  </select>
+                </label>
+                <label className="block text-sm">Confirmed capacity<Input type="number" min={1} max={10000} value={event.capacity ?? ""} onChange={e => update(id, { capacity: e.target.value ? Number(e.target.value) : null })} /></label>
+                <p className="text-sm text-slate-300">Venue from schedule: {event.location || "Not specified"}</p>
+                <LocationSearchInput onPlaceSelect={place => {
+                  const location = place?.geometry?.location;
+                  update(id, location ? { location: place?.formatted_address || place?.name || "", geopoint: { latitude: location.lat(), longitude: location.lng() } } : { geopoint: undefined });
+                }} insideModal />
+                <p className="text-xs text-slate-400">{event.geopoint ? "Map location confirmed" : "Choose a search result to confirm the map location."}</p>
+                <label className="block text-sm">Description<Textarea value={event.description} maxLength={500} onChange={e => update(id, { description: e.target.value })} /></label>
+                {!validation.success && <p className="text-xs text-amber-300">{validation.error.issues.map(issue => issue.path.join(".") + ": " + issue.message).join(" · ")}</p>}
+                <Button type="button" variant="ghost" onClick={() => { setRows(previous => previous.filter(row => row.id !== id)); setReviewed(false); }}><Trash2 className="h-4 w-4" />Remove event</Button>
+              </fieldset>
+            </details>;
+          })}
+          <label className="flex min-h-11 items-start gap-3 text-sm">
+            <input type="checkbox" className="mt-1 h-5 w-5" checked={reviewed} disabled={!!submitted || !!busy} onChange={e => setReviewed(e.target.checked)} />
+            I am authorized to publish these events. I reviewed dates, venues, capacity, and registration requirements. These events will be public.
+          </label>
+          {submitted && <p role="status" className="text-sm text-amber-300">Publishing was attempted. Retry this unchanged draft to confirm the result without duplicate events.</p>}
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" onClick={publish} disabled={!!busy || !reviewed}>{busy === "publish" && <Loader2 className="h-4 w-4 animate-spin" />}{submitted ? "Confirm publishing" : "Publish reviewed events"}</Button>
+            {!submitted && <Button type="button" variant="ghost" disabled={!!busy} onClick={() => { setRows([]); setReviewed(false); }}>Back to schedule</Button>}
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-xl transition-colors">
-            <X className="w-5 h-5 text-slate-400" />
-          </button>
-        </div>
-
-        <div className="p-4 space-y-4">
-          {/* Step 1: Paste Schedule */}
-          {parsedEvents.length === 0 && (
-            <>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-bold text-slate-300">
-                    Paste your schedule or event list
-                  </label>
-                  <button
-                    onClick={loadSample}
-                    className="text-[10px] font-bold text-primary hover:underline uppercase tracking-wider"
-                  >
-                    Load Sample
-                  </button>
-                </div>
-                <Textarea
-                  value={rawText}
-                  onChange={(e) => setRawText(e.target.value)}
-                  placeholder="Paste your weekly meeting schedule, club events, or any list of upcoming dates and activities..."
-                  className="min-h-[200px] bg-slate-900/50 border-white/10 text-white placeholder:text-slate-600 resize-none"
-                />
-                <p className="text-[10px] text-slate-600">
-                  Works with any format: bullet lists, calendar exports, plain text, CSV-style data
-                </p>
-              </div>
-
-              <Button
-                onClick={handleParse}
-                disabled={isParsing || !rawText.trim()}
-                className="w-full h-12 text-base font-bold gap-2 bg-primary hover:bg-primary/90"
-              >
-                {isParsing ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Parsing with Gemini...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-5 h-5" />
-                    Parse Schedule with AI
-                  </>
-                )}
-              </Button>
-            </>
-          )}
-
-          {/* Step 2: Preview & Edit */}
-          {parsedEvents.length > 0 && (
-            <>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-white">
-                    {parsedEvents.length} events extracted
-                  </h3>
-                  <p className="text-xs text-slate-500">Review and edit before creating</p>
-                </div>
-                <button
-                  onClick={() => setParsedEvents([])}
-                  className="text-xs text-slate-400 hover:text-white transition-colors"
-                >
-                  ← Re-parse
-                </button>
-              </div>
-
-              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-                {parsedEvents.map((event, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-slate-900/50 border border-white/5 rounded-xl p-3 group"
-                  >
-                    {editingIndex === idx ? (
-                      /* Edit mode */
-                      <div className="space-y-2">
-                        <Input
-                          value={event.title}
-                          onChange={(e) => updateEvent(idx, "title", e.target.value)}
-                          className="bg-slate-800 border-white/10 text-white text-sm h-8"
-                          placeholder="Event title"
-                        />
-                        <div className="grid grid-cols-3 gap-2">
-                          <Input
-                            type="date"
-                            value={event.date}
-                            onChange={(e) => updateEvent(idx, "date", e.target.value)}
-                            className="bg-slate-800 border-white/10 text-white text-xs h-8"
-                          />
-                          <Input
-                            type="time"
-                            value={event.time}
-                            onChange={(e) => updateEvent(idx, "time", e.target.value)}
-                            className="bg-slate-800 border-white/10 text-white text-xs h-8"
-                          />
-                          <Input
-                            value={event.location}
-                            onChange={(e) => updateEvent(idx, "location", e.target.value)}
-                            className="bg-slate-800 border-white/10 text-white text-xs h-8"
-                            placeholder="Location"
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => setEditingIndex(null)}
-                            className="h-7 text-xs bg-emerald-500 hover:bg-emerald-600"
-                          >
-                            <Check className="w-3 h-3 mr-1" /> Done
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      /* View mode */
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-white truncate">{event.title}</span>
-                            <span className="text-[10px] px-1.5 py-0.5 bg-primary/20 text-primary rounded-full font-bold shrink-0">
-                              {event.category}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
-                            <span>{event.date}</span>
-                            <span>{event.time}</span>
-                            <span className="truncate">{event.location}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                          <button
-                            onClick={() => setEditingIndex(idx)}
-                            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
-                          >
-                            <Pencil className="w-3.5 h-3.5 text-slate-400" />
-                          </button>
-                          <button
-                            onClick={() => removeEvent(idx)}
-                            className="p-1.5 hover:bg-red-500/20 rounded-lg transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              <Button
-                onClick={handleCreateAll}
-                disabled={isCreating || parsedEvents.length === 0}
-                className="w-full h-12 text-base font-bold gap-2 bg-emerald-500 hover:bg-emerald-600"
-              >
-                {isCreating ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Creating {parsedEvents.length} events...
-                  </>
-                ) : (
-                  <>
-                    <CalendarPlus className="w-5 h-5" />
-                    Create All {parsedEvents.length} Events
-                  </>
-                )}
-              </Button>
-            </>
-          )}
-        </div>
+        </>}
       </div>
-    </div>
-  );
+    </DialogContent>
+  </Dialog>;
 }

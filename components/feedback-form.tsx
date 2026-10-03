@@ -5,9 +5,9 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { FEEDBACK_TYPES, feedbackSchema } from '@/lib/feedback';
 
-export function FeedbackForm() {
+export function FeedbackForm({ initialMessage = '' }: { initialMessage?: string }) {
   const [type, setType] = useState<keyof typeof FEEDBACK_TYPES>('improvement');
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState(initialMessage);
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);

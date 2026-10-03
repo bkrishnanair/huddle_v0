@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { format, subDays, isAfter, parseISO } from "date-fns";
 import ScheduleImportModal from "@/components/schedule-import-modal";
 import OnboardingWizard from "@/components/onboarding-wizard";
+import { OrganizerPageEditor } from "@/components/organizer-page-editor";
+import { OrganizerUpdateEditor } from "@/components/organizer-updates";
 
 interface OrganizerStudioProps {
     onTriggerCreate?: () => void;
@@ -150,6 +152,7 @@ export function OrganizerStudio({ onTriggerCreate }: OrganizerStudioProps) {
                 </div>
             </div>
 
+            <div className="mb-8"><OrganizerPageEditor /><OrganizerUpdateEditor /></div>
             {/* Top Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <Card className="glass-surface border-white/10 shadow-2xl relative overflow-hidden group">

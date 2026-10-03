@@ -7,6 +7,8 @@ import EventDetailsDrawer from "@/components/event-details-drawer"
 import { GameEvent } from "@/lib/types"
 import { Loader2, Search, SlidersHorizontal, MapPin, ArrowUpRight } from "lucide-react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { OrganizerUpdatesFeed } from "@/components/organizer-updates"
 
 interface FeaturedData {
   happeningNow: GameEvent[];
@@ -14,31 +16,39 @@ interface FeaturedData {
   newOnHuddle: GameEvent[];
   categoryCounts: { name: string; count: number }[];
   serendipityPicks: GameEvent[];
+  fromFollowing?: GameEvent[];
 }
 
 export default function HomePage() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [data, setData] = useState<FeaturedData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
+  const [reload, setReload] = useState(0)
   const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null)
 
   useEffect(() => {
+    if (authLoading) return;
+    const request = new AbortController();
+    setData(null); setLoading(true); setFailed(false); setSelectedEvent(null);
     async function fetchFeatured() {
       try {
-        const res = await fetch("/api/events/featured");
+        const token = user ? await user.getIdToken() : null;
+        const res = await fetch("/api/events/featured", { signal: request.signal, cache: 'no-store', headers: token ? { Authorization: 'Bearer ' + token } : {} });
         if (res.ok) {
           const json = await res.json();
-          setData(json);
-        }
+          if (!request.signal.aborted) setData(json);
+        } else throw new Error('Feed unavailable');
       } catch (e) {
-        console.error("Failed to fetch featured events:", e);
+        if (!request.signal.aborted) setFailed(true);
       } finally {
-        setLoading(false);
+        if (!request.signal.aborted) setLoading(false);
       }
     }
     fetchFeatured();
-  }, []);
+    return () => request.abort();
+  }, [user, authLoading, reload]);
 
   const { topMatches, upcomingEvents } = useMemo(() => {
     if (!data) return { topMatches: [], upcomingEvents: [] };
@@ -48,17 +58,11 @@ export default function HomePage() {
     const safeNew = data?.newOnHuddle || [];
     const safeSerendipity = data?.serendipityPicks || [];
 
-    // Tsenta Layout: "Top Job Matches" -> "Top matches"
-    // Mix Serendipity Picks + Happening Now + Top Popular
+    // Blend recommendations with live and popular events without duplicates.
     const matches = [...safeSerendipity, ...safeHappeningNow, ...safePopular.slice(0, 3)]
       .filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i) // dedup
-      .slice(0, 5)
-      .map((e, i) => ({
-        ...e,
-        _matchScore: 98 - (i * 4) // mock match score: 98, 94, 90...
-      }));
+      .slice(0, 5);
 
-    // "All applications" -> "Upcoming Events Grid"
     const upcoming = [...safePopular.slice(3), ...safeNew];
     
     // Deduplicate by ID
@@ -98,7 +102,7 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* Tsenta-style Global Search & Quick Filters */}
+        {/* Search and quick filters */}
         <div className="flex flex-col gap-3">
           <button type="button"
             onClick={() => router.push("/discover")}
@@ -131,11 +135,15 @@ export default function HomePage() {
         </div>
 
         {/* Top Matches (Horizontal Scroll) */}
+        {failed && <div role="alert" className="rounded-2xl border border-rose-400/30 p-4 text-slate-200">Events couldn’t load. <button type="button" className="min-h-11 px-3 text-orange-300 underline" onClick={() => setReload(value => value + 1)}>Try again</button></div>}
+        <div className="flex flex-wrap gap-4"><Link href="/organizers" className="inline-flex min-h-11 items-center text-orange-300 underline">Browse clubs & organizers</Link><Link href="/partners" className="inline-flex min-h-11 items-center text-orange-300 underline">Host a local event</Link></div>
+        {!!data?.fromFollowing?.length && <section className="space-y-4"><h2 className="font-display text-xl font-bold text-white">From organizers you follow</h2><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{data.fromFollowing.map(event => <EventCard key={event.id} event={event} onSelectEvent={setSelectedEvent} />)}</div></section>}
+        <OrganizerUpdatesFeed />
         {topMatches.length > 0 && (
           <section>
             <div className="flex justify-between items-end mb-4">
               <h2 className="font-display text-xl font-bold text-slate-100">
-                Top matches
+                Worth a look
               </h2>
             </div>
             <div className="flex gap-4 overflow-x-auto no-scrollbar pb-6 -mx-4 px-4 snap-x snap-mandatory mask-edges">
@@ -177,7 +185,7 @@ export default function HomePage() {
           </section>
         )}
 
-        {(!data || (data.happeningNow.length === 0 && data.popularThisWeek.length === 0 && data.newOnHuddle.length === 0)) && (
+        {!failed && (!data || (data.happeningNow.length === 0 && data.popularThisWeek.length === 0 && data.newOnHuddle.length === 0)) && (
           <div className="text-center py-20 border border-white/10 rounded-3xl bg-slate-900/50">
             <MapPin className="mx-auto mb-4 h-10 w-10 text-teal-300" />
             <h2 className="text-xl font-bold text-white mb-2">No events found</h2>

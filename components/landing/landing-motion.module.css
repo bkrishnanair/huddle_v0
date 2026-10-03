@@ -1,0 +1,53 @@
+/* Scoped choreography only; layout/typography otherwise use the existing tokens. */
+.page { --motion-state: paused; }
+.page[data-motion="on"] [data-in-view="true"] { --motion-state: running; }
+.page :is(a, button):focus-visible { outline: 2px solid #FDBA74; outline-offset: 5px; }
+.page[data-motion="on"] [data-entered="true"] .reveal { animation: arrive 700ms both; }
+.page[data-motion="on"] [data-entered="true"] .revealLater { animation: arrive 850ms 100ms both; }
+.heroTitle { font-size: clamp(3.5rem, 8.3vw, 7.25rem); line-height: .99; letter-spacing: -.055em; text-wrap: balance; }
+.heroAccent { position: relative; display: inline-block; }
+.heroAccent::after { content: ""; position: absolute; left: 1%; right: 1%; bottom: -.12em; height: .035em; border-radius: 50%; background: #FB923C; opacity: .4; transform: rotate(-2deg); }
+.campus { position: relative; height: 400px; isolation: isolate; contain: layout paint; }
+.campus::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(#0B101B, transparent 20%, transparent 90%, #0B101B); z-index: -1; }
+.campus > svg { z-index: -2; }
+.eventMarker { position: absolute; transform: translate(-50%, -50%); display: flex; align-items: center; flex-direction: column; min-height: 64px; min-width: 44px; border-radius: 14px; color: var(--pin-text); }
+.markerLabel { display: flex; align-items: center; gap: 10px; padding: 13px 17px; background: #111B29; border: 1px solid #344354; border-radius: 16px; font-size: 13px; white-space: nowrap; transition: border-color 200ms, background-color 200ms; animation: hover 7s var(--float-delay) ease-in-out infinite; animation-play-state: var(--motion-state); }
+.eventMarker[aria-pressed="true"] .markerLabel { border-color: var(--pin-accent); background: #182433; }
+.eventMarker:hover .markerLabel { border-color: var(--pin-accent); }
+.markerStem { display: block; height: 22px; width: 1px; background: var(--pin-accent); opacity: .45; }
+.markerDot { display: block; height: 10px; width: 10px; border-radius: 100%; background: var(--pin-accent); box-shadow: 0 0 0 6px #ffffff06; }
+.youMarker { position: absolute; top: 77%; left: 50%; display: flex; align-items: center; flex-direction: column; transform: translateX(-50%); }
+.ripple, .rippleDelayed { position: absolute; top: -18px; width: 52px; height: 52px; border-radius: 100%; border: 1px solid #FB923C55; animation: ripple 6s ease-out infinite; animation-play-state: var(--motion-state); }
+.rippleDelayed { animation-delay: -3s; }
+.route { animation: pathTravel 14s linear infinite; animation-play-state: var(--motion-state); }
+.walkerOne { animation: walkOne 13s linear infinite; animation-play-state: var(--motion-state); }
+.walkerTwo { animation: walkTwo 16s -5s linear infinite; animation-play-state: var(--motion-state); }
+.gathering { position: relative; min-height: 340px; contain: layout paint; }
+.gatheringOrbit, .gatheringOrbitOuter { position: absolute; left: 50%; top: 50%; width: 280px; height: 200px; transform: translate(-50%, -50%) rotate(-20deg); border: 1px solid #2DD4BF30; border-radius: 50%; }
+.gatheringOrbitOuter { width: 390px; height: 285px; transform: translate(-50%, -50%) rotate(20deg); border-color: #64748B35; }
+.gatheringCenter { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.gatheringPerson { position: absolute; display: flex; gap: 9px; align-items: center; padding: 11px 15px; background: #162031; border: 1px solid #ffffff18; border-radius: 99px; font-size: 12px; animation: hover 8s var(--float-delay) ease-in-out infinite; animation-play-state: var(--motion-state); }
+.person0 { top: 12%; left: 18%; }
+.person1 { top: 35%; right: 1%; }
+.person2 { bottom: 14%; left: 12%; }
+.finalWord { font-size: clamp(3.5rem, 9vw, 8rem); line-height: 1; letter-spacing: -.055em; text-wrap: balance; }
+
+@keyframes arrive { from { opacity: .4; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@keyframes ripple { 0% { transform: scale(.55); opacity: .75; } 85%, 100% { transform: scale(2.7); opacity: 0; } }
+@keyframes pathTravel { to { stroke-dashoffset: -120; } }
+@keyframes walkOne { 0% { transform: translate(0, 0); opacity: 0; } 8% { opacity: 1; } 30% { transform: translate(110px, 0); } 57% { transform: translate(110px, 100px); } 88% { transform: translate(270px, 100px); opacity: 1; } 100% { transform: translate(270px, 115px); opacity: 0; } }
+@keyframes walkTwo { 0% { transform: translate(0, 0); opacity: 0; } 8% { opacity: 1; } 29% { transform: translate(-103px, 0); } 57% { transform: translate(-103px, 110px); } 88% { transform: translate(-270px, 110px); opacity: 1; } 100% { transform: translate(-270px, 125px); opacity: 0; } }
+
+@media (max-width: 640px) {
+  .campus { height: 310px; }
+  .markerLabel { max-width: 132px; gap: 6px; padding: 10px; font-size: 11px; white-space: normal; text-align: left; }
+  .gatheringOrbitOuter { width: 300px; height: 260px; }
+  .person0 { left: 10%; }
+  .person1 { top: 27%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page *, .page *::before, .page *::after { animation: none !important; transition: none !important; }
+  .rippleDelayed { display: none; }
+}
+.page[data-motion="off"] .reveal, .page[data-motion="off"] .revealLater { animation: none; }

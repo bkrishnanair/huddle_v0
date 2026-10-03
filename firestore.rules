@@ -47,9 +47,18 @@ service cloud.firestore {
       
       // Only authenticated users can create events
       allow create: if request.auth != null 
-        && request.auth.uid == request.resource.data.createdBy;
+        && request.auth.uid == request.resource.data.createdBy
+        && (!('isOrganizerVerified' in request.resource.data) || request.resource.data.isOrganizerVerified == false)
+        && (!('isScraped' in request.resource.data) || request.resource.data.isScraped == false)
+        && (!('source' in request.resource.data) || request.resource.data.source == 'manual')
+        && (!('admins' in request.resource.data) || request.resource.data.admins == [request.auth.uid]);
       
-      allow update: if request.auth != null && (
+      // Ownership and verification flow through reviewed Admin SDK endpoints.
+      // Otherwise an owner could relabel their event as someone else's official event.
+      allow update: if request.auth != null
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'createdBy', 'admins', 'source', 'isScraped', 'isOrganizerVerified', 'claimedFrom', 'claimedAt'
+        ]) && (
         // Event organizer or admin can update any field
         request.auth.uid == resource.data.createdBy ||
         ('admins' in resource.data && request.auth.uid in resource.data.admins) ||
