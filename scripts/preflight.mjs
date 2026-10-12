@@ -95,8 +95,8 @@ const CHECKS = [
   { group: 'Google Maps',        level: 'critical', vars: ['NEXT_PUBLIC_GOOGLE_MAPS_API_KEY'], breaks: 'Map does not render — the core surface.' },
   { group: 'Google Maps — style',level: 'degraded', vars: ['NEXT_PUBLIC_GOOGLE_MAPS_STYLE_MAP_ID'], breaks: 'Map falls back to default styling with POI clutter.' },
   { group: 'Google Maps — server',level:'degraded', vars: ['GOOGLE_MAPS_SERVER_KEY'], breaks: 'Scraper geocoding falls back to the referrer-restricted client key and may fail.' },
-  { group: 'Cron auth',          level: 'critical', vars: ['CRON_SECRET'], breaks: 'All 6 crons return 401: reminders, cleanup, serendipity, scheduled messages, post-event prompt.' },
-  { group: 'Email (Resend)',     level: 'critical', vars: ['RESEND_API_KEY'], breaks: 'T-24h reminder emails SILENTLY do not send. lib/email.ts logs a warning and returns { success:false }. In-app notifications still write, so this looks healthy from the UI.' },
+  { group: 'Cron auth',          level: 'critical', vars: ['CRON_SECRET'], breaks: 'Scheduled maintenance and TerpLink sync fail authentication.' },
+  { group: 'Email (Resend)',     level: 'critical', vars: ['RESEND_API_KEY'], breaks: 'Daily reminder emails do not send. In-app notifications can still write, so verify actual email delivery separately.' },
   { group: 'Email — sender',     level: 'degraded', vars: ['RESEND_FROM_EMAIL'], breaks: 'Falls back to onboarding@resend.dev — deliverability suffers and it is not your domain.' },
   { group: 'Web push (FCM)',     level: 'critical', vars: ['NEXT_PUBLIC_VAPID_KEY'], breaks: 'getToken() cannot mint a token, so ZERO push notifications are delivered. The service worker, multicast batching, dead-token pruning and all three cron integrations are inert.' },
   { group: 'Gemini',             level: 'degraded', vars: ['GEMINI_API_KEY'], breaks: 'AI description enhance, schedule import and vibe search fail.' },
@@ -119,16 +119,23 @@ for (const c of CHECKS) {
   console.log(`      ${DIM}${c.breaks}${RST}`);
 }
 
-// A daily deployment in hourly mode silently skips cleanup and scheduled jobs.
+// This checkout uses two daily jobs and Fluid Compute. Check every schedule,
+// including the importer, rather than trusting an obsolete CRON_MODE override.
 const config = JSON.parse(readFileSync('vercel.json', 'utf8'));
-const dispatchSchedule = config.crons?.find(cron => cron.path === '/api/cron/dispatch')?.schedule;
-const cronMode = env.CRON_MODE === 'hourly' ? 'hourly' : 'daily';
-const expectedSchedule = cronMode === 'hourly' ? '0 * * * *' : '0 14 * * *';
-if (dispatchSchedule !== expectedSchedule) {
+const expectedCrons = new Map([
+  ['/api/cron/dispatch', '0 14 * * *'],
+  ['/api/cron/terplink', '0 10 * * *'],
+]);
+if (!config.fluid || config.crons?.length !== expectedCrons.size ||
+    config.crons.some(cron => expectedCrons.get(cron.path) !== cron.schedule) ||
+    new Set(config.crons.map(cron => cron.path)).size !== expectedCrons.size) {
   criticalMissing++;
-  console.log(`  ${RED}✗ Cron schedule/mode mismatch.${RST} ${cronMode} mode requires vercel.json schedule ${expectedSchedule}.`);
+  console.log(`  ${RED}✗ Low-cost hosting config mismatch.${RST} Expected Fluid Compute, daily dispatch at 14 UTC and daily TerpLink import at 10 UTC.`);
 } else {
-  console.log(`  ${GRN}✓${RST} Cron schedule matches ${cronMode} mode`);
+  console.log(`  ${GRN}✓${RST} Low-cost hosting config: two daily jobs, Fluid Compute enabled`);
+}
+if (env.CRON_MODE === 'hourly' || env.CRON_PLAN === 'pro') {
+  console.log(`  ${YEL}!${RST} Legacy CRON_MODE/CRON_PLAN values are ignored; runtime uses the deployed daily schedule.`);
 }
 
 console.log('');

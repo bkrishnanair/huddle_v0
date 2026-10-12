@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react"
 import { createPortal } from "react-dom"
 import { normalizeCoordinates } from "@/lib/coordinates"
+import { shouldRenderFullEventPin, type MapPinTier } from "@/lib/map-marker-presentation"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Chip } from "@/components/ui/chip"
@@ -400,8 +401,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
       if (idleTimer.current) clearTimeout(idleTimer.current);
       idleTimer.current = setTimeout(() => {
         if (map) {
-          const z = map.getZoom() || 15;
-          setCurrentZoom(z);
+          const z = map.getZoom() ?? 15;
 
           if (z > 18) {
             if (map.getTilt() !== 45) map.setTilt(45);
@@ -706,6 +706,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
         <div className="w-full h-full opacity-100 relative z-0">
           <Map
             onIdle={debouncedFetchEventsInView}
+            onZoomChanged={({ detail }) => setCurrentZoom(detail.zoom)}
             defaultCenter={mapCenter}
             defaultZoom={15}
             className="w-full h-full"
@@ -791,7 +792,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                       const event = cluster.events[0];
                       const index = clusterIdx;
                       const isHovered = hoveredEvent?.id === event.id;
-                      // Ranking system: Only show teardrops for the first 15 events 
+                      // Limit automatic labels; all nearby events still get full pins.
                       const rankLimit = 15;
                       const isPrimaryPin = index < rankLimit || !event.isScraped;
                       const showDetails = isHovered || (currentZoom >= 16 && isPrimaryPin);
@@ -801,11 +802,8 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                       const shadowSize = currentZoom <= 14 ? 'w-3 h-0.5' : 'w-4 h-1';
                       const categoryColor = getCategoryColor(event.category);
 
-                      let isFutureEvent = false;
-                      let pinTier: 'live' | 'imminent' | 'future' = 'future';
-                      if (!event.date || event.date.includes('/')) {
-                        isFutureEvent = false;
-                      } else {
+                      let pinTier: MapPinTier = 'future';
+                      if (event.date && !event.date.includes('/')) {
                         try {
                           if (isEventOngoing(event)) {
                             pinTier = 'live';
@@ -819,22 +817,15 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                                 pinTier = 'imminent';
                             } else {
                                 pinTier = 'future';
-                                isFutureEvent = true;
                             }
                             
                           }
-                        } catch (e) {
-                          isFutureEvent = false;
+                        } catch {
+                          pinTier = 'future';
                         }
                       }
 
-                      // We use 'live' or 'imminent' as the signal to render the full teardrop pin
-                      const forceFullPin = pinTier === 'live' || pinTier === 'imminent';
-                      
-                      // Also simplify to dots if zoomed far out (unless it's a live event)
-                      const isZoomedOut = currentZoom <= 14;
-                      
-                      if (!forceFullPin || (isZoomedOut && pinTier !== 'live')) {
+                      if (!shouldRenderFullEventPin(currentZoom, pinTier)) {
                         return (
                           <AdvancedMarker
                             key={event.id}
@@ -944,7 +935,7 @@ export default function MapView({ user, eventId, initialCenter, intent }: MapVie
                                       relative ${pinSize} min-h-11 min-w-11 flex items-center justify-center
                                       rounded-full rounded-br-none rotate-45
                                       border-2 ${animClass}
-                                      ${isFutureEvent ? 'opacity-70 saturate-50' : 'opacity-100'}
+                                      opacity-100
                                     `}
                                     style={{
                                       background: `linear-gradient(135deg, ${categoryColor}, ${categoryColor}dd)`,

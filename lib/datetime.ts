@@ -78,6 +78,26 @@ export function getUpcomingEventWindow(now = new Date(), hours = 48) {
   };
 }
 
+/** Broad date candidates plus precise instants for daily maintenance jobs.
+ * One calendar-day cushion covers event timezones either side of UTC. */
+export function getCronEventWindow(now = new Date(), lookBackHours = 28, lookAheadHours = 0) {
+  const since = new Date(now.getTime() - lookBackHours * 3_600_000);
+  const until = new Date(now.getTime() + lookAheadHours * 3_600_000);
+  const from = new Date(since.getTime() - 86_400_000).toISOString().slice(0, 10);
+  const to = new Date(until.getTime() + 86_400_000).toISOString().slice(0, 10);
+  return { since, until, from, to };
+}
+
+export function isEventInReminderWindow(event: GameEvent, now = new Date()): boolean {
+  const starts = getEventStartUTC(event);
+  return Number.isFinite(starts.getTime()) && starts > now && starts <= getUpcomingEventWindow(now, 28).until;
+}
+
+export function isEventInPostPromptWindow(event: GameEvent, now = new Date()): boolean {
+  const ends = getEventEndUTC(event);
+  return Number.isFinite(ends.getTime()) && ends <= now && ends >= getCronEventWindow(now).since;
+}
+
 export function getEventFieldsFromISO(value: string, timezone = DEFAULT_TIMEZONE): { date: string; time: string } | null {
   const instant = new Date(value);
   if (!Number.isFinite(instant.getTime())) return null;

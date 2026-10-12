@@ -1,11 +1,11 @@
 // lib/cron/event-reminders.ts
-// Handler: send T-24h reminder notifications + emails to RSVP'd attendees.
+// Handler: daily reminder notifications + emails to RSVP'd attendees.
 import 'server-only';
 
 import { getFirebaseAdminDb } from '@/lib/firebase-admin';
 import { sendReminderEmail } from '@/lib/email';
 import { sendPushToUser } from '@/lib/push-server';
-import { getEventStartUTC } from '@/lib/datetime';
+import { getCronEventWindow, isEventInReminderWindow } from '@/lib/datetime';
 import type { GameEvent } from '@/lib/types';
 import type { CronResult } from './types';
 
@@ -14,8 +14,7 @@ import type { CronResult } from './types';
  * + email to each attendee whose notifyReminders !== false, then
  * stamp reminderSentAt on the event for idempotency.
  *
- * Bounded query: date >= today AND date <= today+2.
- * Estimated reads per run: ~10–30 events + user chunks
+ * Bounded query: at most 201 date candidates, with timezone padding.
  */
 export async function runEventReminders(): Promise<CronResult> {
   const start = Date.now();
@@ -32,41 +31,41 @@ export async function runEventReminders(): Promise<CronResult> {
     if (!adminDb) throw new Error('Database unavailable');
 
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const dayAfterTomorrow = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
-    const dayAfterTomorrowStr = dayAfterTomorrow.toISOString().split('T')[0];
+    const { from, to } = getCronEventWindow(now, 0, 28);
 
     const eventsSnap = await adminDb
       .collection('events')
-      .where('date', '>=', todayStr)
-      .where('date', '<=', dayAfterTomorrowStr)
+      .where('date', '>=', from)
+      .where('date', '<=', to)
+      .limit(201)
       .get();
 
-    let notificationsSent = 0;
+    if (eventsSnap.size > 200) errors.push('Reminder candidate limit reached; some events were deferred');
+
+    let eventsQueued = 0;
 
     const batch = adminDb.batch();
+    const pendingEmails: Parameters<typeof sendReminderEmail>[0][] = [];
     const emailPromises: Promise<{ success: boolean; error?: string }>[] = [];
     const pendingPushes: { uid: string; payload: { title: string; body: string; url: string; type: "event_reminder" } }[] = [];
     let batchOps = 0;
 
-    for (const doc of eventsSnap.docs) {
+    for (const doc of eventsSnap.docs.slice(0, 200)) {
       const data = doc.data();
 
       if (data.reminderSentAt) continue;
-      if (data.status === 'archived') continue;
+      if (data.status === 'archived' || data.status === 'past') continue;
       if (data.isScraped) continue;
 
-      const eventStart = getEventStartUTC(data as GameEvent);
-      if (isNaN(eventStart.getTime())) continue;
-
-      const hoursUntilEvent =
-        (eventStart.getTime() - now.getTime()) / (1000 * 60 * 60);
-
-      // Only process events starting in 0–28h (28h = 24h + buffer)
-      if (hoursUntilEvent < 0 || hoursUntilEvent > 28) continue;
+      if (!isEventInReminderWindow(data as GameEvent, now)) continue;
 
       const playerIds: string[] = data.players || [];
       if (playerIds.length === 0) continue;
+      // Never partially enqueue a roster and mark the whole event as reminded.
+      if (batchOps + playerIds.length + 1 > 450) {
+        errors.push(`Reminder recipient budget reached for event ${doc.id}`);
+        continue;
+      }
 
       // Batch-fetch user docs (chunks of 30 via whereIn)
       const userDocs: Map<string, FirebaseFirestore.DocumentData> = new Map();
@@ -104,7 +103,7 @@ export async function runEventReminders(): Promise<CronResult> {
         batch.set(notifRef, {
           userId: uid,
           type: 'event_reminder',
-          message: `Reminder: "${eventName}" is happening ${hoursUntilEvent < 2 ? 'soon' : 'tomorrow'}! Don't forget to show up.`,
+          message: `Reminder: "${eventName}" is coming up. Check the event for its time and location.`,
           eventId: doc.id,
           eventName,
           read: false,
@@ -112,10 +111,9 @@ export async function runEventReminders(): Promise<CronResult> {
         });
 
         batchOps++;
-        notificationsSent++;
 
         const pushTitle = `Reminder: ${eventName}`;
-        const pushBody = `Happening ${hoursUntilEvent < 2 ? 'soon' : 'tomorrow'}! Don't forget to show up.`;
+        const pushBody = 'Your event is coming up. Check its time and location.';
         
         // Queue push to execute only AFTER successful batch commit
         pendingPushes.push({
@@ -130,15 +128,13 @@ export async function runEventReminders(): Promise<CronResult> {
 
         const userEmail = userData.email;
         if (userEmail) {
-          emailPromises.push(
-            sendReminderEmail({
-              to: userEmail,
-              eventName,
-              eventDate,
-              eventTime,
-              eventUrl,
-            }),
-          );
+          pendingEmails.push({
+            to: userEmail,
+            eventName,
+            eventDate,
+            eventTime,
+            eventUrl,
+          });
         }
       }
 
@@ -146,13 +142,17 @@ export async function runEventReminders(): Promise<CronResult> {
         const eventRef = adminDb.collection('events').doc(doc.id);
         batch.update(eventRef, { reminderSentAt: now.toISOString() });
         batchOps++;
-        processed++;
+        eventsQueued++;
       }
     }
 
     if (batchOps > 0) {
       // 1. Commit in-app notifications first
       await batch.commit();
+      processed = eventsQueued;
+
+      // Do not send emails for an uncommitted notification batch.
+      emailPromises.push(...pendingEmails.map(email => sendReminderEmail(email)));
 
       // 2. Only dispatch and await push notifications after commit succeeds
       const pushPromises = pendingPushes.map((p) =>

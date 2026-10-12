@@ -17,7 +17,9 @@ import type { GameEvent } from '@/lib/types';
 import type { CronResult } from './types';
 
 /** Bounded event, interest and proximity queries; one nudge per user per day. */
-export async function runSerendipity(): Promise<CronResult> {
+export async function runSerendipity({ maxEvents = 10, budgetMs = 45_000 }: {
+  maxEvents?: number; budgetMs?: number;
+} = {}): Promise<CronResult> {
   const start = Date.now();
   const errors: string[] = [];
   let processed = 0;
@@ -40,6 +42,7 @@ export async function runSerendipity(): Promise<CronResult> {
     const allEvents: { id: string; fillRate: number }[] = [];
 
     eventsSnap.docs.forEach((doc) => {
+      if (atRiskEvents.length >= maxEvents) return;
       const data = doc.data();
       if (!isRecommendationEvent(data as GameEvent, now)) return;
 
@@ -111,6 +114,7 @@ export async function runSerendipity(): Promise<CronResult> {
     };
 
     for (const event of atRiskEvents) {
+      if (Date.now() - start >= budgetMs) break;
       const candidatesMap = new Map<string, CandidateUser>();
 
       // 1. Query by interest match (if users have favoriteSports array)
@@ -179,6 +183,9 @@ export async function runSerendipity(): Promise<CronResult> {
       const socialGraph = new Map<string, string[]>();
 
       for (const user of eventCandidates) {
+        if (Date.now() - start >= budgetMs) break;
+        // There can be no attending friends when the roster is empty.
+        if (event.players.length === 0) break;
         if (!userFollowing.has(user.uid)) {
           try {
             const followingSnap = await adminDb
@@ -226,11 +233,12 @@ export async function runSerendipity(): Promise<CronResult> {
     const pushPromises: Promise<any>[] = [];
 
     for (const event of atRiskEvents) {
+      if (Date.now() - start >= budgetMs || notificationsSent >= 20) break;
       const scores = eventScores.get(event.id) || [];
       const topCandidates = scores.slice(0, 10);
 
       for (const candidate of topCandidates) {
-        if (notificationsSent >= 20) break;
+        if (notificationsSent >= 20 || Date.now() - start >= budgetMs) break;
         try {
           const spotsLeft = event.maxPlayers - event.currentPlayers;
           const composed = await composeNotification(candidate, {
