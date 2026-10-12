@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { SCHEDULED_MESSAGE_NOTICE } from "@/lib/cron/cadence"
 
 interface ChatMessage {
   id: string
@@ -178,7 +179,7 @@ export default function EventChat({ eventId, organizerId, pinnedMessage }: Event
       });
 
       if (response.ok) {
-        toast.success("Message scheduled successfully!");
+        toast.success("Message queued for the next scheduled check after your selected time");
         setNewMessage("");
         setShowScheduleDialog(false);
         setScheduleTime("");
@@ -341,6 +342,7 @@ export default function EventChat({ eventId, organizerId, pinnedMessage }: Event
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            <p className="text-sm text-slate-300" role="note">{SCHEDULED_MESSAGE_NOTICE}</p>
             <div className="bg-white/5 border border-white/10 rounded-lg p-3">
               <p className="text-xs text-slate-400 italic">Message to send:</p>
               <p className="text-sm font-medium text-slate-200 mt-1 line-clamp-3">{newMessage}</p>
@@ -348,7 +350,7 @@ export default function EventChat({ eventId, organizerId, pinnedMessage }: Event
 
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase tracking-widest text-slate-300">
-                Send Date & Time
+                Earliest delivery time
               </Label>
               <Input
                 type="datetime-local"

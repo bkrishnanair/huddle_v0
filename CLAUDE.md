@@ -38,10 +38,12 @@ real defects.
 - The user interest field is `favoriteSports`, not `interests`.
 - `reliabilityScore` is not stored. It is derived per request in
   GET /api/users/[id]/profile as a 0-100 integer, or null.
-- There is ONE cron entry in vercel.json: /api/cron/dispatch. The five handlers
-  are selected inside it by lib/cron/schedule.ts. They are not independently
-  scheduled. On a daily schedule CRON_MODE must be 'daily' or cleanup and
-  post-event-prompt never fire.
+- Low-cost hosting uses TWO daily cron entries: /api/cron/dispatch and
+  /api/cron/terplink. Dispatch selects five maintenance handlers; there is no
+  separate recommendation schedule. Cadence comes from vercel.json through
+  lib/cron/cadence.ts; legacy CRON_MODE/CRON_PLAN cannot override it. Fluid
+  Compute is explicit and supports 300s on both Hobby and Pro. Hobby's
+  non-commercial eligibility must be confirmed separately from code readiness.
 - maxDuration in a route must be a literal. Next rejects MemberExpression and
   ConditionalExpression forms.
 - `events/{id}` is `allow read: if true`. Rules cannot project fields, so any

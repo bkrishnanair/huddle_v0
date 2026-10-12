@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   selectHandlers,
-  resolveCronPlan,
-  MAX_DURATION_BY_PLAN,
+  resolveCronMode,
   SERENDIPITY_UTC_HOURS,
   CLEANUP_UTC_HOUR,
   POST_EVENT_PROMPT_UTC_HOUR,
@@ -95,42 +94,36 @@ describe('cron dispatcher handler selection', () => {
   });
 
   describe('mode defaulting', () => {
-    it('treats undefined, empty and unknown values as hourly, not daily', () => {
-      // A typo in CRON_MODE must not silently become "run everything".
+    it('treats undefined, empty and unknown values as daily', () => {
+      // A daily deployment must never silently skip maintenance.
       for (const mode of [undefined, '', 'houry', 'weekly', 'true']) {
-        expect(running(mode, 9).sort()).toEqual(['event-reminders', 'scheduled-messages']);
+        expect(running(mode, 9).sort()).toEqual([...ALL_HANDLERS].sort());
       }
     });
   });
 
   describe('deferrability', () => {
-    it('marks only cleanup and post-event-prompt deferrable', () => {
+    it('defers recommendations before essential maintenance', () => {
       const deferrable = selectHandlers('daily', 0)
         .filter((h) => h.deferrable)
         .map((h) => h.name)
         .sort();
-      expect(deferrable).toEqual(['cleanup', 'post-event-prompt']);
+      expect(deferrable).toEqual(['serendipity']);
     });
   });
 });
 
-describe('plan resolution', () => {
-  it("defaults to hobby for undefined, empty and unknown values", () => {
-    // Fail safe: maxDuration=300 is a hard deploy error on Hobby, so anything
-    // ambiguous must resolve to the lower ceiling.
-    for (const raw of [undefined, '', 'HOBBY', 'free', 'enterprise', 'Pro ']) {
-      expect(resolveCronPlan(raw)).toBe('hobby');
+describe('mode resolution', () => {
+  it('defaults to daily for undefined, empty and unknown values', () => {
+    for (const raw of [undefined, '', 'weekly', 'free', 'enterprise']) {
+      expect(resolveCronMode(raw)).toBe('daily');
     }
   });
 
-  it("resolves 'pro' case insensitively", () => {
-    for (const raw of ['pro', 'PRO', 'Pro']) {
-      expect(resolveCronPlan(raw)).toBe('pro');
+  it('resolves explicit hourly mode case insensitively', () => {
+    for (const raw of ['hourly', 'HOURLY', 'Hourly', ' hourly ']) {
+      expect(resolveCronMode(raw)).toBe('hourly');
     }
   });
 
-  it('never exceeds the Hobby ceiling when the plan is hobby', () => {
-    expect(MAX_DURATION_BY_PLAN[resolveCronPlan(undefined)]).toBe(60);
-    expect(MAX_DURATION_BY_PLAN.hobby).toBeLessThanOrEqual(60);
-  });
 });

@@ -55,10 +55,10 @@ export async function sendReminderEmail({
   }
 
   try {
-    await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: fromEmail,
       to,
-      subject: `Reminder: ${eventName} is tomorrow!`,
+      subject: `Reminder: ${eventName} is coming up`,
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
           <h2 style="color: #1a1a2e; margin-bottom: 8px;">🎯 Don't forget — you're going!</h2>
@@ -85,7 +85,7 @@ export async function sendReminderEmail({
       `,
     });
 
-    return { success: true };
+    return error ? { success: false, error: error.message } : { success: true };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`Failed to send reminder email to ${to}:`, message);
